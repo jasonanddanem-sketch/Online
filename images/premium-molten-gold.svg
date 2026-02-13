@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Crown -->
+<g opacity=".1" fill="#bf953f"><path d="M200,250L220,180L260,230L300,170L340,230L380,180L400,250Z"/><rect x="200" y="250" width="200" height="30" rx="3"/><circle cx="260" cy="240" r="5" fill="#fcf6ba" opacity=".5"/><circle cx="300" cy="230" r="6" fill="#fcf6ba" opacity=".5"/><circle cx="340" cy="240" r="5" fill="#fcf6ba" opacity=".5"/></g>
+<!-- Large Diamond -->
+<g opacity=".09"><polygon points="700,150 760,250 700,320 640,250" fill="none" stroke="#bf953f" stroke-width="2.5"/><polygon points="700,180 740,250 700,295 660,250" fill="#fcf6ba" opacity=".05"/><line x1="700" y1="150" x2="700" y2="320" stroke="#bf953f" stroke-width="1" opacity=".3"/><line x1="640" y1="250" x2="760" y2="250" stroke="#bf953f" stroke-width="1" opacity=".3"/><line x1="700" y1="150" x2="640" y2="250" stroke="#bf953f" stroke-width="1" opacity=".2"/><line x1="700" y1="150" x2="760" y2="250" stroke="#bf953f" stroke-width="1" opacity=".2"/></g>
+<!-- Treasure Chest -->
+<g opacity=".08"><rect x="850" y="520" width="160" height="90" rx="5" fill="none" stroke="#bf953f" stroke-width="2.5"/><path d="M850,520Q930,490,1010,520" fill="none" stroke="#bf953f" stroke-width="2.5"/><rect x="920" y="510" width="20" height="20" rx="3" fill="#bf953f"/><circle cx="930" cy="520" r="4" fill="#fcf6ba" opacity=".5"/><circle cx="880" cy="550" r="6" fill="#fcf6ba" opacity=".2"/><circle cx="960" cy="555" r="5" fill="#fcf6ba" opacity=".15"/></g>
+<!-- Coins -->
+<g opacity=".1"><ellipse cx="100" cy="550" rx="25" ry="8" fill="#bf953f"/><ellipse cx="100" cy="545" rx="25" ry="8" fill="#d4a017"/><ellipse cx="100" cy="540" rx="25" ry="8" fill="#bf953f"/><text x="92" y="544" font-size="10" fill="#fcf6ba" font-weight="bold" opacity=".4">$</text></g>
+<g opacity=".07"><ellipse cx="140" cy="570" rx="20" ry="6" fill="#bf953f"/><ellipse cx="140" cy="566" rx="20" ry="6" fill="#d4a017"/></g>
+<!-- Scepter -->
+<g opacity=".08"><line x1="500" y1="600" x2="500" y2="400" stroke="#bf953f" stroke-width="4" stroke-linecap="round"/><circle cx="500" cy="395" r="15" fill="none" stroke="#bf953f" stroke-width="2.5"/><circle cx="500" cy="395" r="6" fill="#fcf6ba" opacity=".3"/><path d="M492" y1="600" d="M488,580Q500,570,512,580" fill="none" stroke="#bf953f" stroke-width="2"/></g>
+<!-- Ornate Scrollwork -->
+<g opacity=".06" fill="none" stroke="#bf953f" stroke-width="2"><path d="M0,100Q30,80,50,100Q70,120,50,140Q30,155,15,140"/><path d="M50,100Q80,80,100,100Q120,120,100,140"/></g>
+<g opacity=".05" fill="none" stroke="#bf953f" stroke-width="1.5"><path d="M1100,700Q1130,680,1150,700Q1170,720,1150,740Q1130,755,1115,740"/><path d="M1150,700Q1180,680,1200,700"/></g>
+<!-- Small Gems -->
+<polygon points="350,450 370,480 350,510 330,480" fill="none" stroke="#bf953f" stroke-width="1.5" opacity=".07"/>
+<polygon points="1050,300 1065,320 1050,340 1035,320" fill="#fcf6ba" opacity=".04"/>
+<polygon points="600,680 612,698 600,716 588,698" fill="none" stroke="#d4a017" stroke-width="1.5" opacity=".06"/>
+<!-- Ring -->
+<g opacity=".07"><circle cx="250" cy="500" r="25" fill="none" stroke="#bf953f" stroke-width="3"/><circle cx="250" cy="478" r="8" fill="#fcf6ba" opacity=".15"/><path d="M243,475L250,468L257,475" fill="none" stroke="#bf953f" stroke-width="1.5"/></g>
+<!-- Golden Stars -->
+<path d="M150,150l3,9h10l-8,6,3,9-8-6-8,6,3-9-8-6h10Z" fill="#fcf6ba" opacity=".06"/>
+<path d="M800,450l2,7h8l-6,5,2,7-6-5-6,5,2-7-6-5h8Z" fill="#bf953f" opacity=".05"/>
+<path d="M1100,100l3,8h9l-7,5,3,9-8-5-8,5,3-9-7-5h9Z" fill="#fcf6ba" opacity=".06"/>
+<!-- Key -->
+<g opacity=".06" fill="none" stroke="#bf953f" stroke-width="2.5"><circle cx="680" cy="550" r="12"/><line x1="692" y1="550" x2="740" y2="550"/><line x1="730" y1="550" x2="730" y2="560"/><line x1="740" y1="550" x2="740" y2="562"/></g>
+</svg>

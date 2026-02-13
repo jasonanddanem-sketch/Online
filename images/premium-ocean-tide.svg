@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Large Wave -->
+<path d="M0,400Q150,340,300,400Q450,460,600,400Q750,340,900,400Q1050,460,1200,400" fill="none" stroke="#0891b2" stroke-width="3" opacity=".08"/>
+<path d="M0,430Q150,370,300,430Q450,490,600,430Q750,370,900,430Q1050,490,1200,430" fill="none" stroke="#00b4d8" stroke-width="2" opacity=".06"/>
+<path d="M0,455Q150,400,300,455Q450,510,600,455Q750,400,900,455Q1050,510,1200,455" fill="none" stroke="#90e0ef" stroke-width="1.5" opacity=".05"/>
+<!-- Seahorse -->
+<g opacity=".09" fill="#0891b2"><path d="M250,300Q260,270,270,280Q280,250,275,290Q285,280,280,310Q290,300,285,330Q275,360,265,350Q255,360,250,340Q240,350,245,320Q235,330,240,300Z"/><circle cx="268" cy="288" r="2.5" fill="#f0fdfa"/><path d="M250,340Q240,360,250,380Q248,390,245,385Q240,395,235,380Q237,370,250,340Z"/></g>
+<!-- Fish 1 (large) -->
+<g opacity=".1" fill="#0077b6"><path d="M800,250Q850,220,880,250Q850,280,800,250Z"/><path d="M880,250Q905,230,905,250Q905,270,880,250Z"/><circle cx="820" cy="247" r="3" fill="#f0fdfa"/><path d="M840,240Q845,250,840,260" fill="none" stroke="#0e7490" stroke-width="1"/></g>
+<!-- Fish 2 (small) -->
+<g opacity=".08" fill="#00b4d8"><path d="M400,550Q430,535,445,550Q430,565,400,550Z"/><path d="M445,550Q458,540,458,550Q458,560,445,550Z"/><circle cx="415" cy="548" r="2" fill="#f0fdfa"/></g>
+<!-- Fish 3 -->
+<g opacity=".07" fill="#0891b2"><path d="M1000,650Q1030,635,1045,650Q1030,665,1000,650Z"/><path d="M1045,650Q1058,640,1058,650Q1058,660,1045,650Z"/><circle cx="1015" cy="648" r="1.8" fill="#f0fdfa"/></g>
+<!-- Coral -->
+<g opacity=".08" fill="none" stroke="#0891b2" stroke-width="2.5" stroke-linecap="round"><path d="M100,700Q100,650,110,630Q115,610,120,630Q125,610,130,640Q135,620,140,650Q145,630,145,700"/><path d="M120,630Q130,620,125,610"/></g>
+<!-- Seaweed -->
+<g opacity=".07" stroke="#0e7490" stroke-width="3" fill="none" stroke-linecap="round"><path d="M700,800Q690,750,700,700Q710,650,700,600"/><path d="M720,800Q730,760,720,720Q710,680,720,640"/></g>
+<!-- Starfish -->
+<g opacity=".08" fill="#00b4d8"><path d="M550,700L558,680L565,700L585,695L570,708L575,728L558,718L540,728L545,708L530,695Z"/></g>
+<!-- Shell -->
+<g opacity=".09" fill="none" stroke="#0891b2" stroke-width="2"><path d="M950,450Q970,430,990,450Q970,470,950,450Z"/><path d="M960,445Q970,438,980,445" opacity=".5"/><path d="M955,450Q970,443,985,450" opacity=".4"/></g>
+<!-- Bubbles -->
+<circle cx="300" cy="500" r="12" fill="none" stroke="#90e0ef" stroke-width="1.5" opacity=".08"/>
+<circle cx="320" cy="480" r="8" fill="none" stroke="#90e0ef" stroke-width="1" opacity=".06"/>
+<circle cx="310" cy="465" r="5" fill="none" stroke="#90e0ef" stroke-width="1" opacity=".05"/>
+<circle cx="600" cy="300" r="10" fill="none" stroke="#00b4d8" stroke-width="1" opacity=".05"/>
+<circle cx="1100" cy="350" r="7" fill="none" stroke="#90e0ef" stroke-width="1" opacity=".06"/>
+<circle cx="180" cy="200" r="9" fill="none" stroke="#90e0ef" stroke-width="1" opacity=".05"/>
+<!-- Anchor -->
+<g opacity=".06" fill="none" stroke="#0077b6" stroke-width="3" stroke-linecap="round"><line x1="1050" y1="100" x2="1050" y2="200"/><path d="M1020,200Q1020,230,1050,230Q1080,230,1080,200"/><line x1="1030" y1="120" x2="1070" y2="120"/><circle cx="1050" cy="100" r="8"/></g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Large Flame Left -->
+<g opacity=".11" fill="#ff4444"><path d="M150,700Q130,500,180,350Q200,280,220,380Q240,300,250,420Q270,350,260,500Q280,420,275,580Q260,680,200,720Z"/><path d="M170,680Q165,550,195,430Q205,380,210,440Q220,400,220,480" fill="#ff6b6b" opacity=".6"/></g>
+<!-- Large Flame Right -->
+<g opacity=".1" fill="#ff4444"><path d="M1000,720Q980,550,1020,380Q1040,300,1060,410Q1080,330,1080,460Q1100,380,1095,550Q1080,680,1040,730Z"/><path d="M1020,690Q1018,560,1040,440Q1050,390,1055,460" fill="#ff6b6b" opacity=".5"/></g>
+<!-- Medium Flame Center -->
+<g opacity=".09" fill="#ff6b6b"><path d="M580,750Q565,620,590,500Q600,450,615,530Q630,470,630,570Q645,510,640,640Q625,730,600,760Z"/></g>
+<!-- Fire Swirl Top -->
+<g opacity=".08"><path d="M400,200Q430,150,460,200Q490,250,450,260Q420,270,400,200Z" fill="#ff4444"/><path d="M460,200Q475,170,500,190Q520,220,490,230" fill="none" stroke="#ff6b6b" stroke-width="2.5"/></g>
+<!-- Ember Particles -->
+<circle cx="300" cy="300" r="4" fill="#ff4444" opacity=".12"/>
+<circle cx="500" cy="200" r="3" fill="#ff6b6b" opacity=".1"/>
+<circle cx="750" cy="280" r="5" fill="#ff4444" opacity=".08"/>
+<circle cx="900" cy="180" r="3.5" fill="#ff6b6b" opacity=".1"/>
+<circle cx="350" cy="450" r="4" fill="#ff8866" opacity=".09"/>
+<circle cx="650" cy="350" r="3" fill="#ff4444" opacity=".07"/>
+<circle cx="850" cy="500" r="4.5" fill="#ff6b6b" opacity=".08"/>
+<circle cx="200" cy="250" r="2.5" fill="#ff4444" opacity=".1"/>
+<circle cx="1100" cy="250" r="3" fill="#ff8866" opacity=".09"/>
+<!-- Phoenix Wing -->
+<g opacity=".07" fill="none" stroke="#ff4444" stroke-width="2"><path d="M700,100Q750,60,800,100Q830,130,790,150Q760,160,750,140"/><path d="M800,100Q840,70,880,110Q900,140,860,155"/><path d="M750,140Q770,125,790,150"/></g>
+<!-- Energy Circle -->
+<g opacity=".06"><circle cx="400" cy="600" r="60" fill="none" stroke="#ff4444" stroke-width="2"/><circle cx="400" cy="600" r="45" fill="none" stroke="#ff6b6b" stroke-width="1.5"/><path d="M370,570l30,30,30-30" fill="none" stroke="#ff4444" stroke-width="2"/></g>
+<!-- Spark Lines -->
+<g stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round" opacity=".08"><line x1="280" y1="150" x2="295" y2="130"/><line x1="285" y1="145" x2="300" y2="150"/><line x1="920" y1="350" x2="935" y2="330"/><line x1="925" y1="345" x2="940" y2="350"/><line x1="550" y1="100" x2="565" y2="80"/><line x1="555" y1="95" x2="570" y2="100"/></g>
+<!-- Dragon Eye -->
+<g opacity=".08"><ellipse cx="1050" cy="150" rx="50" ry="25" fill="none" stroke="#ff4444" stroke-width="2.5"/><ellipse cx="1050" cy="150" rx="15" ry="25" fill="#ff4444"/><circle cx="1050" cy="150" r="5" fill="#1a0808"/></g>
+<!-- Small Flames Bottom -->
+<path d="M750,780Q745,740,760,720Q765,710,770,730Q775,720,772,760Z" fill="#ff4444" opacity=".08"/>
+<path d="M450,770Q447,740,458,725Q462,718,465,735Q468,725,466,755Z" fill="#ff6b6b" opacity=".07"/>
+</svg>

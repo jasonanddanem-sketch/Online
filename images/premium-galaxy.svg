@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Saturn-like Planet -->
+<g opacity=".1"><circle cx="300" cy="250" r="50" fill="#6e0dd0"/><ellipse cx="300" cy="250" rx="90" ry="15" fill="none" stroke="#a855f7" stroke-width="3" transform="rotate(-20,300,250)"/><path d="M265,220Q300,210,335,220" fill="none" stroke="#d4b5ff" stroke-width="1.5" opacity=".4"/></g>
+<!-- Small Planet with craters -->
+<g opacity=".08"><circle cx="900" cy="600" r="35" fill="#3500d3"/><circle cx="890" cy="590" r="6" fill="#240090" opacity=".5"/><circle cx="910" cy="610" r="8" fill="#240090" opacity=".4"/><circle cx="905" cy="585" r="4" fill="#240090" opacity=".3"/></g>
+<!-- Spiral Nebula -->
+<g opacity=".06" fill="none" stroke="#a855f7" stroke-width="2"><path d="M600,400Q620,380,640,400Q660,420,640,440Q620,460,600,440Q580,420,600,400"/><path d="M600,400Q630,370,660,400Q690,430,660,460Q630,490,600,460Q570,430,600,400"/><path d="M600,400Q640,360,680,400Q720,440,680,480Q640,520,600,480Q560,440,600,400"/></g>
+<!-- Shooting Stars -->
+<g opacity=".1"><line x1="100" y1="100" x2="200" y2="150" stroke="#d4b5ff" stroke-width="2.5" stroke-linecap="round"/><line x1="200" y1="150" x2="210" y2="155" stroke="#d4b5ff" stroke-width="1" opacity=".5"/><circle cx="100" cy="100" r="3" fill="#fff"/></g>
+<g opacity=".08"><line x1="800" y1="80" x2="900" y2="120" stroke="#a855f7" stroke-width="2" stroke-linecap="round"/><circle cx="800" cy="80" r="2.5" fill="#d4b5ff"/></g>
+<g opacity=".06"><line x1="1050" y1="300" x2="1120" y2="330" stroke="#d4b5ff" stroke-width="1.5" stroke-linecap="round"/><circle cx="1050" cy="300" r="2" fill="#fff"/></g>
+<!-- Constellations -->
+<g opacity=".08" fill="#fff"><circle cx="450" cy="150" r="2"/><circle cx="480" cy="130" r="1.8"/><circle cx="510" cy="145" r="2.2"/><circle cx="500" cy="175" r="1.5"/><circle cx="465" cy="180" r="2"/><line x1="450" y1="150" x2="480" y2="130" stroke="#d4b5ff" stroke-width=".8"/><line x1="480" y1="130" x2="510" y2="145" stroke="#d4b5ff" stroke-width=".8"/><line x1="510" y1="145" x2="500" y2="175" stroke="#d4b5ff" stroke-width=".8"/><line x1="500" y1="175" x2="465" y2="180" stroke="#d4b5ff" stroke-width=".8"/><line x1="465" y1="180" x2="450" y2="150" stroke="#d4b5ff" stroke-width=".8"/></g>
+<!-- Rocket -->
+<g opacity=".07" fill="#a855f7"><path d="M1050,100L1070,60L1090,100Z"/><rect x="1060" y="100" width="20" height="40" rx="3"/><path d="M1055,140L1050,160L1065,150Z"/><path d="M1085,140L1090,160L1075,150Z"/><rect x="1067" y="140" width="6" height="15" fill="#6e0dd0" rx="2"/></g>
+<!-- Star Field -->
+<circle cx="50" cy="50" r="1.5" fill="#fff" opacity=".2"/>
+<circle cx="180" cy="450" r="1" fill="#d4b5ff" opacity=".18"/>
+<circle cx="350" cy="550" r="1.3" fill="#fff" opacity=".15"/>
+<circle cx="520" cy="80" r="1" fill="#a855f7" opacity=".15"/>
+<circle cx="680" cy="300" r="1.5" fill="#fff" opacity=".12"/>
+<circle cx="750" cy="500" r="1" fill="#d4b5ff" opacity=".15"/>
+<circle cx="950" cy="150" r="1.2" fill="#fff" opacity=".18"/>
+<circle cx="1100" cy="500" r="1" fill="#a855f7" opacity=".12"/>
+<circle cx="1150" cy="200" r="1.5" fill="#fff" opacity=".15"/>
+<circle cx="400" cy="700" r="1" fill="#d4b5ff" opacity=".1"/>
+<circle cx="600" cy="650" r="1.3" fill="#fff" opacity=".12"/>
+<circle cx="100" cy="700" r="1" fill="#a855f7" opacity=".1"/>
+<circle cx="700" cy="750" r="1.5" fill="#fff" opacity=".08"/>
+<circle cx="1000" cy="400" r=".8" fill="#d4b5ff" opacity=".12"/>
+<!-- Astronaut Helmet -->
+<g opacity=".06"><circle cx="150" cy="600" r="30" fill="none" stroke="#d4b5ff" stroke-width="2.5"/><path d="M125,610Q150,630,175,610" fill="none" stroke="#a855f7" stroke-width="2"/><rect x="142" y="630" width="16" height="20" rx="4" fill="#d4b5ff" opacity=".5"/></g>
+</svg>

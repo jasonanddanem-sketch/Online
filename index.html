@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DabbleHQ - Connect & Share</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&family=Rajdhani:wght@400;500;700&family=Quicksand:wght@400;500;700&family=Pacifico&family=Baloo+2:wght@400;500;700&family=Playfair+Display:wght@400;700&family=Space+Grotesk:wght@400;500;700&family=Caveat:wght@400;700&family=Archivo:wght@400;500;700&family=Silkscreen&family=Press+Start+2P&family=Righteous&family=Satisfy&family=Bungee&family=Monoton&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+    <div id="premiumBgLayer"></div>
+
+    <!-- ========== PAGE: LOGIN ========== -->
+    <div class="login-page" id="loginPage">
+        <div class="login-bg-shapes">
+            <div class="login-shape login-shape-1"></div>
+            <div class="login-shape login-shape-2"></div>
+            <div class="login-shape login-shape-3"></div>
+        </div>
+        <div class="login-split">
+            <div class="login-hero">
+                <div class="login-hero-content">
+                    <div class="login-brand"><span class="login-brand-icon"><i class="fas fa-bolt"></i></span> DabbleHQ</div>
+                    <h1 class="login-tagline">Where ideas<br><span>come alive.</span></h1>
+                    <p class="login-hero-desc">Join a community of creators, thinkers, and doers. Share your world, discover new ones.</p>
+                    <div class="login-hero-stats">
+                        <div class="login-hero-stat"><strong>10K+</strong><span>Active Users</span></div>
+                        <div class="login-hero-stat"><strong>50K+</strong><span>Posts Daily</span></div>
+                        <div class="login-hero-stat"><strong>200+</strong><span>Communities</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="login-form-side">
+                <div class="login-card">
+                    <h2 class="login-title">Welcome back</h2>
+                    <p class="login-subtitle">Sign in to your account</p>
+                    <!-- LOGIN FORM -->
+                    <form id="loginForm" autocomplete="off">
+                        <div class="login-error" id="loginError"></div>
+                        <div class="login-field">
+                            <label class="login-label" for="loginEmail">Email</label>
+                            <div class="login-input-wrap">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="login-field">
+                            <label class="login-label" for="loginPassword">Password</label>
+                            <div class="login-input-wrap">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+                                <button type="button" class="login-toggle-pw" id="togglePassword"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="login-options">
+                            <label class="login-remember"><input type="checkbox" id="rememberMe"> Remember me</label>
+                            <a href="#" class="login-forgot">Forgot password?</a>
+                        </div>
+                        <button type="submit" class="login-btn">Sign In <i class="fas fa-arrow-right"></i></button>
+                    </form>
+                    <div class="login-divider"><span>or</span></div>
+                    <div class="login-footer">New to DabbleHQ? <a href="#" class="login-create">Create an account</a></div>
+                    <!-- SIGNUP FORM (hidden by default) -->
+                    <form id="signupForm" autocomplete="off" style="display:none;">
+                        <div class="login-error" id="signupError"></div>
+                        <div class="login-field">
+                            <label class="login-label" for="signupUsername">Username</label>
+                            <div class="login-input-wrap">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="signupUsername" placeholder="Choose a username" autocomplete="username">
+                            </div>
+                        </div>
+                        <div class="login-field">
+                            <label class="login-label" for="signupEmail">Email</label>
+                            <div class="login-input-wrap">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="signupEmail" placeholder="Enter your email" autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="login-field">
+                            <label class="login-label" for="signupPassword">Password</label>
+                            <div class="login-input-wrap">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="signupPassword" placeholder="Create a password" autocomplete="new-password">
+                            </div>
+                        </div>
+                        <button type="submit" class="login-btn">Create Account <i class="fas fa-arrow-right"></i></button>
+                    </form>
+                    <div id="signupFooter" style="display:none;" class="login-footer">Already have an account? <a href="#" class="login-back">Sign in</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell" id="appShell">
+    <!-- ========== NAVIGATION BAR ========== -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="#" class="nav-logo" data-page="home">DabbleHQ</a>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search..." id="globalSearch">
+                </div>
+            </div>
+            <div class="nav-center">
+                <a href="#" class="nav-link active" data-page="home"><i class="fas fa-home"></i><span>Home</span></a>
+                <a href="#" class="nav-link" data-page="groups"><i class="fas fa-users-rectangle"></i><span>Groups</span></a>
+                <a href="#" class="nav-link" data-page="skins"><i class="fas fa-palette"></i><span>Skins</span></a>
+                <a href="#" class="nav-link" data-page="shop"><i class="fas fa-store"></i><span>Skin Shop</span></a>
+                <a href="#" class="nav-link" data-page="profiles"><i class="fas fa-user-group"></i><span>Profiles</span></a>
+                <a href="#" class="nav-link" data-page="saved"><i class="fas fa-bookmark"></i><span>Saved</span></a>
+                <a href="#" class="nav-link" data-page="messages"><i class="fas fa-envelope"></i><span>Messages</span></a>
+                <a href="#" class="nav-link" data-page="notifications">
+                    <i class="fas fa-bell"></i><span>Notification</span>
+                    <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <div class="nav-coins" id="navCoins"><i class="fas fa-coins"></i><span class="coin-count" id="navCoinCount">0</span></div>
+                <div class="nav-user" id="navUserDropdown">
+                    <img src="https://i.pravatar.cc/40?img=12" alt="User" class="nav-avatar">
+                    <span class="nav-username">John Doe</span>
+                    <i class="fas fa-chevron-down"></i>
+                    <div class="user-dropdown" id="userDropdownMenu">
+                        <a href="#" id="dropdownViewProfile"><i class="fas fa-user"></i> My Profile</a>
+                        <a href="#" data-page="skins"><i class="fas fa-palette"></i> My Skins</a>
+                        <a href="#"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========== MODAL OVERLAY ========== -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <!-- ========== PAGE: HOME ========== -->
+    <div class="page active" id="page-home">
+        <div class="timeline-cover" id="timelineCover">
+            <button class="timeline-cover-btn" id="coverEditBtn" title="Add Cover Photo"><i class="fas fa-camera"></i> Add Cover Photo</button>
+            <input type="file" id="coverFileInput" accept="image/*" style="display:none;">
+        </div>
+        <div class="main-container">
+            <aside class="left-sidebar">
+                <div class="card profile-card" id="profileCard">
+                    <div class="profile-cover" id="profileCover"></div>
+                    <div class="profile-info">
+                        <div class="profile-avatar-wrap">
+                            <img src="https://i.pravatar.cc/100?img=12" alt="John Doe" class="profile-avatar" id="profileAvatarImg">
+                            <button class="avatar-edit-btn" id="avatarEditBtn" title="Change Photo"><i class="fas fa-camera"></i></button>
+                            <input type="file" id="avatarFileInput" accept="image/*,image/gif" style="display:none;">
+                        </div>
+                        <h3 class="profile-name">John Doe</h3>
+                        <p class="profile-title">Living my best life</p>
+                        <p class="profile-about">Coffee addict, sunset chaser, and part-time adventurer. Always looking for the next great story.</p>
+                        <div class="profile-stats">
+                            <div class="stat stat-clickable" id="followingStat"><span class="stat-count" id="followingCount">0</span><span class="stat-label">Following</span></div>
+                            <div class="stat stat-clickable" id="followersStat"><span class="stat-count" id="followersCount">5</span><span class="stat-label">Followers</span></div>
+                        </div>
+                        <div class="profile-links"><a href="#" class="view-profile-link" id="viewMyProfile">View Profile</a><a href="#" class="edit-profile-btn" id="editProfileBtn" title="Edit Profile"><i class="fas fa-pen"></i></a></div>
+                    </div>
+                </div>
+                <div class="card photos-card">
+                    <h4 class="card-heading"><i class="fas fa-images" style="margin-right:8px;color:var(--primary);"></i>Photos</h4>
+                    <div class="photos-preview" id="photosPreview"><p class="photos-empty">No photos yet</p></div>
+                    <a href="#" class="view-more-link" id="viewAllPhotos">View All</a>
+                </div>
+                <div class="card suggestions-card">
+                    <h4 class="card-heading">People You May Know</h4>
+                    <div class="suggestion-list" id="suggestionList"></div>
+                    <a href="#" class="view-more-link" data-page="profiles">View More</a>
+                </div>
+            </aside>
+            <main class="center-feed">
+                <div class="card post-create-bar" id="openPostModal">
+                    <img src="https://i.pravatar.cc/40?img=12" alt="User" class="post-create-avatar">
+                    <div class="post-input-fake">What are we posting today?</div>
+                </div>
+                <div class="search-tabs" id="feedTabs">
+                    <button class="search-tab active" data-feedtab="following"><i class="fas fa-user-group"></i> Following</button>
+                    <button class="search-tab" data-feedtab="discover"><i class="fas fa-compass"></i> Discover</button>
+                </div>
+                <div id="feedContainer"></div>
+            </main>
+            <aside class="right-sidebar">
+                <div class="card promo-card">
+                    <div class="promo-logo">DQ</div>
+                    <h3 class="promo-title">Earn Coins on DabbleHQ</h3>
+                    <p class="promo-subtitle">Earn coins by interacting and spend them in the Skin Shop to customize your profile!</p>
+                    <div class="coin-rules">
+                        <div class="coin-rule"><i class="fas fa-heart"></i><span>Like <strong>+1</strong></span></div>
+                        <div class="coin-rule"><i class="fas fa-comment"></i><span>Comment <strong>+2</strong></span></div>
+                        <div class="coin-rule"><i class="fas fa-pen-to-square"></i><span>Post <strong>+5</strong></span></div>
+                    </div>
+                </div>
+                <div class="card groups-card">
+                    <h4 class="card-heading">Trending Groups</h4>
+                    <div class="group-list" id="trendingGroupsSidebar"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: GROUPS ========== -->
+    <div class="page" id="page-groups">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-users-rectangle"></i> Groups</h2>
+                <div class="page-actions">
+                    <div class="page-search"><i class="fas fa-search"></i><input type="text" placeholder="Search groups..." id="groupSearch"></div>
+                    <button class="btn btn-primary" id="createGroupBtn"><i class="fas fa-plus"></i> Create Group</button>
+                </div>
+            </div>
+            <div class="search-tabs" id="groupsTabs"></div>
+            <div id="groupsSections"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: SKINS ========== -->
+    <div class="page" id="page-skins">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-palette"></i> My Skins</h2>
+                <p class="page-subtitle">Click a skin to apply it to your profile</p>
+            </div>
+            <div class="search-tabs" id="mySkinsTabs"></div>
+            <div class="page-grid" id="mySkinsGrid"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: PROFILES ========== -->
+    <div class="page" id="page-profiles">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-user-group"></i> Profiles</h2>
+                <div class="page-actions">
+                    <div class="page-search"><i class="fas fa-search"></i><input type="text" placeholder="Search people..." id="profileSearch"></div>
+                </div>
+            </div>
+            <div class="search-tabs" id="profilesTabs">
+                <button class="search-tab active" data-ptab="network"><i class="fas fa-circle-nodes"></i> My Network</button>
+                <button class="search-tab" data-ptab="discover"><i class="fas fa-compass"></i> Discover</button>
+            </div>
+            <div id="profilesSections"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: SAVED ========== -->
+    <div class="page" id="page-saved">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-bookmark"></i> Saved Posts</h2>
+                <div class="page-actions">
+                    <button class="btn btn-primary" id="createFolderBtn"><i class="fas fa-folder-plus"></i> New Folder</button>
+                </div>
+            </div>
+            <div id="savedContent"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: SKIN SHOP ========== -->
+    <div class="page" id="page-shop">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-store"></i> Skin Shop</h2>
+                <p class="page-subtitle">Customize your experience with skins, fonts, and logos!</p>
+            </div>
+            <div class="search-tabs" id="shopTabs"></div>
+            <div class="page-grid" id="shopGrid"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: MESSAGES ========== -->
+    <div class="page" id="page-messages">
+        <div class="page-container messages-layout">
+            <div class="msg-sidebar">
+                <div class="msg-sidebar-header"><h3>Messages</h3></div>
+                <div class="msg-search"><i class="fas fa-search"></i><input type="text" placeholder="Search conversations..." id="msgSearch"></div>
+                <div class="msg-contact-list" id="msgContactList"></div>
+            </div>
+            <div class="msg-chat" id="msgChat">
+                <div class="msg-chat-placeholder"><i class="fas fa-envelope-open-text"></i><p>Select a conversation to start messaging</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: NOTIFICATIONS ========== -->
+    <div class="page" id="page-notifications">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-bell"></i> Notifications</h2>
+            </div>
+            <div class="search-tabs" id="notifTabs"></div>
+            <div id="notifList">
+                <div class="empty-state" id="noNotifMsg"><i class="fas fa-bell-slash"></i><p>No notifications yet.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: SEARCH RESULTS ========== -->
+    <div class="page" id="page-search">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-search"></i> Search Results</h2>
+                <p class="page-subtitle" id="searchQuery"></p>
+            </div>
+            <div class="search-tabs">
+                <button class="search-tab active" data-tab="people"><i class="fas fa-user"></i> People</button>
+                <button class="search-tab" data-tab="groups"><i class="fas fa-users-rectangle"></i> Groups</button>
+                <button class="search-tab" data-tab="posts"><i class="fas fa-newspaper"></i> Posts</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: GROUP VIEW ========== -->
+    <div class="page" id="page-group-view">
+        <div class="pv-cover-banner" id="gvCoverBanner">
+            <button class="timeline-cover-btn" id="gvCoverEditBtn" style="display:none;" title="Change Cover"><i class="fas fa-camera"></i> Change Cover</button>
+            <input type="file" id="gvCoverFileInput" accept="image/*" style="display:none;">
+        </div>
+        <div class="gv-layout">
+            <aside class="gv-left" id="gvLeftSidebar"></aside>
+            <main class="gv-center">
+                <div class="card pv-profile-card" id="gvProfileCard"></div>
+                <div id="gvPostBar"></div>
+                <div id="gvPostsFeed"></div>
+            </main>
+            <aside class="gv-right" id="gvRightSidebar"></aside>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: PHOTOS ========== -->
+    <div class="page" id="page-photos">
+        <div class="page-container">
+            <div class="page-header">
+                <h2><i class="fas fa-images"></i> My Photos</h2>
+                <p class="page-subtitle"><a href="#" class="photos-back-link" style="color:var(--primary);font-weight:500;"><i class="fas fa-arrow-left"></i> Back</a></p>
+            </div>
+            <div id="photoAlbumContent"></div>
+        </div>
+    </div>
+
+    <!-- ========== PAGE: PROFILE VIEW ========== -->
+    <div class="page" id="page-profile-view">
+        <div class="pv-cover-banner" id="pvCoverBanner"></div>
+        <div class="pv-layout">
+            <div class="pv-col-left">
+                <div class="card profile-card pv-profile-card" id="pvProfileCard"></div>
+            </div>
+            <div id="pvPhotosCard" class="pv-col-photos"></div>
+            <main class="pv-col-feed">
+                <div id="pvPostsFeed"></div>
+            </main>
+            <aside class="pv-col-skin">
+                <div id="pvSkinCard" class="pv-skin-box"></div>
+            </aside>
+        </div>
+    </div>
+
+    </div><!-- /app-shell -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

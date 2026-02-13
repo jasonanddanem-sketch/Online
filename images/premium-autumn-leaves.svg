@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Large Maple Leaf -->
+<g opacity=".1" fill="#d35400"><path d="M250,350L230,280Q200,300,180,260L220,240Q200,200,220,180L250,220Q260,180,280,160L270,220Q310,200,320,180L280,240Q340,240,360,260L300,280L320,350Q280,320,250,350Z"/><line x1="250" y1="350" x2="250" y2="220" stroke="#b45309" stroke-width="2" opacity=".5"/></g>
+<!-- Falling Leaf 2 -->
+<g opacity=".09" fill="#e67e22" transform="rotate(-25,700,200)"><path d="M700,200L685,150Q660,165,645,135L680,120Q665,90,680,75L700,105Q710,75,725,60L715,100Q745,85,755,70L725,120Q770,120,785,135L740,155L755,200Q725,175,700,200Z"/></g>
+<!-- Oak Leaf -->
+<g opacity=".08" fill="#b45309"><path d="M900,500Q920,470,940,490Q950,470,960,490Q965,475,975,495Q970,510,955,515Q960,530,945,530Q935,540,925,530Q910,535,910,520Q895,515,900,500Z"/><line x1="935" y1="535" x2="935" y2="575" stroke="#8b4513" stroke-width="2"/></g>
+<!-- Small falling leaves -->
+<g opacity=".07" fill="#d35400" transform="rotate(40,500,450)"><path d="M500,450Q510,420,520,440Q520,420,530,440Q520,460,510,455Z"/></g>
+<g opacity=".06" fill="#e67e22" transform="rotate(-15,150,600)"><path d="M150,600Q160,570,170,590Q170,570,180,590Q170,610,160,605Z"/></g>
+<g opacity=".07" fill="#c0392b" transform="rotate(60,1050,200)"><path d="M1050,200Q1060,170,1070,190Q1070,170,1080,190Q1070,210,1060,205Z"/></g>
+<!-- Acorn 1 -->
+<g opacity=".09" fill="#8b4513"><ellipse cx="550" cy="620" rx="18" ry="22"/><path d="M530,610Q530,595,550,590Q570,595,570,610Z" fill="#b45309"/><line x1="550" y1="590" x2="555" y2="570" stroke="#8b4513" stroke-width="2"/></g>
+<!-- Acorn 2 -->
+<g opacity=".07" fill="#8b4513"><ellipse cx="1100" cy="450" rx="12" ry="15"/><path d="M1087,443Q1087,432,1100,428Q1113,432,1113,443Z" fill="#b45309"/></g>
+<!-- Branch -->
+<g opacity=".07" stroke="#8b4513" stroke-width="3" fill="none" stroke-linecap="round"><path d="M50,100Q150,120,200,200Q230,260,300,280"/><path d="M150,150Q180,130,200,150"/><path d="M220,230Q250,210,260,230"/></g>
+<!-- Mushroom -->
+<g opacity=".08"><ellipse cx="750" cy="680" rx="35" ry="20" fill="#d35400"/><rect x="742" y="680" width="16" height="30" fill="#b45309" rx="3"/><circle cx="740" cy="673" r="4" fill="#e67e22" opacity=".5"/><circle cx="760" cy="670" r="3" fill="#e67e22" opacity=".4"/></g>
+<!-- Pinecone -->
+<g opacity=".07" fill="#8b4513"><ellipse cx="400" cy="150" rx="20" ry="35"/><path d="M385,135Q400,125,415,135" fill="none" stroke="#b45309" stroke-width="1.5"/><path d="M382,150Q400,140,418,150" fill="none" stroke="#b45309" stroke-width="1.5"/><path d="M385,165Q400,155,415,165" fill="none" stroke="#b45309" stroke-width="1.5"/></g>
+<!-- Wind swirls -->
+<path d="M600,100Q650,80,680,100Q700,120,670,125" fill="none" stroke="#d35400" stroke-width="1.5" opacity=".05"/>
+<path d="M800,600Q850,580,880,600Q900,620,870,625" fill="none" stroke="#e67e22" stroke-width="1.5" opacity=".04"/>
+<!-- Scattered dots (seeds) -->
+<circle cx="650" cy="300" r="2" fill="#8b4513" opacity=".06"/>
+<circle cx="350" cy="500" r="2.5" fill="#d35400" opacity=".05"/>
+<circle cx="1000" cy="100" r="2" fill="#b45309" opacity=".06"/>
+</svg>

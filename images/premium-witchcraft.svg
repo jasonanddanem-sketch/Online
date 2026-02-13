@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Witch Hat -->
+<g opacity=".12" fill="#c084fc"><path d="M180,250l60-180,60,180-10,0Q280,260,100,260l10,0Z"/><ellipse cx="240" cy="260" rx="90" ry="18"/></g>
+<!-- Cauldron with bubbles -->
+<g opacity=".1" fill="#a855f7"><path d="M880,520Q860,640,950,640Q1040,640,1020,520Z"/><ellipse cx="950" cy="515" rx="75" ry="14"/><path d="M878,550Q855,535,860,560" fill="none" stroke="#a855f7" stroke-width="5"/><path d="M1022,550Q1045,535,1040,560" fill="none" stroke="#a855f7" stroke-width="5"/><circle cx="930" cy="500" r="10" opacity=".6"/><circle cx="955" cy="488" r="7" opacity=".5"/><circle cx="970" cy="478" r="8" opacity=".4"/><circle cx="940" cy="470" r="5" opacity=".3"/></g>
+<!-- Large Crescent Moon -->
+<g opacity=".11" fill="#c084fc"><path d="M1020,80A80,80,0,1,1,1020,240A60,60,0,1,0,1020,80"/></g>
+<!-- Pentagram in Circle -->
+<g opacity=".08" fill="none" stroke="#8b5cf6" stroke-width="2.5"><circle cx="600" cy="380" r="80"/><polygon points="600,300 618,365 690,365 632,400 650,468 600,430 550,468 568,400 510,365 582,365"/></g>
+<!-- Potion Bottle 1 -->
+<g opacity=".1" fill="#c084fc"><rect x="100" y="450" width="35" height="18" rx="4"/><path d="M93,468L80,535Q78,560,118,560Q158,560,155,535L142,468Z"/><path d="M95,510Q118,495,140,510" fill="none" stroke="#a855f7" stroke-width="2"/></g>
+<!-- Potion Bottle 2 (rounder) -->
+<g opacity=".09" fill="#a855f7"><rect x="430" y="620" width="25" height="14" rx="3"/><circle cx="442" cy="670" r="30"/><path d="M430,634L414,650" fill="none" stroke="#a855f7" stroke-width="4"/><path d="M455,634L462,650" fill="none" stroke="#a855f7" stroke-width="4"/></g>
+<!-- Bats -->
+<g fill="#8b5cf6" opacity=".09"><path d="M700,120Q670,90,655,120Q665,105,680,118Q688,108,695,118Q702,108,710,118Q720,105,730,120Q745,90,700,120Z" transform="scale(1.8) translate(-250,-20)"/></g>
+<g fill="#c084fc" opacity=".07"><path d="M700,120Q670,90,655,120Q665,105,680,118Q688,108,695,118Q702,108,710,118Q720,105,730,120Q745,90,700,120Z" transform="translate(200,500) scale(.9)"/></g>
+<!-- Cat Silhouette -->
+<g opacity=".1" fill="#c084fc"><path d="M520,720Q518,670,530,655L538,625L548,655Q558,642,560,670Q575,668,575,695Q575,735,550,735Q520,735,520,720Z"/><circle cx="535" cy="690" r="2.5"/><circle cx="555" cy="690" r="2.5"/><path d="M543,697Q545,700,547,697" fill="none" stroke="#241845" stroke-width="1"/></g>
+<!-- Broomstick -->
+<g opacity=".09"><line x1="1120" y1="280" x2="1060" y2="520" stroke="#c084fc" stroke-width="4"/><path d="M1060,520Q1035,555,1025,580Q1055,565,1065,545Q1075,565,1085,555Q1070,530,1060,520Z" fill="#a855f7"/></g>
+<!-- Crystal Ball -->
+<g opacity=".1"><circle cx="340" cy="350" r="45" fill="none" stroke="#c084fc" stroke-width="2.5"/><ellipse cx="340" cy="350" rx="45" ry="45" fill="#8b5cf6" opacity=".15"/><path d="M310,395L370,395L365,415Q340,428,315,415Z" fill="#a855f7"/><path d="M325,338Q340,325,355,338" fill="none" stroke="#c084fc" stroke-width="2" opacity=".5"/></g>
+<!-- Scattered Stars -->
+<path d="M400,80l4,12h13l-10,8,4,12-11-8-11,8,4-12-10-8h13Z" fill="#c084fc" opacity=".1"/>
+<path d="M820,450l3,9h10l-8,6,3,9-8-6-8,6,3-9-8-6h10Z" fill="#a855f7" opacity=".08"/>
+<path d="M280,550l2,6h7l-6,4,2,7-5-4-5,4,2-7-6-4h7Z" fill="#c084fc" opacity=".07"/>
+<path d="M1100,600l3,8h9l-7,5,3,9-8-5-8,5,3-9-7-5h9Z" fill="#8b5cf6" opacity=".06"/>
+<path d="M680,680l2,5h6l-5,4,2,5-5-3-5,3,2-5-5-4h6Z" fill="#c084fc" opacity=".08"/>
+<!-- Swirl Decorations -->
+<path d="M760,300Q795,275,805,310Q815,345,780,335Q750,325,770,300" fill="none" stroke="#c084fc" stroke-width="2" opacity=".07"/>
+<path d="M150,650Q185,625,195,660Q205,695,170,685" fill="none" stroke="#a855f7" stroke-width="1.5" opacity=".06"/>
+<!-- Spider Web Corner -->
+<g opacity=".06" stroke="#c084fc" stroke-width="1" fill="none"><path d="M0,0L120,80"/><path d="M0,0L60,100"/><path d="M0,0L0,110"/><path d="M30,20Q50,30,45,50"/><path d="M55,35Q80,50,70,80"/></g>
+<!-- Wand with sparkle -->
+<g opacity=".09"><line x1="750" y1="550" x2="810" y2="480" stroke="#c084fc" stroke-width="3" stroke-linecap="round"/><circle cx="810" cy="478" r="5" fill="#c084fc"/><path d="M810,465l2,6h6l-5,4,2,6-5-4-5,4,2-6-5-4h6Z" fill="#c084fc" opacity=".8"/></g>
+</svg>

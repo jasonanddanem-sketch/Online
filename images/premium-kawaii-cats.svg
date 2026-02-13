@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Big Cat Face -->
+<g opacity=".1" fill="#e91e8c"><ellipse cx="250" cy="300" rx="80" ry="70"/><path d="M175,240L195,170L225,250Z"/><path d="M275,250L305,170L325,240Z"/><ellipse cx="220" cy="290" rx="12" ry="14" fill="#fff0f6"/><ellipse cx="280" cy="290" rx="12" ry="14" fill="#fff0f6"/><circle cx="220" cy="295" r="6" fill="#4a2040"/><circle cx="280" cy="295" r="6" fill="#4a2040"/><ellipse cx="250" cy="320" rx="6" ry="4" fill="#f472b6"/><path d="M220,330Q250,350,280,330" fill="none" stroke="#f472b6" stroke-width="2"/><line x1="170" y1="300" x2="205" y2="310" stroke="#f472b6" stroke-width="1.5"/><line x1="170" y1="315" x2="205" y2="315" stroke="#f472b6" stroke-width="1.5"/><line x1="295" y1="310" x2="330" y2="300" stroke="#f472b6" stroke-width="1.5"/><line x1="295" y1="315" x2="330" y2="315" stroke="#f472b6" stroke-width="1.5"/></g>
+<!-- Sleeping Cat -->
+<g opacity=".09" fill="#f472b6"><ellipse cx="900" cy="650" rx="90" ry="40"/><circle cx="830" cy="630" r="30"/><path d="M805,610L815,580L830,615Z"/><path d="M830,615L845,585L855,610Z"/><path d="M990,640Q1020,620,1010,650Q1000,670,990,650" fill="#e91e8c"/><path d="M820,640Q835,650,850,640" fill="none" stroke="#e91e8c" stroke-width="2"/></g>
+<!-- Paw Prints scattered -->
+<g fill="#e91e8c" opacity=".08"><ellipse cx="500" cy="200" rx="14" ry="11"/><circle cx="488" cy="182" r="6"/><circle cx="500" cy="177" r="6"/><circle cx="512" cy="182" r="6"/></g>
+<g fill="#f472b6" opacity=".07"><ellipse cx="750" cy="450" rx="12" ry="9"/><circle cx="740" cy="435" r="5"/><circle cx="750" cy="431" r="5"/><circle cx="760" cy="435" r="5"/></g>
+<g fill="#e91e8c" opacity=".06"><ellipse cx="1050" cy="350" rx="11" ry="8"/><circle cx="1041" cy="337" r="4.5"/><circle cx="1050" cy="333" r="4.5"/><circle cx="1059" cy="337" r="4.5"/></g>
+<!-- Yarn Ball -->
+<g opacity=".09"><circle cx="650" cy="600" r="40" fill="none" stroke="#e91e8c" stroke-width="2"/><path d="M625,580Q650,570,670,590Q680,610,660,625Q640,635,625,615Q620,600,635,590" fill="none" stroke="#f472b6" stroke-width="1.5"/><path d="M690,600Q720,620,710,650" fill="none" stroke="#e91e8c" stroke-width="2" stroke-dasharray="5,5"/></g>
+<!-- Fish -->
+<g opacity=".08" fill="#e91e8c"><path d="M400,500Q430,480,440,500Q430,520,400,500Z"/><path d="M440,500Q455,485,455,500Q455,515,440,500Z"/><circle cx="415" cy="498" r="2" fill="#fff0f6"/></g>
+<g opacity=".07" fill="#f472b6"><path d="M1050,550Q1080,530,1090,550Q1080,570,1050,550Z"/><path d="M1090,550Q1105,535,1105,550Q1105,565,1090,550Z"/><circle cx="1065" cy="548" r="1.8" fill="#fff0f6"/></g>
+<!-- Hearts -->
+<path d="M150,550Q150,530,170,530Q190,530,190,555Q190,575,170,595Q150,575,150,555Z" fill="#e91e8c" opacity=".07"/>
+<path d="M550,100Q550,85,565,85Q580,85,580,105Q580,120,565,135Q550,120,550,105Z" fill="#f472b6" opacity=".06"/>
+<path d="M1100,150Q1100,138,1112,138Q1124,138,1124,155Q1124,168,1112,180Q1100,168,1100,155Z" fill="#e91e8c" opacity=".05"/>
+<!-- Milk Bowl -->
+<g opacity=".08" fill="#f472b6"><ellipse cx="350" cy="700" rx="35" ry="10"/><path d="M315,700Q320,720,350,720Q380,720,385,700Z"/></g>
+<!-- Cat Tail Curl -->
+<path d="M100,500Q130,480,140,510Q150,540,120,550Q90,555,100,530" fill="none" stroke="#e91e8c" stroke-width="4" stroke-linecap="round" opacity=".08"/>
+</svg>

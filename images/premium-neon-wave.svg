@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+<!-- Circuit Board Traces -->
+<g stroke="#00f5a0" stroke-width="1.5" fill="none" opacity=".1"><path d="M0,200L200,200L250,150L400,150L450,200L600,200"/><path d="M250,150L250,80"/><path d="M450,200L450,300L550,300"/></g>
+<g stroke="#7b2ff7" stroke-width="1.5" fill="none" opacity=".08"><path d="M600,500L800,500L850,450L1000,450L1050,500L1200,500"/><path d="M850,450L850,380"/><path d="M1050,500L1050,600L1150,600"/></g>
+<!-- Chip/Processor -->
+<g opacity=".09"><rect x="300" y="400" width="80" height="80" rx="5" fill="none" stroke="#00f5a0" stroke-width="2"/><rect x="315" y="415" width="50" height="50" rx="3" fill="#00f5a0" opacity=".08"/><line x1="320" y1="400" x2="320" y2="385" stroke="#00f5a0" stroke-width="1.5"/><line x1="340" y1="400" x2="340" y2="385" stroke="#00f5a0" stroke-width="1.5"/><line x1="360" y1="400" x2="360" y2="385" stroke="#00f5a0" stroke-width="1.5"/><line x1="320" y1="480" x2="320" y2="495" stroke="#00f5a0" stroke-width="1.5"/><line x1="340" y1="480" x2="340" y2="495" stroke="#00f5a0" stroke-width="1.5"/><line x1="360" y1="480" x2="360" y2="495" stroke="#00f5a0" stroke-width="1.5"/><line x1="300" y1="420" x2="285" y2="420" stroke="#00f5a0" stroke-width="1.5"/><line x1="300" y1="440" x2="285" y2="440" stroke="#00f5a0" stroke-width="1.5"/><line x1="300" y1="460" x2="285" y2="460" stroke="#00f5a0" stroke-width="1.5"/><line x1="380" y1="420" x2="395" y2="420" stroke="#00f5a0" stroke-width="1.5"/><line x1="380" y1="440" x2="395" y2="440" stroke="#00f5a0" stroke-width="1.5"/><line x1="380" y1="460" x2="395" y2="460" stroke="#00f5a0" stroke-width="1.5"/></g>
+<!-- Glowing Nodes -->
+<circle cx="200" cy="200" r="6" fill="#00f5a0" opacity=".15"/>
+<circle cx="250" cy="80" r="4" fill="#00f5a0" opacity=".12"/>
+<circle cx="600" cy="200" r="5" fill="#00d9f5" opacity=".12"/>
+<circle cx="850" cy="380" r="4" fill="#7b2ff7" opacity=".12"/>
+<circle cx="1050" cy="600" r="5" fill="#7b2ff7" opacity=".1"/>
+<circle cx="550" cy="300" r="4" fill="#00f5a0" opacity=".1"/>
+<!-- Data Streams -->
+<g opacity=".06" fill="#00f5a0"><rect x="700" y="100" width="3" height="12" rx="1"/><rect x="700" y="120" width="3" height="8" rx="1"/><rect x="700" y="136" width="3" height="15" rx="1"/><rect x="700" y="160" width="3" height="6" rx="1"/><rect x="700" y="174" width="3" height="10" rx="1"/></g>
+<g opacity=".05" fill="#7b2ff7"><rect x="100" y="500" width="3" height="10" rx="1"/><rect x="100" y="518" width="3" height="15" rx="1"/><rect x="100" y="540" width="3" height="8" rx="1"/><rect x="100" y="556" width="3" height="12" rx="1"/></g>
+<!-- Monitor Screen -->
+<g opacity=".07"><rect x="900" y="150" width="120" height="80" rx="5" fill="none" stroke="#00d9f5" stroke-width="2"/><rect x="945" y="230" width="30" height="15" fill="#00d9f5" opacity=".5"/><line x1="915" y1="170" x2="960" y2="170" stroke="#00f5a0" stroke-width="1"/><line x1="915" y1="180" x2="1000" y2="180" stroke="#00f5a0" stroke-width="1"/><line x1="915" y1="190" x2="980" y2="190" stroke="#7b2ff7" stroke-width="1"/><line x1="915" y1="200" x2="970" y2="200" stroke="#00f5a0" stroke-width="1"/></g>
+<!-- Hexagonal Grid -->
+<g opacity=".05" fill="none" stroke="#00f5a0" stroke-width="1"><polygon points="600,600 630,617 630,653 600,670 570,653 570,617"/><polygon points="660,617 690,634 690,670 660,687 630,670 630,634"/><polygon points="540,617 570,634 570,670 540,687 510,670 510,634"/></g>
+<!-- Lightning Bolt -->
+<path d="M500,80L480,140L510,140L490,200" fill="none" stroke="#00f5a0" stroke-width="2.5" stroke-linecap="round" opacity=".08"/>
+<!-- Wave Form -->
+<path d="M0,700Q100,680,200,700Q300,720,400,700Q500,680,600,700Q700,720,800,700Q900,680,1000,700Q1100,720,1200,700" fill="none" stroke="#00f5a0" stroke-width="1.5" opacity=".06"/>
+<path d="M0,720Q100,700,200,720Q300,740,400,720Q500,700,600,720Q700,740,800,720Q900,700,1000,720Q1100,740,1200,720" fill="none" stroke="#7b2ff7" stroke-width="1" opacity=".04"/>
+</svg>

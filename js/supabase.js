@@ -244,10 +244,7 @@ async function sbCreateComment(postId, authorId, content, parentCommentId = null
       content,
       parent_comment_id: parentCommentId
     })
-    .select(`
-      *,
-      author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)
-    `)
+    .select('*')
     .single();
   if (error) throw error;
   return data;
@@ -255,39 +252,22 @@ async function sbCreateComment(postId, authorId, content, parentCommentId = null
 
 // Lightweight comment fetch for inline preview (no per-comment like counts)
 async function sbGetCommentsLite(postId, limit = 20) {
-  // Try with explicit FK hint first
-  let res = await sb.from('comments')
-    .select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)')
+  const { data, error } = await sb.from('comments')
+    .select('*, author:profiles(id, username, display_name, avatar_url)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true })
     .limit(limit);
-  // If FK hint fails, try without it
-  if (res.error) {
-    console.warn('sbGetCommentsLite FK hint failed, retrying without:', res.error.message);
-    res = await sb.from('comments')
-      .select('*, author:profiles(id, username, display_name, avatar_url)')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true })
-      .limit(limit);
-  }
-  if (res.error) throw res.error;
-  return res.data || [];
+  if (error) throw error;
+  return data || [];
 }
 
 async function sbGetComments(postId, sortBy = 'top') {
-  // Try with FK hint, fallback without
-  let res = await sb.from('comments')
-    .select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)')
+  const { data: rawData, error } = await sb.from('comments')
+    .select('*, author:profiles(id, username, display_name, avatar_url)')
     .eq('post_id', postId)
     .order('created_at', { ascending: sortBy === 'oldest' || sortBy === 'top' });
-  if (res.error) {
-    res = await sb.from('comments')
-      .select('*, author:profiles(id, username, display_name, avatar_url)')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: sortBy === 'oldest' || sortBy === 'top' });
-  }
-  if (res.error) throw res.error;
-  var data = res.data || [];
+  if (error) throw error;
+  var data = rawData || [];
 
   // Fetch like counts in parallel (not N+1 sequential)
   await Promise.all(data.map(async function(c) {

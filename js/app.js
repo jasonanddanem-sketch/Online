@@ -1044,6 +1044,9 @@ async function toggleFollow(userId,btn){
                 btn.innerHTML=btn.classList.contains('follow-btn-small')?'<i class="fas fa-check"></i>':'<i class="fas fa-check"></i> Following';
             }
             sbGetProfile(userId).then(function(p){if(p)addNotification('follow','You are now following '+(p.display_name||p.username));}).catch(function(){});
+            // Notify the person being followed
+            var myName=currentUser.display_name||currentUser.username||'Someone';
+            sbCreateNotification(userId,'follow',myName+' started following you','',{follower_id:currentUser.id}).catch(function(){});
         }
         updateFollowCounts();
         renderSuggestions();
@@ -1164,6 +1167,13 @@ function handleShare(btn){
                 await sbCreatePost(currentUser.id,shareContent,null,null,origPostId,shareLoc);
                 if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
                 var countEl=btn.querySelector('span');if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
+                // Notify original post author
+                var origAuthorEl=post.querySelector('.post-avatar[data-person-id]');
+                var origAuthorId=origAuthorEl?origAuthorEl.getAttribute('data-person-id'):null;
+                if(origAuthorId&&origAuthorId!==currentUser.id){
+                    var myName=currentUser.display_name||currentUser.username||'Someone';
+                    sbCreateNotification(origAuthorId,'like',myName+' shared your post','',{post_id:origPostId}).catch(function(){});
+                }
                 closeModal();
                 showToast('Post shared!');
                 // Refresh feed to show the new shared post
@@ -1326,6 +1336,12 @@ async function showComments(postId,countEl,sortMode){
             try {
                 var parentCid = replyTarget && /^[0-9a-f]{8}-/.test(replyTarget) ? replyTarget : null;
                 await sbCreateComment(postId, currentUser.id, text, parentCid);
+                // Notify post author
+                var fp=feedPosts.find(function(x){return x.idx===postId;});
+                if(fp&&fp.person&&fp.person.id&&fp.person.id!==currentUser.id){
+                    var myName=currentUser.display_name||currentUser.username||'Someone';
+                    sbCreateNotification(fp.person.id,'comment',myName+' commented on your post',text,{post_id:postId}).catch(function(){});
+                }
             } catch(e) { console.error('Comment error:', e); showToast('Comment failed: '+(e.message||'Unknown error')); return; }
         } else {
             if(!state.comments[postId])state.comments[postId]=[];
@@ -2981,6 +2997,12 @@ function bindPostEvents(){
                         btn.classList.add('liked');
                         btn.querySelector('i').className='fas fa-thumbs-up';
                         countEl.textContent=count+1;
+                        // Notify post author
+                        var fp=feedPosts.find(function(x){return x.idx===postId;});
+                        if(fp&&fp.person&&fp.person.id&&fp.person.id!==currentUser.id){
+                            var myName=currentUser.display_name||currentUser.username||'Someone';
+                            sbCreateNotification(fp.person.id,'like',myName+' liked your post','',{post_id:postId}).catch(function(){});
+                        }
                     } else {
                         delete state.likedPosts[postId];
                         btn.classList.remove('liked');

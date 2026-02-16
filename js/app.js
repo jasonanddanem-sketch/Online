@@ -1088,7 +1088,7 @@ async function showComments(postId,countEl,sortMode){
             (sbComments||[]).forEach(function(c){
                 var authorName=(c.author?c.author.display_name||c.author.username:'User');
                 var authorAvatar=(c.author?c.author.avatar_url:null);
-                var likeCount=(c.likes&&c.likes[0])?c.likes[0].count:0;
+                var likeCount=c.like_count||0;
                 allComments.push({cid:c.id,name:authorName,img:authorAvatar,text:c.content,likes:likeCount,parentId:c.parent_comment_id,authorId:c.author_id});
             });
         }catch(e){console.error('Load comments error:',e);}
@@ -1237,7 +1237,7 @@ async function renderInlineComments(postId){
                 if(!c.parent_comment_id){
                     var authorName=(c.author?c.author.display_name||c.author.username:'User');
                     var authorAvatar=(c.author?c.author.avatar_url:null);
-                    var likeCount=(c.likes&&c.likes[0])?c.likes[0].count:0;
+                    var likeCount=c.like_count||0;
                     all.push({name:authorName,img:authorAvatar,text:c.content,likes:likeCount,cid:c.id});
                 }
             });
@@ -2557,19 +2557,20 @@ async function generatePosts(){
             posts = await sbGetFeed(50);
         }
         posts.forEach(function(p,i){
+            if(!p||!p.author) return; // skip posts with missing author data
             feedPosts.push({
-                idx: p.id,          // UUID
+                idx: p.id,
                 person: {
                     id: p.author.id,
-                    name: p.author.display_name || p.author.username,
+                    name: p.author.display_name || p.author.username || 'User',
                     img: null,
                     avatar_url: p.author.avatar_url
                 },
-                text: p.content,
+                text: p.content || '',
                 tags: [],
                 badge: badgeTypes[i % badgeTypes.length],
                 loc: locations[i % locations.length],
-                likes: (p.likes && p.likes[0]) ? p.likes[0].count : 0,
+                likes: p.like_count || 0,
                 comments: [],
                 commentCount: (p.comments && p.comments[0]) ? p.comments[0].count : 0,
                 shares: 0,
@@ -2578,7 +2579,8 @@ async function generatePosts(){
             });
         });
     } catch(e) {
-        console.error('generatePosts:', e);
+        console.error('generatePosts error:', e);
+        showToast('Feed error: ' + (e.message || 'Could not load posts'));
     }
     renderFeed(activeFeedTab);
 }

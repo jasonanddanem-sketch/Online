@@ -152,13 +152,20 @@ async function sbGetFeed(limit = 50, offset = 0) {
     .select(`
       *,
       author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url),
-      likes:likes(count),
       comments:comments(count)
     `)
     .is('group_id', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw error;
+  // Fetch like counts separately (no FK between posts and likes)
+  for (const post of (data || [])) {
+    const { count } = await sb.from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'post')
+      .eq('target_id', post.id);
+    post.like_count = count || 0;
+  }
   return data;
 }
 
@@ -176,7 +183,6 @@ async function sbGetFollowingFeed(userId, limit = 50, offset = 0) {
     .select(`
       *,
       author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url),
-      likes:likes(count),
       comments:comments(count)
     `)
     .is('group_id', null)
@@ -184,6 +190,14 @@ async function sbGetFollowingFeed(userId, limit = 50, offset = 0) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw error;
+  // Fetch like counts separately (no FK between posts and likes)
+  for (const post of (data || [])) {
+    const { count } = await sb.from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'post')
+      .eq('target_id', post.id);
+    post.like_count = count || 0;
+  }
   return data;
 }
 
@@ -192,7 +206,6 @@ async function sbGetUserPosts(userId, limit = 20) {
     .select(`
       *,
       author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url),
-      likes:likes(count),
       comments:comments(count)
     `)
     .eq('author_id', userId)
@@ -232,8 +245,7 @@ async function sbGetComments(postId, sortBy = 'top') {
   let query = sb.from('comments')
     .select(`
       *,
-      author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url),
-      likes:likes(count)
+      author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)
     `)
     .eq('post_id', postId);
 
@@ -247,8 +259,16 @@ async function sbGetComments(postId, sortBy = 'top') {
   const { data, error } = await query;
   if (error) throw error;
 
+  // Fetch like counts for each comment separately (no FK between comments and likes)
+  for (const c of (data || [])) {
+    const { count } = await sb.from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'comment')
+      .eq('target_id', c.id);
+    c.like_count = count || 0;
+  }
   if (sortBy === 'top') {
-    data.sort((a, b) => (b.likes?.[0]?.count || 0) - (a.likes?.[0]?.count || 0));
+    data.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
   }
   return data;
 }

@@ -202,8 +202,10 @@ async function initApp() {
             showLogin(); return;
         }
     }
+    state.coins = currentUser.coin_balance || 0;
     populateUserUI();
     showApp();
+    if(currentUser.cover_photo_url) { state.coverPhoto = currentUser.cover_photo_url; applyCoverPhoto(); }
     await loadFollowCounts();
     await loadGroups();
     generatePosts();
@@ -695,7 +697,10 @@ async function renderSearchResults(q,tab){
 
 // ======================== COIN SYSTEM ========================
 function updateCoins(){
-    if(currentUser) currentUser.coin_balance=state.coins;
+    if(currentUser){
+        currentUser.coin_balance=state.coins;
+        sbUpdateProfile(currentUser.id,{coin_balance:state.coins}).catch(function(e){console.error('coinSync:',e);});
+    }
     $('#navCoinCount').textContent=state.coins;
     var el=$('#navCoins');
     el.classList.remove('coin-pop');
@@ -2102,16 +2107,41 @@ function showCoverCropModal(src){
         canvas.width=1280;canvas.height=350;
         var ctx=canvas.getContext('2d');
         ctx.drawImage(img,sx,sy,sw,sh,0,0,1280,350);
-        var url=canvas.toDataURL('image/jpeg',0.9);
-        state.coverPhoto=url;
-        state.photos.cover.unshift({src:url,date:Date.now()});
-        renderPhotosCard();
-        applyCoverPhoto();
+        var dataUrl=canvas.toDataURL('image/jpeg',0.9);
+        // Upload cover photo to Supabase
+        if(currentUser){
+            canvas.toBlob(function(blob){
+                var coverFile=new File([blob],'cover.jpg',{type:'image/jpeg'});
+                sbUploadCover(currentUser.id,coverFile).then(function(publicUrl){
+                    return sbUpdateProfile(currentUser.id,{cover_photo_url:publicUrl}).then(function(){
+                        state.coverPhoto=publicUrl;
+                        state.photos.cover.unshift({src:publicUrl,date:Date.now()});
+                        renderPhotosCard();
+                        applyCoverPhoto();
+                    });
+                }).catch(function(e){
+                    console.error('Cover upload error:',e);
+                    state.coverPhoto=dataUrl;
+                    state.photos.cover.unshift({src:dataUrl,date:Date.now()});
+                    renderPhotosCard();
+                    applyCoverPhoto();
+                });
+            },'image/jpeg',0.9);
+        } else {
+            state.coverPhoto=dataUrl;
+            state.photos.cover.unshift({src:dataUrl,date:Date.now()});
+            renderPhotosCard();
+            applyCoverPhoto();
+        }
         closeModal();
     });
 }
 function applyCoverPhoto(){
-    if(state.coverPhoto){$('#timelineCover').style.backgroundImage='url('+state.coverPhoto+')';}
+    if(state.coverPhoto){
+        $('#timelineCover').style.backgroundImage='url('+state.coverPhoto+')';
+        var btn=$('#coverEditBtn');
+        if(btn) btn.innerHTML='<i class="fas fa-camera"></i> Change Cover Photo';
+    }
 }
 
 // View Profile links
@@ -2220,36 +2250,31 @@ $('#avatarEditBtn').addEventListener('click',function(e){
         });
     });
 });
-$('#avatarFileInput').addEventListener('change', async function(){
+$('#avatarFileInput').addEventListener('change', function(){
     var file=this.files[0];
     if(!file) return;
-
-    // Upload to Supabase storage
-    if(currentUser) {
-        try {
-            var publicUrl = await sbUploadAvatar(currentUser.id, file);
-            await sbUpdateProfile(currentUser.id, { avatar_url: publicUrl });
-            syncAllAvatars(publicUrl);
-            state.photos.profile.unshift({src:publicUrl,date:Date.now()});
-            renderPhotosCard();
-            return; // Skip the old local preview flow
-        } catch(e) { console.error('Avatar upload error:', e); }
-    }
-
-    // Fallback: local preview only
     var isGif=file.type==='image/gif';
-    var reader=new FileReader();
-    reader.onload=function(e){
-        if(isGif){
-            var url=e.target.result;
-            syncAllAvatars(url);
-            state.photos.profile.unshift({src:url,date:Date.now()});
-            renderPhotosCard();
+    if(isGif){
+        // GIFs: upload directly without cropping
+        if(currentUser){
+            sbUploadAvatar(currentUser.id, file).then(function(publicUrl){
+                return sbUpdateProfile(currentUser.id, { avatar_url: publicUrl }).then(function(){
+                    syncAllAvatars(publicUrl);
+                    state.photos.profile.unshift({src:publicUrl,date:Date.now()});
+                    renderPhotosCard();
+                });
+            }).catch(function(e){console.error('Avatar upload error:', e);});
         } else {
-            showCropModal(e.target.result);
+            var reader=new FileReader();
+            reader.onload=function(e){syncAllAvatars(e.target.result);state.photos.profile.unshift({src:e.target.result,date:Date.now()});renderPhotosCard();};
+            reader.readAsDataURL(file);
         }
-    };
-    reader.readAsDataURL(file);
+    } else {
+        // Non-GIFs: show crop modal first
+        var reader=new FileReader();
+        reader.onload=function(e){ showCropModal(e.target.result); };
+        reader.readAsDataURL(file);
+    }
 });
 
 function showCropModal(src){
@@ -2292,10 +2317,30 @@ function showCropModal(src){
         canvas.width=400;canvas.height=400;
         var ctx=canvas.getContext('2d');
         ctx.drawImage(img,sx,sy,sw,sh,0,0,400,400);
-        var url=canvas.toDataURL('image/png');
-        syncAllAvatars(url);
-        state.photos.profile.unshift({src:url,date:Date.now()});
-        renderPhotosCard();
+        var dataUrl=canvas.toDataURL('image/png');
+        // Upload cropped image to Supabase
+        if(currentUser){
+            canvas.toBlob(function(blob){
+                var croppedFile=new File([blob],'avatar.png',{type:'image/png'});
+                sbUploadAvatar(currentUser.id,croppedFile).then(function(publicUrl){
+                    return sbUpdateProfile(currentUser.id,{avatar_url:publicUrl}).then(function(){
+                        syncAllAvatars(publicUrl);
+                        state.photos.profile.unshift({src:publicUrl,date:Date.now()});
+                        renderPhotosCard();
+                    });
+                }).catch(function(e){
+                    console.error('Avatar upload error:',e);
+                    // Fallback: use local data URL
+                    syncAllAvatars(dataUrl);
+                    state.photos.profile.unshift({src:dataUrl,date:Date.now()});
+                    renderPhotosCard();
+                });
+            },'image/png');
+        } else {
+            syncAllAvatars(dataUrl);
+            state.photos.profile.unshift({src:dataUrl,date:Date.now()});
+            renderPhotosCard();
+        }
         closeModal();
     });
 }

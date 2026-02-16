@@ -15,12 +15,14 @@ var signupForm = document.getElementById('signupForm');
 var signupError = document.getElementById('signupError');
 
 function showApp() {
+    loginPage.classList.remove('visible');
     loginPage.classList.add('hidden');
     appShell.classList.add('active');
 }
 function showLogin() {
-    loginPage.classList.remove('hidden');
     appShell.classList.remove('active');
+    loginPage.classList.remove('hidden');
+    loginPage.classList.add('visible');
 }
 
 // Toggle password visibility
@@ -168,6 +170,8 @@ function populateUserUI() {
     if (profName) profName.textContent = name;
     var profTitle = document.querySelector('.profile-title');
     if (profTitle) profTitle.textContent = currentUser.bio || '';
+    var profAbout = document.querySelector('.profile-about');
+    if (profAbout) profAbout.textContent = currentUser.bio || '';
     // Post create bar avatar
     var postAvatar = document.querySelector('.post-create-avatar');
     if (postAvatar) postAvatar.src = avatar;
@@ -2170,22 +2174,22 @@ $('#dropdownViewProfile').addEventListener('click',function(e){e.preventDefault(
 // Edit Profile
 $('#editProfileBtn').addEventListener('click',function(e){
     e.preventDefault();
-    var name=$('.profile-name').textContent;
-    var title=$('.profile-title').textContent;
-    var about=$('.profile-about').textContent;
+    // Read current values from Supabase profile (authoritative) or DOM fallback
+    var name=currentUser?currentUser.display_name||currentUser.username:'';
+    var bio=currentUser?currentUser.bio||'':'';
+    var titleEl=$('.profile-title');
+    var title=titleEl?titleEl.textContent:'';
     var html='<div class="modal-header"><h3>Edit Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body"><form class="edit-profile-form" id="editProfileForm">';
     html+='<label>Name</label><input type="text" id="editName" value="'+name+'">';
-    html+='<label>Status</label><input type="text" id="editTitle" value="'+title+'">';
-    html+='<label>About Me</label><textarea id="editAbout">'+about+'</textarea>';
+    html+='<label>Bio</label><textarea id="editAbout" placeholder="Tell us about yourself...">'+bio+'</textarea>';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:4px;"><div><label style="margin-bottom:0;"><i class="fas fa-lock" style="margin-right:6px;color:var(--gray);"></i>Private Followers</label><p style="font-size:12px;color:var(--gray);margin-top:2px;">Hide your followers and following lists</p></div><label class="toggle-switch"><input type="checkbox" id="editPrivate" '+(state.privateFollowers?'checked':'')+'><span class="toggle-slider"></span></label></div>';
     html+='<button type="submit" class="btn btn-primary btn-block" style="margin-top:12px;">Save</button></form></div>';
     showModal(html);
     $('#editProfileForm').addEventListener('submit', async function(ev){
         ev.preventDefault();
         var n=$('#editName').value.trim()||name;
-        var t=$('#editTitle').value.trim()||title;
-        var a=$('#editAbout').value.trim()||about;
+        var a=$('#editAbout').value.trim();
         state.privateFollowers=$('#editPrivate').checked;
 
         // Save to Supabase
@@ -2197,15 +2201,16 @@ $('#editProfileBtn').addEventListener('click',function(e){
                 });
                 currentUser.display_name = n;
                 currentUser.bio = a;
-            } catch(e) { console.error('Profile update:', e); }
+            } catch(e) { console.error('Profile update:', e); showToast('Failed to save profile'); return; }
         }
 
         $$('.profile-name').forEach(function(el){el.textContent=n;});
-        $('.profile-title').textContent=t;
-        if($('.profile-about')) $('.profile-about').textContent=a;
-        $('.nav-username').textContent=n;
+        var pt=$('.profile-title'); if(pt) pt.textContent=a;
+        var pa=$('.profile-about'); if(pa) pa.textContent=a;
+        var nu=$('.nav-username'); if(nu) nu.textContent=n;
         updateStatClickable();
         closeModal();
+        showToast('Profile updated!');
     });
 });
 

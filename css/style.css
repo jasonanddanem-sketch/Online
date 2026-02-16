@@ -84,7 +84,8 @@ img{display:block;}
 ::-webkit-scrollbar-thumb{background:var(--border);}
 
 /* ========== LOGIN PAGE ========== */
-.login-page{position:fixed;inset:0;background:#0f172a;z-index:9999;overflow:hidden;}
+.login-page{position:fixed;inset:0;background:#0f172a;z-index:9999;overflow:hidden;display:none;}
+.login-page.visible{display:block;}
 .login-page.hidden{display:none;}
 .login-bg-shapes{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
 .login-shape{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35;}

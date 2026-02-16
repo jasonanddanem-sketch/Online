@@ -1104,10 +1104,10 @@ async function showComments(postId,countEl,sortMode){
             });
         }catch(e){
             console.error('Load comments error:',e);
-            // Fallback: try direct query without FK hints
+            // Fallback: use lite query
             try{
-                var res=await sb.from('comments').select('*, author:profiles(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:sortMode==='oldest'});
-                if(!res.error)(res.data||[]).forEach(function(c){
+                var fallbackComments=await sbGetCommentsLite(postId,50);
+                fallbackComments.forEach(function(c){
                     var authorName=(c.author?c.author.display_name||c.author.username:'User');
                     var authorAvatar=(c.author?c.author.avatar_url:null);
                     allComments.push({cid:c.id,name:authorName,img:authorAvatar,text:c.content,likes:0,parentId:c.parent_comment_id,authorId:c.author_id});
@@ -1254,28 +1254,14 @@ async function renderInlineComments(postId){
     var isUUID=/^[0-9a-f]{8}-/.test(postId);
     if(isUUID){
         try{
-            // Direct lightweight query — skip per-comment like counts for inline preview
-            var res=await sb.from('comments').select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:false}).limit(20);
-            if(res.error) throw res.error;
-            (res.data||[]).forEach(function(c){
+            var sbComments=await sbGetCommentsLite(postId,20);
+            sbComments.forEach(function(c){
                 var authorName=(c.author?c.author.display_name||c.author.username:'User');
                 var authorAvatar=(c.author?c.author.avatar_url:null);
                 var isReply=!!c.parent_comment_id;
                 all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
             });
-        }catch(e){
-            console.error('Inline comments error for post '+postId+':',e);
-            // Fallback: try without FK hint
-            try{
-                var res2=await sb.from('comments').select('*, author:profiles(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:false}).limit(20);
-                if(!res2.error)(res2.data||[]).forEach(function(c){
-                    var authorName=(c.author?c.author.display_name||c.author.username:'User');
-                    var authorAvatar=(c.author?c.author.avatar_url:null);
-                    var isReply=!!c.parent_comment_id;
-                    all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
-                });
-            }catch(e2){console.error('Inline comments fallback error:',e2);}
-        }
+        }catch(e){console.error('Inline comments error for post '+postId+':',e);}
     } else {
         var user=state.comments[postId]||[];
         var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';

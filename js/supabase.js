@@ -241,6 +241,26 @@ async function sbCreateComment(postId, authorId, content, parentCommentId = null
   return data;
 }
 
+// Lightweight comment fetch for inline preview (no per-comment like counts)
+async function sbGetCommentsLite(postId, limit = 20) {
+  // Try with explicit FK hint first
+  let res = await sb.from('comments')
+    .select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  // If FK hint fails, try without it
+  if (res.error) {
+    res = await sb.from('comments')
+      .select('*, author:profiles(id, username, display_name, avatar_url)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+  }
+  if (res.error) throw res.error;
+  return res.data || [];
+}
+
 async function sbGetComments(postId, sortBy = 'top') {
   let query = sb.from('comments')
     .select(`

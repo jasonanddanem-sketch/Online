@@ -1103,7 +1103,7 @@ async function toggleFollow(userId,btn){
 // ======================== NOTIFICATIONS ========================
 var activeNotifTab='all';
 var notifTabDefs=[
-    {key:'all',label:'<i class="fas fa-bell"></i> All',filter:null},
+    {key:'all',label:'<i class="fas fa-bell"></i> All',filter:function(n){return n.type!=='system'&&n.type!=='skin'&&n.type!=='group'&&n.type!=='coin'&&n.type!=='purchase';}},
     {key:'comment',label:'<i class="fas fa-comment"></i> Comments',filter:function(n){return n.type==='comment';}},
     {key:'reply',label:'<i class="fas fa-reply"></i> Replies',filter:function(n){return n.type==='reply';}},
     {key:'like',label:'<i class="fas fa-heart"></i> Likes',filter:function(n){return n.type==='like';}},
@@ -1120,8 +1120,9 @@ function addNotification(type,text){
         sbCreateNotification(currentUser.id,type,text,'',{originalType:type}).catch(function(e){console.warn('Notif save error:',e);});
     }
 }
+var _systemTypes={system:1,skin:1,group:1,coin:1,purchase:1};
 function updateNotifBadge(){
-    var unread=state.notifications.filter(function(n){return !n.read;}).length;
+    var unread=state.notifications.filter(function(n){return !n.read&&!_systemTypes[n.type];}).length;
     var badge=$('#notifBadge');
     if(unread>0){badge.style.display='flex';badge.textContent=unread;}
     else{badge.style.display='none';}

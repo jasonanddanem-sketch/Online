@@ -208,8 +208,10 @@ async function initApp() {
         }
     }
     state.coins = currentUser.coin_balance || 0;
+    loadState(); // Restore skins, settings, purchases from localStorage
     populateUserUI();
     showApp();
+    reapplyCustomizations(); // Re-apply skins, fonts, nav styles, dark mode
     if(currentUser.cover_photo_url) { state.coverPhoto = currentUser.cover_photo_url; applyCoverPhoto(); }
     // Load user's existing likes from Supabase so UI reflects correct state
     try {
@@ -231,6 +233,16 @@ async function initApp() {
     } catch(e){ console.warn('Could not load post photos:', e); }
     await loadFollowCounts();
     await loadGroups();
+    // Load joined groups from group_members table
+    try {
+        var allGroups = groups || [];
+        for(var gi=0;gi<allGroups.length;gi++){
+            var members = await sbGetGroupMembers(allGroups[gi].id);
+            if(members && members.some(function(m){ return m.user_id === currentUser.id; })){
+                state.joinedGroups[allGroups[gi].id] = true;
+            }
+        }
+    } catch(e){ console.warn('Could not load group memberships:', e); }
     await generatePosts();
     renderSuggestions();
     // Load notifications from Supabase
@@ -335,8 +347,83 @@ var state = {
     groupCommentCoinPosts: {},
     groupReplyCoinPosts: {}
 };
-// Follow state is now loaded from Supabase in initApp()
-// Group joins are loaded from Supabase group_members table
+var settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top'};
+
+// Persist state to localStorage (keyed per user)
+function saveState(){
+    if(!currentUser) return;
+    var key='blipvibe_'+currentUser.id;
+    var save={
+        ownedSkins:state.ownedSkins,activeSkin:state.activeSkin,
+        ownedFonts:state.ownedFonts,activeFont:state.activeFont,
+        ownedLogos:state.ownedLogos,activeLogo:state.activeLogo,
+        ownedIconSets:state.ownedIconSets,activeIconSet:state.activeIconSet,
+        ownedCoinSkins:state.ownedCoinSkins,activeCoinSkin:state.activeCoinSkin,
+        ownedTemplates:state.ownedTemplates,activeTemplate:state.activeTemplate,
+        ownedNavStyles:state.ownedNavStyles,activeNavStyle:state.activeNavStyle,
+        ownedPremiumSkins:state.ownedPremiumSkins,activePremiumSkin:state.activePremiumSkin,
+        joinedGroups:state.joinedGroups,privateFollowers:state.privateFollowers,
+        groupCoins:state.groupCoins,groupOwnedSkins:state.groupOwnedSkins,
+        groupOwnedPremiumSkins:state.groupOwnedPremiumSkins,
+        groupActiveSkin:state.groupActiveSkin,groupActivePremiumSkin:state.groupActivePremiumSkin,
+        settings:settings
+    };
+    try{localStorage.setItem(key,JSON.stringify(save));}catch(e){}
+}
+function loadState(){
+    if(!currentUser) return;
+    var key='blipvibe_'+currentUser.id;
+    try{
+        var raw=localStorage.getItem(key);
+        if(!raw) return;
+        var save=JSON.parse(raw);
+        // Restore owned items and active customizations
+        if(save.ownedSkins) state.ownedSkins=save.ownedSkins;
+        if(save.activeSkin) state.activeSkin=save.activeSkin;
+        if(save.ownedFonts) state.ownedFonts=save.ownedFonts;
+        if(save.activeFont) state.activeFont=save.activeFont;
+        if(save.ownedLogos) state.ownedLogos=save.ownedLogos;
+        if(save.activeLogo) state.activeLogo=save.activeLogo;
+        if(save.ownedIconSets) state.ownedIconSets=save.ownedIconSets;
+        if(save.activeIconSet) state.activeIconSet=save.activeIconSet;
+        if(save.ownedCoinSkins) state.ownedCoinSkins=save.ownedCoinSkins;
+        if(save.activeCoinSkin) state.activeCoinSkin=save.activeCoinSkin;
+        if(save.ownedTemplates) state.ownedTemplates=save.ownedTemplates;
+        if(save.activeTemplate) state.activeTemplate=save.activeTemplate;
+        if(save.ownedNavStyles) state.ownedNavStyles=save.ownedNavStyles;
+        if(save.activeNavStyle) state.activeNavStyle=save.activeNavStyle;
+        if(save.ownedPremiumSkins) state.ownedPremiumSkins=save.ownedPremiumSkins;
+        if(save.activePremiumSkin) state.activePremiumSkin=save.activePremiumSkin;
+        if(save.joinedGroups) state.joinedGroups=save.joinedGroups;
+        if(save.privateFollowers!==undefined) state.privateFollowers=save.privateFollowers;
+        if(save.groupCoins) state.groupCoins=save.groupCoins;
+        if(save.groupOwnedSkins) state.groupOwnedSkins=save.groupOwnedSkins;
+        if(save.groupOwnedPremiumSkins) state.groupOwnedPremiumSkins=save.groupOwnedPremiumSkins;
+        if(save.groupActiveSkin) state.groupActiveSkin=save.groupActiveSkin;
+        if(save.groupActivePremiumSkin) state.groupActivePremiumSkin=save.groupActivePremiumSkin;
+        if(save.settings){
+            settings.darkMode=!!save.settings.darkMode;
+            settings.notifSound=save.settings.notifSound!==false;
+            settings.privateProfile=!!save.settings.privateProfile;
+            settings.autoplay=save.settings.autoplay!==false;
+            settings.commentOrder=save.settings.commentOrder||'top';
+        }
+    }catch(e){console.warn('loadState:',e);}
+}
+function reapplyCustomizations(){
+    if(state.activePremiumSkin) applyPremiumSkin(state.activePremiumSkin,true);
+    else if(state.activeSkin) applySkin(state.activeSkin,true);
+    if(state.activeFont) applyFont(state.activeFont,true);
+    if(state.activeLogo) applyLogo(state.activeLogo);
+    if(state.activeIconSet) applyIconSet(state.activeIconSet);
+    if(state.activeCoinSkin) applyCoinSkin(state.activeCoinSkin);
+    if(state.activeTemplate) applyTemplate(state.activeTemplate,true);
+    if(state.activeNavStyle) applyNavStyle(state.activeNavStyle);
+    if(settings.darkMode){document.body.style.background='#1a1a2e';document.body.style.color='#eee';}
+}
+// Auto-save state on page leave and periodically
+window.addEventListener('beforeunload',function(){saveState();});
+setInterval(function(){saveState();},10000); // save every 10s as safety net
 
 // Load follow counts from Supabase
 async function loadFollowCounts() {
@@ -2391,7 +2478,6 @@ function showCropModal(src){
 }
 
 // Settings & dropdown handlers
-var settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top'};
 function settingsToggle(key){return '<label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;"><span style="font-size:14px;">'+{darkMode:'Dark Mode',notifSound:'Notification Sounds',privateProfile:'Private Profile',autoplay:'Autoplay Videos'}[key]+'</span><span class="stoggle" data-key="'+key+'" style="width:42px;height:24px;border-radius:12px;background:'+(settings[key]?'var(--green)':'#ccc')+';position:relative;display:inline-block;transition:background .2s;"><span style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;'+(settings[key]?'left:20px':'left:2px')+';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></span></label>';}
 document.addEventListener('click',function(e){
     var a=e.target.closest('.user-dropdown a');
@@ -2411,12 +2497,13 @@ document.addEventListener('click',function(e){
             showModal(h);
             document.getElementById('settingsViewHidden').addEventListener('click',function(){showHiddenPostsModal();});
             document.getElementById('settingsViewBlocked').addEventListener('click',function(){showBlockedUsersModal();});
-            document.getElementById('commentOrderSelect').addEventListener('change',function(){settings.commentOrder=this.value;});
+            document.getElementById('commentOrderSelect').addEventListener('change',function(){settings.commentOrder=this.value;saveState();});
             $$('.stoggle').forEach(function(t){t.style.cursor='pointer';t.addEventListener('click',function(){
                 var k=t.dataset.key;settings[k]=!settings[k];
                 t.style.background=settings[k]?'var(--green)':'#ccc';
                 t.firstElementChild.style.left=settings[k]?'20px':'2px';
                 if(k==='darkMode'){document.body.style.background=settings[k]?'#1a1a2e':'';document.body.style.color=settings[k]?'#eee':'';}
+                saveState();
             });});
         }
         if(text==='Logout'){
@@ -3131,7 +3218,7 @@ function renderShop(){
     active.items.forEach(function(item){html+=active.render(item);});
     html+='</div>';
     $('#shopGrid').innerHTML=html;
-    function shopPurchased(btn){var p=btn.parentElement;var priceEl=p.querySelector('.skin-price');if(priceEl)priceEl.remove();btn.className='btn btn-disabled';btn.textContent='Owned';btn.disabled=true;btn.replaceWith(btn.cloneNode(true));renderMySkins();}
+    function shopPurchased(btn){var p=btn.parentElement;var priceEl=p.querySelector('.skin-price');if(priceEl)priceEl.remove();btn.className='btn btn-disabled';btn.textContent='Owned';btn.disabled=true;btn.replaceWith(btn.cloneNode(true));renderMySkins();saveState();}
     $$('.buy-skin-btn').forEach(function(btn){btn.addEventListener('click',function(){var sid=btn.getAttribute('data-sid');var skin=skins.find(function(s){return s.id===sid;});if(state.coins>=skin.price){state.coins-=skin.price;state.ownedSkins[sid]=true;updateCoins();shopPurchased(btn);addNotification('skin','You purchased the "'+skin.name+'" skin!');}});});
     $$('.buy-font-btn').forEach(function(btn){btn.addEventListener('click',function(){var fid=btn.getAttribute('data-fid');var font=fonts.find(function(f){return f.id===fid;});if(state.coins>=font.price){state.coins-=font.price;state.ownedFonts[fid]=true;updateCoins();shopPurchased(btn);addNotification('skin','You purchased the "'+font.name+'" font!');}});});
     $$('.buy-logo-btn').forEach(function(btn){btn.addEventListener('click',function(){var lid=btn.getAttribute('data-lid');var logo=logos.find(function(l){return l.id===lid;});if(state.coins>=logo.price){state.coins-=logo.price;state.ownedLogos[lid]=true;updateCoins();shopPurchased(btn);addNotification('skin','You purchased the "'+logo.name+'" logo!');}});});
@@ -3249,7 +3336,7 @@ function renderGroupShop(groupId){
         var isPremium=btn.getAttribute('data-premium')==='1';
         if(isPremium){state.groupActivePremiumSkin[gid]=sid;state.groupActiveSkin[gid]=null;}
         else{state.groupActiveSkin[gid]=sid;state.groupActivePremiumSkin[gid]=null;}
-        applyGroupSkin(gid);renderGroupShop(gid);renderGroups();
+        applyGroupSkin(gid);renderGroupShop(gid);renderGroups();saveState();
     });});
 
     initDragScroll('#gvShopContent');
@@ -3577,7 +3664,7 @@ function renderMySkins(){
             updatePremiumBg();
         });
     }
-    function mySkinsRerender(){var row=$('#mySkinsGrid .shop-scroll-row');var sl=row?row.scrollLeft:0;renderMySkins();var row2=$('#mySkinsGrid .shop-scroll-row');if(row2)row2.scrollLeft=sl;}
+    function mySkinsRerender(){var row=$('#mySkinsGrid .shop-scroll-row');var sl=row?row.scrollLeft:0;renderMySkins();var row2=$('#mySkinsGrid .shop-scroll-row');if(row2)row2.scrollLeft=sl;saveState();}
     $$('#mySkinsGrid .apply-skin-btn').forEach(function(btn){btn.addEventListener('click',function(){applySkin(btn.dataset.sid==='default'?null:btn.dataset.sid);mySkinsRerender();});});
     $$('#mySkinsGrid .apply-font-btn').forEach(function(btn){btn.addEventListener('click',function(){applyFont(btn.dataset.fid==='default'?null:btn.dataset.fid);mySkinsRerender();});});
     $$('#mySkinsGrid .apply-logo-btn').forEach(function(btn){btn.addEventListener('click',function(){applyLogo(btn.dataset.lid==='default'?null:btn.dataset.lid);mySkinsRerender();});});

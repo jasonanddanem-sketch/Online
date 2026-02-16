@@ -139,9 +139,16 @@ function handleLogout() {
     });
 }
 
+var DEFAULT_AVATAR = 'images/default-avatar.svg';
+
 // Helper: get avatar URL for current user (returns placeholder if none)
 function getMyAvatarUrl() {
-    return (currentUser && currentUser.avatar_url) || 'https://i.pravatar.cc/100?img=12';
+    return (currentUser && currentUser.avatar_url) || DEFAULT_AVATAR;
+}
+
+// Helper: get avatar URL for any person/profile object
+function getAvatarFor(p) {
+    return (p && p.avatar_url) || DEFAULT_AVATAR;
 }
 
 // Helper: populate header UI from currentUser profile
@@ -209,6 +216,22 @@ sbOnAuthChange(function (session) {
         showLogin();
     }
 });
+
+// Load real stats for the login page hero section
+(async function loadLoginStats() {
+    try {
+        var [users, posts, groups] = await Promise.all([
+            sb.from('profiles').select('*', { count: 'exact', head: true }),
+            sb.from('posts').select('*', { count: 'exact', head: true }),
+            sb.from('groups').select('*', { count: 'exact', head: true })
+        ]);
+        var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K+' : String(n); };
+        var el;
+        el = document.getElementById('statUsers'); if (el) el.textContent = fmt(users.count || 0);
+        el = document.getElementById('statPosts'); if (el) el.textContent = fmt(posts.count || 0);
+        el = document.getElementById('statGroups'); if (el) el.textContent = fmt(groups.count || 0);
+    } catch (e) { /* stats are non-critical */ }
+})();
 
 // Check session on load
 (async function () {
@@ -843,7 +866,7 @@ function renderSearchResults(q,tab){
                 var rest=text.substring(200);
                 var hasMore=rest.length>0;
                 html+='<div class="card feed-post search-post-card">';
-                html+='<div class="post-header"><img src="https://i.pravatar.cc/50?img='+person.img+'" alt="'+person.name+'" class="post-avatar" data-person-id="'+person.id+'">';
+                html+='<div class="post-header"><img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar" data-person-id="'+person.id+'">';
                 html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+person.id+'">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
                 html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span></div></div></div>';
                 html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';
@@ -1099,7 +1122,7 @@ function handleShare(btn){
 function buildCommentHtml(cid,name,img,text,likes,isReply){
     var liked=likedComments[cid];var lc=likes+(liked?1:0);
     var disliked=dislikedComments[cid];var dc=disliked?1:0;
-    var avatarSrc=img?('https://i.pravatar.cc/32?img='+img):$('#profileAvatarImg').src;
+    var avatarSrc=DEFAULT_AVATAR;
     var sz=isReply?'28':'32';
     var h='<div class="comment-item'+(isReply?' comment-reply':'')+'" data-cid="'+cid+'">';
     h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;">';
@@ -1279,7 +1302,7 @@ function renderInlineComments(postId){
     shown.forEach(function(c){
         var liked=likedComments[c.cid];var lc=c.likes+(liked?1:0);
         var disliked=dislikedComments[c.cid];var dc=disliked?1:0;
-        var avatarSrc=c.img?'https://i.pravatar.cc/24?img='+c.img:$('#profileAvatarImg').src;
+        var avatarSrc=DEFAULT_AVATAR;
         html+='<div class="inline-comment"><img src="'+avatarSrc+'" class="inline-comment-avatar"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
         var replies=getRepliesForComment(c.cid);
         if(replies.length) html+='<a href="#" class="show-more-replies-inline" data-postid="'+postId+'" style="font-size:11px;color:var(--primary);display:block;margin-left:34px;margin-bottom:6px;">View replies ('+replies.length+')</a>';
@@ -1335,7 +1358,7 @@ function renderInlineComments(postId){
 function showProfileModal(person){
     var isFollowed=state.followedUsers[person.id];
     var html='<div class="modal-header"><h3>Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    html+='<div class="modal-body"><div class="modal-profile-top"><img src="https://i.pravatar.cc/80?img='+person.img+'" alt="'+person.name+'"><h3>'+person.name+'</h3><p>'+person.bio+'</p></div>';
+    html+='<div class="modal-body"><div class="modal-profile-top"><img src="images/default-avatar.svg" alt="'+person.name+'"><h3>'+person.name+'</h3><p>'+person.bio+'</p></div>';
     html+='<div class="modal-profile-stats"><div class="stat"><span class="stat-count">'+Math.floor(Math.random()*500)+'</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-count">'+Math.floor(Math.random()*2000)+'</span><span class="stat-label">Followers</span></div></div>';
     html+='<div class="modal-actions"><button class="btn '+(isFollowed?'btn-disabled':'btn-green')+'" id="modalFollowBtn" data-uid="'+person.id+'">'+(isFollowed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button>';
     html+='<button class="btn btn-primary" id="modalMsgBtn" data-uid="'+person.id+'"><i class="fas fa-envelope"></i> Message</button>';
@@ -1347,7 +1370,7 @@ function showProfileModal(person){
         html+='<div class="suggestion-list" id="modalSuggestScroll">';
         recs.forEach(function(p){
             var followed=state.followedUsers[p.id];
-            html+='<div class="suggestion-item"><img src="https://i.pravatar.cc/40?img='+p.img+'" alt="'+p.name+'" class="suggestion-avatar">';
+            html+='<div class="suggestion-item"><img src="images/default-avatar.svg" alt="'+p.name+'" class="suggestion-avatar">';
             html+='<div class="suggestion-info"><span class="suggestion-name" data-person-id="'+p.id+'">'+p.name+'</span></div>';
             html+='<button class="follow-btn-small'+(followed?' followed':'')+'" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
         });
@@ -1438,7 +1461,7 @@ function showProfileView(person){
     // Profile card - matches home sidebar style
     var cardHtml='<div class="profile-cover" style="background:linear-gradient(135deg,var(--primary),var(--primary-hover));"></div>';
     cardHtml+='<div class="profile-info">';
-    var pvAvatarSrc=person.avatar_url||(person.img?'https://i.pravatar.cc/100?img='+person.img:getMyAvatarUrl());
+    var pvAvatarSrc=person.avatar_url||'images/default-avatar.svg';
     cardHtml+='<div class="profile-avatar-wrap"><img src="'+pvAvatarSrc+'" alt="'+person.name+'" class="profile-avatar"></div>';
     cardHtml+='<h3 class="profile-name">'+person.name+'</h3>';
     cardHtml+='<p class="profile-title">'+(person.bio||'')+'</p>';
@@ -1515,7 +1538,7 @@ function showProfileView(person){
 
         feedHtml+='<div class="card feed-post">';
         feedHtml+='<div class="post-header">';
-        feedHtml+='<img src="https://i.pravatar.cc/50?img='+person.img+'" alt="'+person.name+'" class="post-avatar">';
+        feedHtml+='<img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar">';
         feedHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
         feedHtml+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span><span class="badge badge-blue"><i class="fas fa-map-marker-alt"></i> '+loc+'</span></div></div></div>';
         feedHtml+='<div class="post-description"><p>'+text+'</p></div>';
@@ -1529,7 +1552,7 @@ function showProfileView(person){
         feedHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+pvGenComments.length+'</span></button>';
         feedHtml+='<button class="action-btn share-btn"><i class="fas fa-share-from-square"></i><span>'+shares+'</span></button>';
         feedHtml+='</div><div class="action-right"><div class="liked-avatars" data-post-id="pv-'+i+'">';
-        for(var a=0;a<Math.min(3,pvLikers.length);a++){feedHtml+='<img src="https://i.pravatar.cc/24?img='+pvLikers[a].img+'" alt="'+pvLikers[a].name+'">';}
+        for(var a=0;a<Math.min(3,pvLikers.length);a++){feedHtml+='<img src="images/default-avatar.svg" alt="'+pvLikers[a].name+'">';}
         feedHtml+='</div></div></div>';
         feedHtml+='<div class="post-comments" data-post-id="pv-'+i+'"></div>';
         feedHtml+='</div>';
@@ -1715,7 +1738,7 @@ function showGroupProfileModal(person,group){
     var html='<div class="modal-header"><h3>Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body" style="padding:16px;">';
     html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">';
-    html+='<img src="https://i.pravatar.cc/80?img='+person.img+'" alt="'+person.name+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
+    html+='<img src="images/default-avatar.svg" alt="'+person.name+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
     html+='<div><h3 style="font-size:16px;font-weight:600;margin:0;">'+person.name+'</h3><p style="font-size:13px;color:var(--gray);margin:2px 0 0;">'+person.bio+'</p>';
     if(theirRole!=='Member') html+='<span style="font-size:10px;background:'+(theirRole==='Admin'?'#e74c3c':gc)+';color:#fff;padding:1px 7px;border-radius:8px;display:inline-block;margin-top:3px;">'+theirRole+'</span>';
     html+='</div></div>';
@@ -1850,7 +1873,7 @@ function showGroupMembersModal(group){
         var pRank=roleRank(pRole);
         var roleColors={'Co-Admin':'#8b5cf6','Moderator':'var(--primary)','Admin':'#e74c3c'};
         var roleTag=pRole!=='Member'?' <span style="font-size:10px;background:'+(roleColors[pRole]||'var(--primary)')+';color:#fff;padding:2px 6px;border-radius:8px;margin-left:4px;">'+pRole+'</span>':'';
-        html+='<div class="follow-list-item" style="flex-wrap:wrap;"><img src="https://i.pravatar.cc/44?img='+p.img+'" alt="'+p.name+'" class="gvm-click" data-person-id="'+p.id+'" style="cursor:pointer;"><div class="follow-list-info" style="flex:1;"><h4>'+p.name+roleTag+'</h4><p>'+p.bio+'</p></div>';
+        html+='<div class="follow-list-item" style="flex-wrap:wrap;"><img src="images/default-avatar.svg" alt="'+p.name+'" class="gvm-click" data-person-id="'+p.id+'" style="cursor:pointer;"><div class="follow-list-info" style="flex:1;"><h4>'+p.name+roleTag+'</h4><p>'+p.bio+'</p></div>';
         html+='<div style="display:flex;gap:6px;">';
         html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' gvm-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button>';
         if(canManage&&myRank>pRank&&p.name!=='John Doe') html+='<button class="btn follow-btn-small gvm-remove-btn" data-uid="'+p.id+'" style="background:#e74c3c;color:#fff;border-color:#e74c3c;" title="Remove Member"><i class="fas fa-user-minus"></i></button>';
@@ -1928,8 +1951,8 @@ function showGroupView(group){
     leftHtml+='<div class="gv-about-body"><div class="gv-about-meta"><span><i class="fas fa-calendar"></i> Created recently</span>';
     leftHtml+='<span><i class="fas fa-globe"></i> Public group</span></div></div></div>';
     leftHtml+='<div class="card gv-staff-card"><h4 class="card-heading"><i class="fas fa-shield-halved" style="color:var(--primary);margin-right:6px;"></i>Admin & Mods</h4><div class="gv-staff-list">';
-    leftHtml+='<div class="gv-staff-item"><img src="https://i.pravatar.cc/40?img='+adminImg+'"><div><strong>'+adminName+'</strong><span class="gv-staff-role admin">Admin'+(amIAdmin?' (You)':'')+'</span></div></div>';
-    group.mods.forEach(function(m){var mp=people.find(function(x){return x.name===m.name;});var isSelf=m.name==='John Doe';var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item">'+((joined||isOwner)&&mp?'<img src="https://i.pravatar.cc/40?img='+m.img+'" class="gv-staff-click" data-person-id="'+mp.id+'" style="cursor:pointer;">':'<img src="https://i.pravatar.cc/40?img='+m.img+'">')+'<div><strong>'+m.name+(isSelf?' (You)':'')+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});
+    leftHtml+='<div class="gv-staff-item"><img src="images/default-avatar.svg"><div><strong>'+adminName+'</strong><span class="gv-staff-role admin">Admin'+(amIAdmin?' (You)':'')+'</span></div></div>';
+    group.mods.forEach(function(m){var mp=people.find(function(x){return x.name===m.name;});var isSelf=m.name==='John Doe';var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item">'+((joined||isOwner)&&mp?'<img src="images/default-avatar.svg" class="gv-staff-click" data-person-id="'+mp.id+'" style="cursor:pointer;">':'<img src="images/default-avatar.svg">')+'<div><strong>'+m.name+(isSelf?' (You)':'')+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});
     leftHtml+='</div></div>';
     if(amIAdmin) leftHtml+='<button class="btn btn-outline btn-block" id="gvDeleteGroupBtn" style="color:#e74c3c;border-color:#e74c3c;margin-top:12px;"><i class="fas fa-trash"></i> Delete Group</button>';
     $('#gvLeftSidebar').innerHTML=leftHtml;
@@ -1944,7 +1967,7 @@ function showGroupView(group){
     var gvMembers=group.memberIds?people.filter(function(p){return group.memberIds.indexOf(p.id)!==-1;}):people;
     var moreCount=Math.max(0,group.members-6);
     rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview">';
-    gvMembers.slice(0,6).forEach(function(p){rightHtml+='<img src="https://i.pravatar.cc/36?img='+p.img+'" title="'+p.name+'"'+((joined||isOwner)?' class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;"':'')+'>';});
+    gvMembers.slice(0,6).forEach(function(p){rightHtml+='<img src="images/default-avatar.svg" title="'+p.name+'"'+((joined||isOwner)?' class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;"':'')+'>';});
     if(moreCount>0) rightHtml+='<span class="gv-members-more"'+((joined||isOwner)?' id="gvShowAllMembers" style="cursor:pointer;"':'')+'>+'+fmtNum(moreCount)+' more</span>';
     rightHtml+='</div></div>';
     $('#gvRightSidebar').innerHTML=rightHtml;
@@ -1971,12 +1994,12 @@ function showGroupView(group){
         var tags=tagSets[(group.id*5+i)%tagSets.length];
         var likes=Math.floor(Math.random()*people.length);
         var gvGenComments=getComments('gv-'+group.id+'-'+i);
-        feedHtml+='<div class="card feed-post"><div class="post-header"><img src="https://i.pravatar.cc/50?img='+person.img+'" alt="'+person.name+'" class="post-avatar"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div><div class="post-badges"><span class="badge badge-blue"><i class="fas fa-users"></i> '+group.name+'</span></div></div></div>';
+        feedHtml+='<div class="card feed-post"><div class="post-header"><img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div><div class="post-badges"><span class="badge badge-blue"><i class="fas fa-users"></i> '+group.name+'</span></div></div></div>';
         feedHtml+='<div class="post-description"><p>'+text+'</p></div>';
         feedHtml+='<div class="post-tags">';tags.forEach(function(t){feedHtml+='<span class="skill-tag">'+t+'</span>';});feedHtml+='</div>';
         var gvLikers=getLikers('gv-'+group.id+'-'+i,likes);
         feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="gv-'+group.id+'-'+i+'"><i class="far fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button><button class="action-btn dislike-btn" data-post-id="gv-'+group.id+'-'+i+'"><i class="far fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+gvGenComments.length+'</span></button></div><div class="action-right"><div class="liked-avatars" data-post-id="gv-'+group.id+'-'+i+'">';
-        for(var a=0;a<Math.min(3,gvLikers.length);a++){feedHtml+='<img src="https://i.pravatar.cc/24?img='+gvLikers[a].img+'" alt="'+gvLikers[a].name+'">';}
+        for(var a=0;a<Math.min(3,gvLikers.length);a++){feedHtml+='<img src="images/default-avatar.svg" alt="'+gvLikers[a].name+'">';}
         feedHtml+='</div></div></div>';
         feedHtml+='<div class="post-comments" data-post-id="gv-'+group.id+'-'+i+'"></div>';
         feedHtml+='</div>';
@@ -2372,7 +2395,7 @@ function showFollowListModal(title,list,isFollowingList){
             var followed=state.followedUsers[p.id];
             var theyFollowMe=myFollowers.indexOf(p.id)!==-1;
             var rel=followed&&theyFollowMe?'Mutual':theyFollowMe?'Follows You':'Not Following You';
-            html+='<div class="follow-list-item"><img src="https://i.pravatar.cc/44?img='+p.img+'" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p><span style="font-size:11px;color:var(--gray);font-style:italic;">'+rel+'</span></div>';
+            html+='<div class="follow-list-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p><span style="font-size:11px;color:var(--gray);font-style:italic;">'+rel+'</span></div>';
             html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' fl-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
         });
         html+='</div>';
@@ -2609,7 +2632,7 @@ function renderFeed(tab){
         var commentCount=p.commentCount||genComments.length;
         var menuId='post-menu-'+i;
         var short=text.substring(0,Math.min(160,text.length));var rest=text.substring(160);var hasMore=rest.length>0;
-        var avatarSrc=person.avatar_url||(person.img?'https://i.pravatar.cc/50?img='+person.img:'https://i.pravatar.cc/50?img=12');
+        var avatarSrc=person.avatar_url||'images/default-avatar.svg';
         var timeStr=p.created_at?timeAgoReal(p.created_at):timeAgo(typeof i==='number'?i:0);
         html+='<div class="card feed-post">';
         html+='<div class="post-header">';
@@ -2631,7 +2654,7 @@ function renderFeed(tab){
         html+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+commentCount+'</span></button>';
         html+='<button class="action-btn share-btn"><i class="fas fa-share-from-square"></i><span>'+shares+'</span></button>';
         html+='</div><div class="action-right"><div class="liked-avatars" data-post-id="'+i+'">';
-        for(var a=0;a<Math.min(3,likers.length);a++){html+='<img src="https://i.pravatar.cc/24?img='+likers[a].img+'" alt="'+likers[a].name+'">';}
+        for(var a=0;a<Math.min(3,likers.length);a++){html+='<img src="images/default-avatar.svg" alt="'+likers[a].name+'">';}
         html+='</div></div></div>';
         html+='<div class="post-comments" data-post-id="'+i+'"></div>';
         html+='</div>';
@@ -2795,7 +2818,7 @@ function showLikersModal(postId){
     var privateCt=likers.length-publicLikers.length;
     var h='<div class="modal-header"><h3><i class="fas fa-thumbs-up" style="color:var(--primary);margin-right:8px;"></i>Liked by</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><ul class="follow-list" style="max-height:400px;overflow-y:auto;">';
     publicLikers.forEach(function(p){
-        h+='<li class="follow-list-item"><img src="https://i.pravatar.cc/44?img='+p.img+'" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p></div></li>';
+        h+='<li class="follow-list-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p></div></li>';
     });
     if(privateCt>0){
         h+='<li class="follow-list-item" style="opacity:.5;"><div style="width:44px;height:44px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-lock" style="color:#999;"></i></div><div class="follow-list-info"><h4>'+privateCt+' private user'+(privateCt>1?'s':'')+'</h4><p>Followers set to private</p></div></li>';
@@ -2989,7 +3012,7 @@ function renderSuggestions(){
     var html='';
     getRankedSuggestions(5).forEach(function(p){
         var followed=state.followedUsers[p.id];
-        html+='<div class="suggestion-item"><img src="https://i.pravatar.cc/40?img='+p.img+'" alt="'+p.name+'" class="suggestion-avatar">';
+        html+='<div class="suggestion-item"><img src="images/default-avatar.svg" alt="'+p.name+'" class="suggestion-avatar">';
         html+='<div class="suggestion-info"><span class="suggestion-name" data-person-id="'+p.id+'">'+p.name+'</span><span class="suggestion-role">'+p.bio+'</span></div>';
         html+='<button class="follow-btn-small'+(followed?' followed':'')+'" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
     });
@@ -3145,7 +3168,7 @@ function profileCardHtml(p,showRel){
         var rel=followed&&theyFollowMe?'Mutual':theyFollowMe?'Follows You':'Not Following You';
         relHtml='<span style="font-size:11px;color:var(--gray);font-style:italic;display:block;margin-top:2px;">'+rel+'</span>';
     }
-    return '<div class="profile-card-item"><img src="https://i.pravatar.cc/64?img='+p.img+'" alt="'+p.name+'"><h4 data-person-id="'+p.id+'">'+p.name+'</h4><p>'+p.bio+'</p>'+relHtml+'<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn '+(followed?'btn-disabled':'btn-green')+' profile-follow-btn" data-uid="'+p.id+'" style="flex:1;">'+(followed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button><button class="btn btn-outline profile-view-btn" data-uid="'+p.id+'" style="flex:1;"><i class="fas fa-user"></i> View</button></div></div>';
+    return '<div class="profile-card-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><h4 data-person-id="'+p.id+'">'+p.name+'</h4><p>'+p.bio+'</p>'+relHtml+'<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn '+(followed?'btn-disabled':'btn-green')+' profile-follow-btn" data-uid="'+p.id+'" style="flex:1;">'+(followed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button><button class="btn btn-outline profile-view-btn" data-uid="'+p.id+'" style="flex:1;"><i class="fas fa-user"></i> View</button></div></div>';
 }
 function renderMyNetwork(){
     var html='';
@@ -3213,7 +3236,7 @@ var currentShopTab=null;
 function getShopCategories(){
     var cats=[];
     cats.push({key:'basic',label:'<i class="fas fa-palette"></i> Basic Skins',items:skins,render:function(s){return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="skin-preview-inner" style="color:#333;background:#fff;">Profile Preview</div></div><div class="skin-card-body" style="background:'+s.cardBg+';"><h4 style="color:'+s.cardText+';">'+s.name+'</h4><p style="color:'+s.cardMuted+';">'+s.desc+'</p>'+shopBuy(state.ownedSkins[s.id],s.price,'buy-skin-btn','data-sid="'+s.id+'"')+'</div></div>';}});
-    cats.push({key:'premium',label:'<i class="fas fa-gem"></i> Premium Skins',items:premiumSkins,render:function(s){return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="https://i.pravatar.cc/60?img=12" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p>'+shopBuy(state.ownedPremiumSkins[s.id],s.price,'buy-premium-btn','data-pid="'+s.id+'"')+'</div></div>';}});
+    cats.push({key:'premium',label:'<i class="fas fa-gem"></i> Premium Skins',items:premiumSkins,render:function(s){return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="images/default-avatar.svg" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p>'+shopBuy(state.ownedPremiumSkins[s.id],s.price,'buy-premium-btn','data-pid="'+s.id+'"')+'</div></div>';}});
     cats.push({key:'fonts',label:'<i class="fas fa-font"></i> Font Styles',items:fonts,render:function(f){return '<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#667eea,#764ba2);"><span style="font-family:\''+f.family+'\',sans-serif;color:#fff;font-size:24px;">Aa Bb Cc</span></div><div class="skin-card-body"><h4 style="font-family:\''+f.family+'\',sans-serif;">'+f.name+'</h4><p>'+f.desc+'</p>'+shopBuy(state.ownedFonts[f.id],f.price,'buy-font-btn','data-fid="'+f.id+'"')+'</div></div>';}});
     cats.push({key:'logos',label:'<i class="fas fa-star"></i> Logo Styles',items:logos,render:function(l){return '<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><span style="color:#fff;font-size:22px;font-weight:700;">'+l.text+'</span></div><div class="skin-card-body"><h4>'+l.name+'</h4><p>'+l.desc+'</p>'+shopBuy(state.ownedLogos[l.id],l.price,'buy-logo-btn','data-lid="'+l.id+'"')+'</div></div>';}});
     cats.push({key:'icons',label:'<i class="fas fa-icons"></i> Icon Sets',items:iconSets,render:function(s){var prev='';Object.keys(s.icons).slice(0,5).forEach(function(k){prev+='<i class="fas '+s.icons[k]+'" style="margin:0 4px;font-size:18px;"></i>';});return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div style="color:#fff;">'+prev+'</div></div><div class="skin-card-body"><h4>'+s.name+'</h4><p>'+s.desc+'</p>'+shopBuy(state.ownedIconSets[s.id],s.price,'buy-icon-btn','data-iid="'+s.id+'"')+'</div></div>';}});
@@ -3268,7 +3291,7 @@ function getGroupShopCategories(groupId){
     }});
 
     cats.push({key:'premium',label:'<i class="fas fa-gem"></i> Premium Skins',items:premiumSkins,render:function(s){
-        return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="https://i.pravatar.cc/60?img=12" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p>'+groupShopBuy(groupId,state.groupOwnedPremiumSkins[groupId][s.id],s.price,'buy-gspremium-btn','data-pid="'+s.id+'" data-gid="'+groupId+'"')+'</div></div>';
+        return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="images/default-avatar.svg" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p>'+groupShopBuy(groupId,state.groupOwnedPremiumSkins[groupId][s.id],s.price,'buy-gspremium-btn','data-pid="'+s.id+'" data-gid="'+groupId+'"')+'</div></div>';
     }});
 
     cats.push({key:'guild',label:'<i class="fas fa-shield-halved"></i> Guild Skins',items:guildSkins,render:function(s){
@@ -3287,7 +3310,7 @@ function getGroupShopCategories(groupId){
             var bodyStyle=s.cardBg?'background:'+s.cardBg+';':'';
             var titleStyle=s.cardText?'color:'+s.cardText+';':'';
             var descStyle=s.cardMuted?'color:'+s.cardMuted+';':'';
-            var inner=isPremium?'<div class="premium-preview-frame" style="background:'+s.border+';"><img src="https://i.pravatar.cc/60?img=12" class="premium-preview-avatar"></div>':'<div class="skin-preview-inner" style="color:#333;background:#fff;">Preview</div>';
+            var inner=isPremium?'<div class="premium-preview-frame" style="background:'+s.border+';"><img src="images/default-avatar.svg" class="premium-preview-avatar"></div>':'<div class="skin-preview-inner" style="color:#333;background:#fff;">Preview</div>';
             return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';">'+inner+'</div><div class="skin-card-body" style="'+bodyStyle+'"><h4 style="'+titleStyle+'">'+(s.icon?'<i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>':'')+s.name+'</h4><p style="'+descStyle+'">'+s.desc+'</p><button class="btn '+(isActive?'btn-disabled':'btn-primary')+' apply-gskin-btn" data-sid="'+s.id+'" data-gid="'+groupId+'" data-premium="'+(isPremium?'1':'0')+'">'+(isActive?'Active':'Apply')+'</button></div></div>';
         }});
     } else {
@@ -3610,7 +3633,7 @@ function getMySkinCategories(){
     var ownedC=coinSkins.filter(function(s){return state.ownedCoinSkins[s.id];});
     var ownedT=templates.filter(function(t){return state.ownedTemplates[t.id];});
     if(ownedS.length) cats.push({key:'basic',label:'<i class="fas fa-palette"></i> Basic Skins',items:ownedS,render:function(s){var a=state.activeSkin===s.id;return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="skin-preview-inner" style="color:#333;background:#fff;">Preview</div></div><div class="skin-card-body" style="background:'+s.cardBg+';"><h4 style="color:'+s.cardText+';">'+s.name+'</h4><p style="color:'+s.cardMuted+';">'+s.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-skin-btn" data-sid="'+s.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);"><div class="skin-preview-inner" style="color:#333;background:#fff;">Default</div></div><div class="skin-card-body"><h4>Default</h4><p>The BlipVibe signature look.</p><button class="btn '+(!state.activeSkin?'btn-disabled':'btn-primary')+' apply-skin-btn" data-sid="default">'+(!state.activeSkin?'Active':'Apply')+'</button></div></div>'});
-    if(ownedP.length) cats.push({key:'premium',label:'<i class="fas fa-gem"></i> Premium Skins',items:ownedP,render:function(s){var a=state.activePremiumSkin===s.id;return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="https://i.pravatar.cc/60?img=12" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-premium-btn" data-pid="'+s.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);"><div style="color:#fff;font-size:14px;font-weight:600;">Default</div></div><div class="skin-card-body"><h4>Default</h4><p>The BlipVibe signature look.</p><button class="btn '+(!state.activePremiumSkin?'btn-disabled':'btn-primary')+' apply-premium-btn" data-pid="default">'+(!state.activePremiumSkin?'Active':'Apply')+'</button></div></div>'});
+    if(ownedP.length) cats.push({key:'premium',label:'<i class="fas fa-gem"></i> Premium Skins',items:ownedP,render:function(s){var a=state.activePremiumSkin===s.id;return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="images/default-avatar.svg" class="premium-preview-avatar"></div></div><div class="skin-card-body"><h4><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p>'+s.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-premium-btn" data-pid="'+s.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);"><div style="color:#fff;font-size:14px;font-weight:600;">Default</div></div><div class="skin-card-body"><h4>Default</h4><p>The BlipVibe signature look.</p><button class="btn '+(!state.activePremiumSkin?'btn-disabled':'btn-primary')+' apply-premium-btn" data-pid="default">'+(!state.activePremiumSkin?'Active':'Apply')+'</button></div></div>'});
     if(ownedF.length) cats.push({key:'fonts',label:'<i class="fas fa-font"></i> Font Styles',items:ownedF,render:function(f){var a=state.activeFont===f.id;return '<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#667eea,#764ba2);"><span style="font-family:\''+f.family+'\',sans-serif;color:#fff;font-size:24px;">Aa Bb Cc</span></div><div class="skin-card-body"><h4 style="font-family:\''+f.family+'\',sans-serif;">'+f.name+'</h4><p>'+f.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-font-btn" data-fid="'+f.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#667eea,#764ba2);"><span style="font-family:Roboto,sans-serif;color:#fff;font-size:24px;">Aa Bb Cc</span></div><div class="skin-card-body"><h4>Default (Roboto)</h4><p>The original BlipVibe font.</p><button class="btn '+(!state.activeFont?'btn-disabled':'btn-primary')+' apply-font-btn" data-fid="default">'+(!state.activeFont?'Active':'Apply')+'</button></div></div>'});
     if(ownedL.length) cats.push({key:'logos',label:'<i class="fas fa-star"></i> Logo Styles',items:ownedL,render:function(l){var a=state.activeLogo===l.id;return '<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><span style="color:#fff;font-size:22px;font-weight:700;">'+l.text+'</span></div><div class="skin-card-body"><h4>'+l.name+'</h4><p>'+l.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-logo-btn" data-lid="'+l.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><span style="color:#fff;font-size:22px;font-weight:700;">BlipVibe</span></div><div class="skin-card-body"><h4>Default</h4><p>The original BlipVibe logo.</p><button class="btn '+(!state.activeLogo?'btn-disabled':'btn-primary')+' apply-logo-btn" data-lid="default">'+(!state.activeLogo?'Active':'Apply')+'</button></div></div>'});
     if(ownedI.length) cats.push({key:'icons',label:'<i class="fas fa-icons"></i> Icon Sets',items:ownedI,render:function(s){var a=state.activeIconSet===s.id;var prev='';Object.keys(s.icons).slice(0,4).forEach(function(k){prev+='<i class="fas '+s.icons[k]+'" style="margin:0 4px;font-size:18px;"></i>';});return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div style="color:#fff;">'+prev+'</div></div><div class="skin-card-body"><h4>'+s.name+'</h4><p>'+s.desc+'</p><button class="btn '+(a?'btn-disabled':'btn-primary')+' apply-icon-btn" data-iid="'+s.id+'">'+(a?'Active':'Apply')+'</button></div></div>';},defaultCard:'<div class="skin-card"><div class="skin-preview" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);"><div style="color:#fff;"><i class="fas fa-home" style="margin:0 4px;font-size:18px;"></i><i class="fas fa-users-rectangle" style="margin:0 4px;font-size:18px;"></i><i class="fas fa-palette" style="margin:0 4px;font-size:18px;"></i><i class="fas fa-store" style="margin:0 4px;font-size:18px;"></i></div></div><div class="skin-card-body"><h4>Default</h4><p>The original BlipVibe icons.</p><button class="btn '+(!state.activeIconSet?'btn-disabled':'btn-primary')+' apply-icon-btn" data-iid="default">'+(!state.activeIconSet?'Active':'Apply')+'</button></div></div>'});
@@ -3706,7 +3729,7 @@ function renderMsgContacts(filter){
         var lastMsg=c.messages[c.messages.length-1];
         var preview=lastMsg?(lastMsg.from==='me'?'You: ':'')+lastMsg.text:'';
         html+='<div class="msg-contact'+(activeChat&&activeChat.id===c.id?' active':'')+'" data-cid="'+c.id+'">';
-        html+='<img src="https://i.pravatar.cc/44?img='+c.img+'" alt="'+c.name+'">';
+        html+='<img src="images/default-avatar.svg" alt="'+c.name+'">';
         html+='<div class="msg-contact-info"><div class="msg-contact-name">'+c.name+'</div><div class="msg-contact-preview">'+preview+'</div></div>';
         html+='<span class="msg-contact-time">now</span></div>';
     });
@@ -3724,7 +3747,7 @@ function renderMsgContacts(filter){
 function openChat(contact){
     activeChat=contact;
     renderMsgContacts();
-    var html='<div class="msg-chat-header"><img src="https://i.pravatar.cc/40?img='+contact.img+'" alt="'+contact.name+'"><h4>'+contact.name+'</h4></div>';
+    var html='<div class="msg-chat-header"><img src="images/default-avatar.svg" alt="'+contact.name+'"><h4>'+contact.name+'</h4></div>';
     html+='<div class="msg-chat-messages" id="chatMessages">';
     contact.messages.forEach(function(m){
         html+='<div class="msg-bubble '+(m.from==='me'?'sent':'received')+'">'+m.text+'</div>';
@@ -3930,7 +3953,7 @@ function showHiddenPostsModal(){
             if(!p) return;
             var short=p.text.substring(0,100)+(p.text.length>100?'...':'');
             h+='<div class="hidden-post-item" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">';
-            h+='<img src="https://i.pravatar.cc/40?img='+p.person.img+'" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
+            h+='<img src="images/default-avatar.svg" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
             h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+p.person.name+'</div><p style="font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+short+'</p></div>';
             h+='<button class="btn btn-outline unhide-btn" data-pid="'+pid+'" style="padding:6px 14px;font-size:12px;flex-shrink:0;"><i class="fas fa-eye"></i> Unhide</button>';
             h+='</div>';
@@ -3992,7 +4015,7 @@ function showBlockedUsersModal(){
             var p=people.find(function(x){return x.id===parseInt(uid);});
             if(!p) return;
             h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">';
-            h+='<img src="https://i.pravatar.cc/40?img='+p.img+'" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
+            h+='<img src="images/default-avatar.svg" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
             h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+p.name+'</div><p style="font-size:12px;color:var(--gray);">'+p.bio+'</p></div>';
             h+='<button class="btn btn-outline unblock-btn" data-uid="'+uid+'" style="padding:6px 14px;font-size:12px;flex-shrink:0;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-unlock"></i> Unblock</button>';
             h+='</div>';
@@ -4087,7 +4110,7 @@ function renderSavedPostCard(p){
     var folder=findPostFolder(i);
     var html='<div class="card feed-post saved-post-item" data-spid="'+i+'">';
     html+='<div class="post-header">';
-    html+='<img src="https://i.pravatar.cc/50?img='+person.img+'" alt="'+person.name+'" class="post-avatar">';
+    html+='<img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar">';
     html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
     html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span>';
     if(folder) html+='<span class="badge badge-blue"><i class="fas fa-folder"></i> '+folder.name+'</span>';

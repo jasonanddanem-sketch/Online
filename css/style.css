@@ -1751,60 +1751,6 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .nav-coins{padding:4px 8px!important;font-size:12px!important;}
     .nav-user .fa-chevron-down{display:none!important;}
 
-    /* --- Bottom nav — pill-style for ALL nav styles --- */
-    .nav-center{
-        position:fixed!important;bottom:0!important;left:0!important;right:0!important;
-        top:auto!important;transform:none!important;
-        background:var(--nav-bg)!important;
-        padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px)!important;
-        border-radius:0!important;gap:0!important;
-        box-shadow:0 -2px 16px rgba(0,0,0,.25)!important;
-        z-index:999!important;width:100%!important;
-        justify-content:space-around!important;
-        flex-direction:row!important;flex:none!important;
-        height:auto!important;max-height:none!important;
-        overflow:visible!important;border:none!important;margin:0!important;
-        pointer-events:auto!important;
-    }
-    .nav-link{
-        flex-direction:column!important;align-items:center!important;
-        gap:2px!important;padding:6px 4px!important;border-radius:8px!important;
-        font-size:10px!important;color:rgba(255,255,255,.7)!important;
-        width:auto!important;justify-content:center!important;
-        max-height:none!important;border-bottom:none!important;
-        position:relative!important;flex-shrink:1!important;
-        min-width:0!important;
-    }
-    .nav-link i{font-size:18px!important;width:auto!important;}
-    .nav-link span{
-        display:block!important;font-size:9px!important;
-        opacity:.7!important;white-space:nowrap!important;
-        overflow:hidden!important;text-overflow:ellipsis!important;
-        max-width:56px!important;text-align:center!important;
-        position:static!important;transform:none!important;
-        background:none!important;padding:0!important;
-        margin:0!important;border-radius:0!important;
-        color:inherit!important;pointer-events:auto!important;
-        line-height:1.2!important;
-    }
-    .nav-link:hover span:not(.notif-badge),.nav-link:focus span:not(.notif-badge){
-        position:static!important;transform:none!important;
-        background:none!important;padding:0!important;margin:0!important;
-        top:auto!important;bottom:auto!important;left:auto!important;
-        font-size:9px!important;color:inherit!important;
-        z-index:auto!important;border-radius:0!important;
-        white-space:nowrap!important;pointer-events:auto!important;
-        display:block!important;opacity:.7!important;
-    }
-    .nav-link.active:hover span:not(.notif-badge){opacity:1!important;}
-    .nav-link.active{color:#fff!important;background:rgba(255,255,255,.12)!important;}
-    .nav-link.active span{opacity:1!important;}
-    .notif-badge{
-        position:absolute!important;top:0!important;right:0!important;
-        min-width:1.6em!important;height:1.6em!important;font-size:calc(8px * var(--font-scale,1))!important;
-        margin:0!important;
-    }
-
     /* --- Main layout — force single column --- */
     .main-container{
         grid-template-columns:1fr!important;
@@ -1964,27 +1910,21 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     body.nav-mirror .timeline-cover{margin-top:0!important;}
     body.nav-mirror .pv-cover-banner{margin:0 auto!important;}
 
-    /* --- Nav Dock — already bottom, just unify with global bottom nav --- */
+    /* --- Nav Dock — compact --- */
     body.nav-dock .navbar{height:48px!important;}
-    body.nav-dock .page{padding-bottom:72px!important;}
-    body.nav-dock .messages-layout{height:calc(100vh - 140px)!important;}
 
-    /* --- Nav Pill — already bottom pill, unify --- */
+    /* --- Nav Pill — compact --- */
     body.nav-pill .navbar{height:48px!important;}
-    body.nav-pill .nav-center{border-radius:0!important;bottom:0!important;left:0!important;right:0!important;transform:none!important;width:100%!important;}
-    body.nav-pill .page{padding-bottom:72px!important;}
-    body.nav-pill .messages-layout{height:calc(100vh - 140px)!important;}
 
-    /* --- Nav Horizon — already bottom, unify --- */
+    /* --- Nav Horizon — compact top bar --- */
     body.nav-horizon .navbar{top:0!important;bottom:auto!important;border-radius:0!important;box-shadow:0 2px 10px rgba(0,0,0,.3)!important;height:48px!important;}
     body.nav-horizon .user-dropdown{top:100%!important;bottom:auto!important;margin-top:4px!important;margin-bottom:0!important;}
-    body.nav-horizon .page{padding-top:58px!important;padding-bottom:72px!important;}
+    body.nav-horizon .page{padding-top:58px!important;}
     body.nav-horizon #page-home{padding-top:48px!important;}
     body.nav-horizon .timeline-cover{margin-top:0!important;}
     body.nav-horizon .main-container{margin-top:-48px!important;}
 
-    /* --- Nav Split — already split bottom, unify --- */
-    body.nav-split .page{padding-bottom:72px!important;}
+    /* --- Nav Split — compact --- */
 
     /* --- Nav Shelf → compact single row on mobile --- */
     body.nav-shelf .navbar{height:48px!important;}
@@ -2017,9 +1957,6 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     body.nav-island .timeline-cover{margin:48px auto 0!important;border-radius:0!important;}
     body.nav-island .main-container{margin-top:-48px!important;}
     body.nav-island .pv-cover-banner{margin:48px auto 0!important;border-radius:0!important;}
-
-    /* --- Premium nav skin — apply to bottom bar --- */
-    body[class*="premium-"] .nav-center{background:var(--ps-nav)!important;background-size:200% 200%!important;animation:gradientShift 6s ease infinite!important;}
 
     /* --- Image crop — prevent page scroll on touch --- */
     .crop-container,.crop-box,.crop-resize,
@@ -2079,8 +2016,8 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .search-tab{padding:10px 14px;font-size:clamp(12px,3vw,14px);flex-shrink:0;}
     .feed-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 
-    /* --- Spacing — account for bottom nav --- */
-    .page{padding-top:58px!important;padding-bottom:72px!important;}
+    /* --- Spacing — tablet (no bottom nav) --- */
+    .page{padding-top:58px!important;padding-bottom:20px!important;}
     #page-home{padding-top:48px!important;}
     .page-container{padding:0 12px 40px!important;}
     .page-header{margin-bottom:16px;}
@@ -2132,7 +2069,100 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .login-form-side{min-width:0!important;padding:20px 16px!important;}
     .login-card{max-width:100%;}
     .login-title{font-size:22px;}
+
+    /* --- Touch targets (Apple HIG 44px minimum) --- */
+    .nav-link{min-height:44px;min-width:44px;}
+    .action-btn{min-height:44px;}
+    .btn{min-height:44px;}
+    .suggestion-item,.group-item,.msg-contact{min-height:48px;}
 }
+
+/* --- Touch-device tablet landscape (iPads 769–1100px, no hover) --- */
+@media(min-width:769px) and (max-width:1100px) and (hover:none){
+    .nav-link{min-height:44px;padding:8px 12px;}
+    .action-btn,.btn{min-height:44px;}
+}
+
+/* =========================================================
+   PHONE — bottom nav + phone-only overrides (≤640px)
+   ========================================================= */
+@media(max-width:640px){
+    /* --- Bottom nav — pill-style for ALL nav styles --- */
+    .nav-center{
+        position:fixed!important;bottom:0!important;left:0!important;right:0!important;
+        top:auto!important;transform:none!important;
+        background:var(--nav-bg)!important;
+        padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px)!important;
+        border-radius:0!important;gap:0!important;
+        box-shadow:0 -2px 16px rgba(0,0,0,.25)!important;
+        z-index:999!important;width:100%!important;
+        justify-content:space-around!important;
+        flex-direction:row!important;flex:none!important;
+        height:auto!important;max-height:none!important;
+        overflow:visible!important;border:none!important;margin:0!important;
+        pointer-events:auto!important;
+    }
+    .nav-link{
+        flex-direction:column!important;align-items:center!important;
+        gap:2px!important;padding:6px 4px!important;border-radius:8px!important;
+        font-size:10px!important;color:rgba(255,255,255,.7)!important;
+        width:auto!important;justify-content:center!important;
+        max-height:none!important;border-bottom:none!important;
+        position:relative!important;flex-shrink:1!important;
+        min-width:0!important;
+    }
+    .nav-link i{font-size:18px!important;width:auto!important;}
+    .nav-link span{
+        display:block!important;font-size:9px!important;
+        opacity:.7!important;white-space:nowrap!important;
+        overflow:hidden!important;text-overflow:ellipsis!important;
+        max-width:56px!important;text-align:center!important;
+        position:static!important;transform:none!important;
+        background:none!important;padding:0!important;
+        margin:0!important;border-radius:0!important;
+        color:inherit!important;pointer-events:auto!important;
+        line-height:1.2!important;
+    }
+    .nav-link:hover span:not(.notif-badge),.nav-link:focus span:not(.notif-badge){
+        position:static!important;transform:none!important;
+        background:none!important;padding:0!important;margin:0!important;
+        top:auto!important;bottom:auto!important;left:auto!important;
+        font-size:9px!important;color:inherit!important;
+        z-index:auto!important;border-radius:0!important;
+        white-space:nowrap!important;pointer-events:auto!important;
+        display:block!important;opacity:.7!important;
+    }
+    .nav-link.active:hover span:not(.notif-badge){opacity:1!important;}
+    .nav-link.active{color:#fff!important;background:rgba(255,255,255,.12)!important;}
+    .nav-link.active span{opacity:1!important;}
+    .notif-badge{
+        position:absolute!important;top:0!important;right:0!important;
+        min-width:1.6em!important;height:1.6em!important;font-size:calc(8px * var(--font-scale,1))!important;
+        margin:0!important;
+    }
+
+    /* --- Bottom nav clearance --- */
+    .page{padding-bottom:72px!important;}
+
+    /* --- Nav Dock — bottom clearance --- */
+    body.nav-dock .page{padding-bottom:72px!important;}
+    body.nav-dock .messages-layout{height:calc(100vh - 140px)!important;}
+
+    /* --- Nav Pill — bottom nav unify --- */
+    body.nav-pill .nav-center{border-radius:0!important;bottom:0!important;left:0!important;right:0!important;transform:none!important;width:100%!important;}
+    body.nav-pill .page{padding-bottom:72px!important;}
+    body.nav-pill .messages-layout{height:calc(100vh - 140px)!important;}
+
+    /* --- Nav Horizon — bottom clearance --- */
+    body.nav-horizon .page{padding-bottom:72px!important;}
+
+    /* --- Nav Split — bottom clearance --- */
+    body.nav-split .page{padding-bottom:72px!important;}
+
+    /* --- Premium nav — bottom bar styling --- */
+    body[class*="premium-"] .nav-center{background:var(--ps-nav)!important;background-size:200% 200%!important;animation:gradientShift 6s ease infinite!important;}
+}
+
 @media(max-width:480px){
     .nav-container{padding:0 6px!important;gap:4px!important;}
     .search-bar{width:70px!important;}

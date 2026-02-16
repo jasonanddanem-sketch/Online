@@ -247,14 +247,15 @@ async function sbGetCommentsLite(postId, limit = 20) {
   let res = await sb.from('comments')
     .select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)')
     .eq('post_id', postId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
     .limit(limit);
   // If FK hint fails, try without it
   if (res.error) {
+    console.warn('sbGetCommentsLite FK hint failed, retrying without:', res.error.message);
     res = await sb.from('comments')
       .select('*, author:profiles(id, username, display_name, avatar_url)')
       .eq('post_id', postId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(limit);
   }
   if (res.error) throw res.error;
@@ -262,31 +263,30 @@ async function sbGetCommentsLite(postId, limit = 20) {
 }
 
 async function sbGetComments(postId, sortBy = 'top') {
-  let query = sb.from('comments')
-    .select(`
-      *,
-      author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)
-    `)
-    .eq('post_id', postId);
-
-  if (sortBy === 'newest') {
-    query = query.order('created_at', { ascending: false });
-  } else if (sortBy === 'oldest') {
-    query = query.order('created_at', { ascending: true });
+  // Try with FK hint, fallback without
+  let res = await sb.from('comments')
+    .select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: sortBy === 'oldest' || sortBy === 'top' });
+  if (res.error) {
+    res = await sb.from('comments')
+      .select('*, author:profiles(id, username, display_name, avatar_url)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: sortBy === 'oldest' || sortBy === 'top' });
   }
-  // 'top' sorting done client-side after fetching like counts
+  if (res.error) throw res.error;
+  var data = res.data || [];
 
-  const { data, error } = await query;
-  if (error) throw error;
-
-  // Fetch like counts for each comment separately (no FK between comments and likes)
-  for (const c of (data || [])) {
-    const { count } = await sb.from('likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('target_type', 'comment')
-      .eq('target_id', c.id);
-    c.like_count = count || 0;
-  }
+  // Fetch like counts in parallel (not N+1 sequential)
+  await Promise.all(data.map(async function(c) {
+    try {
+      const { count } = await sb.from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('target_type', 'comment')
+        .eq('target_id', c.id);
+      c.like_count = count || 0;
+    } catch(e) { c.like_count = 0; }
+  }));
   if (sortBy === 'top') {
     data.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
   }

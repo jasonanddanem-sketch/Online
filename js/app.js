@@ -1102,10 +1102,10 @@ function handleShare(btn){
     var origTime=time?time.textContent:'';
     var origText=desc?desc.innerHTML:'';
     var html='<div class="modal-header"><h3>Share Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    html+='<div class="modal-body"><textarea id="shareComment" placeholder="Add your thoughts..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px;resize:vertical;margin-bottom:12px;font-family:inherit;background:var(--light-bg);color:var(--dark);"></textarea>';
-    html+='<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--light-bg);">';
-    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;"><strong style="font-size:13px;">'+origName+'</strong><span style="color:var(--gray);font-size:12px;">'+origTime+'</span></div>';
-    html+='<div style="font-size:13px;color:var(--gray);">'+origText+'</div></div>';
+    html+='<div class="modal-body"><textarea id="shareComment" class="share-textarea" placeholder="Add your thoughts..."></textarea>';
+    html+='<div class="share-preview">';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"><strong class="share-preview-name" style="font-size:13px;">'+origName+'</strong><span class="share-preview-time" style="font-size:12px;">'+origTime+'</span></div>';
+    html+='<div class="share-preview-text" style="font-size:13px;">'+origText+'</div></div>';
     html+='<button id="sharePublishBtn" class="btn btn-primary" style="width:100%;margin-top:12px;">Share</button></div>';
     showModal(html);
     document.getElementById('sharePublishBtn').addEventListener('click',function(){
@@ -1116,9 +1116,9 @@ function handleShare(btn){
         ph+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</h4><span class="post-time">just now</span></div>';
         ph+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-share"></i> Shared</span></div></div></div>';
         if(comment) ph+='<div class="post-description"><p>'+comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p></div>';
-        ph+='<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 14px;background:var(--light-bg);">';
-        ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;"><strong style="font-size:13px;">'+origName+'</strong><span style="color:var(--gray);font-size:12px;">'+origTime+'</span></div>';
-        ph+='<div style="font-size:13px;color:var(--gray);">'+origText+'</div></div>';
+        ph+='<div class="share-preview" style="margin:0 0 14px;">';
+        ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"><strong class="share-preview-name" style="font-size:13px;">'+origName+'</strong><span class="share-preview-time" style="font-size:12px;">'+origTime+'</span></div>';
+        ph+='<div class="share-preview-text" style="font-size:13px;">'+origText+'</div></div>';
         ph+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.like+'"></i><span class="like-count">0</span></button>';
         ph+='<button class="action-btn dislike-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.dislike+'"></i><span class="dislike-count">0</span></button>';
         ph+='<button class="action-btn comment-btn"><i class="far '+activeIcons.comment+'"></i><span>0</span></button>';
@@ -1329,7 +1329,11 @@ async function renderInlineComments(postId){
                 var isReply=!!c.parent_comment_id;
                 all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
             });
-        }catch(e){console.error('Inline comments error for post '+postId+':',e);}
+        }catch(e){
+            console.error('Inline comments error for post '+postId+':',e);
+            el.innerHTML='<p style="color:#e74c3c;font-size:11px;padding:4px 20px;">Comments failed: '+(e.message||'Unknown error')+'</p>';
+            return;
+        }
     } else {
         var user=state.comments[postId]||[];
         var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';

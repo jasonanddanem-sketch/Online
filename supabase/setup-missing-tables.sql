@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.posts (
     group_id   UUID REFERENCES public.groups(id) ON DELETE SET NULL,
     content    TEXT NOT NULL CHECK (char_length(content) > 0),
     image_url  TEXT,
+    shared_post_id UUID REFERENCES public.posts(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -441,6 +442,7 @@ CREATE POLICY messages_update ON public.messages FOR UPDATE USING (auth.uid() = 
 -- 9. MIGRATIONS for existing databases
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS skin_data JSONB DEFAULT '{}';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS shared_post_id UUID REFERENCES public.posts(id) ON DELETE SET NULL;
 
 -- Storage policy for backgrounds
 DROP POLICY IF EXISTS "Auth delete avatars" ON storage.objects;

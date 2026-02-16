@@ -1101,6 +1101,9 @@ function handleShare(btn){
     var origName=username?username.textContent:'Unknown';
     var origTime=time?time.textContent:'';
     var origText=desc?desc.innerHTML:'';
+    // Get the original post UUID from the like button's data-post-id
+    var likeBtn=post.querySelector('.like-btn');
+    var origPostId=likeBtn?likeBtn.getAttribute('data-post-id'):null;
     var html='<div class="modal-header"><h3>Share Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body"><textarea id="shareComment" class="share-textarea" placeholder="Add your thoughts..."></textarea>';
     html+='<div class="share-preview">';
@@ -1108,33 +1111,46 @@ function handleShare(btn){
     html+='<div class="share-preview-text" style="font-size:13px;">'+origText+'</div></div>';
     html+='<button id="sharePublishBtn" class="btn btn-primary" style="width:100%;margin-top:12px;">Share</button></div>';
     showModal(html);
-    document.getElementById('sharePublishBtn').addEventListener('click',function(){
+    document.getElementById('sharePublishBtn').addEventListener('click',async function(){
         var comment=document.getElementById('shareComment').value.trim();
-        var container=$('#feedContainer');
-        var postId='share-'+Date.now();
-        var ph='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar">';
-        ph+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</h4><span class="post-time">just now</span></div>';
-        ph+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-share"></i> Shared</span></div></div></div>';
-        if(comment) ph+='<div class="post-description"><p>'+comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p></div>';
-        ph+='<div class="share-preview" style="margin:0 0 14px;">';
-        ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"><strong class="share-preview-name" style="font-size:13px;">'+origName+'</strong><span class="share-preview-time" style="font-size:12px;">'+origTime+'</span></div>';
-        ph+='<div class="share-preview-text" style="font-size:13px;">'+origText+'</div></div>';
-        ph+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.like+'"></i><span class="like-count">0</span></button>';
-        ph+='<button class="action-btn dislike-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.dislike+'"></i><span class="dislike-count">0</span></button>';
-        ph+='<button class="action-btn comment-btn"><i class="far '+activeIcons.comment+'"></i><span>0</span></button>';
-        ph+='<button class="action-btn share-btn"><i class="fas '+activeIcons.share+'"></i><span>0</span></button></div></div>';
-        ph+='<div class="post-comments" data-post-id="'+postId+'"></div></div>';
-        container.insertAdjacentHTML('afterbegin',ph);
-        if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
-        closeModal();
-        var countEl=btn.querySelector('span');if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
-        var np=container.firstElementChild;
-        var lb=np.querySelector('.like-btn');
-        lb.addEventListener('click',function(){var c=lb.querySelector('.like-count');var n=parseInt(c.textContent);var pid=lb.getAttribute('data-post-id');var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.likedPosts[pid]){delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far '+activeIcons.like;c.textContent=n-1;}else{if(state.dislikedPosts[pid]){var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far '+activeIcons.dislike;}state.likedPosts[pid]=true;lb.classList.add('liked');lb.querySelector('i').className='fas '+activeIcons.like;c.textContent=n+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}});
-        var db=np.querySelector('.dislike-btn');
-        db.addEventListener('click',function(){var c=db.querySelector('.dislike-count');var n=parseInt(c.textContent);var pid=db.getAttribute('data-post-id');var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far '+activeIcons.dislike;c.textContent=n-1;}else{if(state.likedPosts[pid]){var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far '+activeIcons.like;}state.dislikedPosts[pid]=true;db.classList.add('disliked');db.querySelector('i').className='fas '+activeIcons.dislike;c.textContent=n+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}});
-        np.querySelector('.comment-btn').addEventListener('click',function(){showComments(postId,np.querySelector('.comment-btn span'));});
-        np.querySelector('.share-btn').addEventListener('click',function(){handleShare(np.querySelector('.share-btn'));});
+        var shareContent=comment||'Shared a post';
+        var isUUID=origPostId&&/^[0-9a-f]{8}-/.test(origPostId);
+        // Save to Supabase
+        if(isUUID&&currentUser){
+            try{
+                await sbCreatePost(currentUser.id,shareContent,null,null,origPostId);
+                if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
+                var countEl=btn.querySelector('span');if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
+                closeModal();
+                showToast('Post shared!');
+                // Refresh feed to show the new shared post
+                await generatePosts();
+            }catch(e){
+                console.error('Share error:',e);
+                showToast('Share failed: '+(e.message||'Unknown error'));
+            }
+        } else {
+            // Fallback: local-only share for non-Supabase posts
+            var container=$('#feedContainer');
+            var postId='share-'+Date.now();
+            var ph='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar">';
+            ph+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</h4><span class="post-time">just now</span></div>';
+            ph+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-share"></i> Shared</span></div></div></div>';
+            if(comment) ph+='<div class="post-description"><p>'+comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p></div>';
+            ph+='<div class="share-preview" style="margin:0 0 14px;">';
+            ph+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+origAvatar+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"><strong class="share-preview-name" style="font-size:13px;">'+origName+'</strong><span class="share-preview-time" style="font-size:12px;">'+origTime+'</span></div>';
+            ph+='<div class="share-preview-text" style="font-size:13px;">'+origText+'</div></div>';
+            ph+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.like+'"></i><span class="like-count">0</span></button>';
+            ph+='<button class="action-btn dislike-btn" data-post-id="'+postId+'"><i class="far '+activeIcons.dislike+'"></i><span class="dislike-count">0</span></button>';
+            ph+='<button class="action-btn comment-btn"><i class="far '+activeIcons.comment+'"></i><span>0</span></button>';
+            ph+='<button class="action-btn share-btn"><i class="fas '+activeIcons.share+'"></i><span>0</span></button></div></div>';
+            ph+='<div class="post-comments" data-post-id="'+postId+'"></div></div>';
+            container.insertAdjacentHTML('afterbegin',ph);
+            if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
+            closeModal();
+            var countEl2=btn.querySelector('span');if(countEl2)countEl2.textContent=parseInt(countEl2.textContent)+1;
+            bindPostEvents();
+        }
     });
 }
 
@@ -2671,9 +2687,19 @@ async function generatePosts(){
         if(!posts||!posts.length){
             posts = await sbGetFeed(50);
         }
+        // Fetch shared post data in batch
+        var sharedIds=[];
+        posts.forEach(function(p){if(p.shared_post_id)sharedIds.push(p.shared_post_id);});
+        var sharedMap={};
+        if(sharedIds.length){
+            try{
+                var sharedPosts=await sbGetPostsByIds(sharedIds);
+                sharedPosts.forEach(function(sp){sharedMap[sp.id]=sp;});
+            }catch(e){console.warn('Could not load shared posts:',e);}
+        }
         posts.forEach(function(p,i){
             if(!p||!p.author) return; // skip posts with missing author data
-            feedPosts.push({
+            var fp={
                 idx: p.id,
                 person: {
                     id: p.author.id,
@@ -2691,7 +2717,19 @@ async function generatePosts(){
                 shares: 0,
                 images: p.image_url ? [p.image_url] : null,
                 created_at: p.created_at
-            });
+            };
+            if(p.shared_post_id&&sharedMap[p.shared_post_id]){
+                var sp=sharedMap[p.shared_post_id];
+                fp.sharedPost={
+                    name:sp.author?(sp.author.display_name||sp.author.username):'User',
+                    avatar_url:sp.author?sp.author.avatar_url:null,
+                    text:sp.content||'',
+                    time:timeAgoReal(sp.created_at),
+                    images:sp.image_url?[sp.image_url]:null
+                };
+                fp.badge={cls:'badge-green',icon:'fa-share',text:'Shared'};
+            }
+            feedPosts.push(fp);
         });
     } catch(e) {
         console.error('generatePosts error:', e);
@@ -2741,6 +2779,14 @@ function renderFeed(tab){
         tags.forEach(function(t){html+='<span class="skill-tag">'+t+'</span>';});
         html+='</div>';
         if(p.images){var imgs=p.images;html+='<div class="post-media-grid pm-count-'+imgs.length+'">';imgs.forEach(function(src){html+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});html+='</div>';}
+        if(p.sharedPost){
+            var sp=p.sharedPost;var spAvatar=sp.avatar_url||DEFAULT_AVATAR;
+            html+='<div class="share-preview" style="margin:0 20px 14px;">';
+            html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><img src="'+spAvatar+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"><strong class="share-preview-name" style="font-size:13px;">'+sp.name+'</strong><span class="share-preview-time" style="font-size:12px;">'+sp.time+'</span></div>';
+            html+='<div class="share-preview-text" style="font-size:13px;">'+sp.text+'</div>';
+            if(sp.images){sp.images.forEach(function(src){html+='<img src="'+src+'" style="max-width:100%;border-radius:8px;margin-top:8px;">';});}
+            html+='</div>';
+        }
         html+='<div class="post-actions"><div class="action-left">';
         html+='<button class="action-btn like-btn'+(state.likedPosts[i]?' liked':'')+'" data-post-id="'+i+'"><i class="'+(state.likedPosts[i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
         html+='<button class="action-btn dislike-btn" data-post-id="'+i+'"><i class="'+(state.dislikedPosts[i]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';

@@ -135,9 +135,11 @@ async function sbGetAllProfiles(limit = 50) {
 
 // ---- 4. POSTS ---------------------------------------------------------------
 
-async function sbCreatePost(authorId, content, imageUrl = null, groupId = null) {
+async function sbCreatePost(authorId, content, imageUrl = null, groupId = null, sharedPostId = null) {
+  var row = { author_id: authorId, content: content, image_url: imageUrl, group_id: groupId };
+  if (sharedPostId) row.shared_post_id = sharedPostId;
   const { data, error } = await sb.from('posts')
-    .insert({ author_id: authorId, content, image_url: imageUrl, group_id: groupId })
+    .insert(row)
     .select(`
       *,
       author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url)
@@ -199,6 +201,15 @@ async function sbGetFollowingFeed(userId, limit = 50, offset = 0) {
     post.like_count = count || 0;
   }
   return data;
+}
+
+async function sbGetPostsByIds(ids) {
+  if (!ids.length) return [];
+  const { data, error } = await sb.from('posts')
+    .select('*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url)')
+    .in('id', ids);
+  if (error) throw error;
+  return data || [];
 }
 
 async function sbGetUserPosts(userId, limit = 20) {

@@ -250,6 +250,9 @@ async function initApp() {
             renderNotifications();
         });
     } catch(e){ console.warn('Realtime notifications error:', e); }
+    // Load conversations and subscribe to realtime messages
+    loadConversations();
+    initMessageSubscription();
 }
 
 // Listen for auth state changes
@@ -586,6 +589,7 @@ function navigateTo(page){
         renderNotifications();
         if(currentUser) sbMarkNotificationsRead(currentUser.id).catch(function(){});
     }
+    if(page==='messages') loadConversations();
     if(page==='groups') renderGroups();
     if(page==='shop') renderShop();
     if(page==='skins') renderMySkins();
@@ -1209,7 +1213,7 @@ async function showProfileModal(person){
         toggleFollow(person.id,this);
     });
     document.getElementById('modalMsgBtn').addEventListener('click',function(){
-        closeModal();navigateTo('messages');
+        closeModal();startConversation(person.id,person.display_name||person.name||person.username,person.avatar_url);
     });
     document.getElementById('modalViewProfileBtn').addEventListener('click',function(){
         closeModal();
@@ -1393,7 +1397,7 @@ async function showProfileView(person){
     var msgBtn=document.getElementById('pvMsgBtn');
     if(msgBtn){
         msgBtn.addEventListener('click',function(){
-            navigateTo('messages');
+            startConversation(person.id,person.name||person.display_name||person.username,person.avatar_url);
         });
     }
     var blockBtn=document.getElementById('pvBlockBtn');
@@ -1576,7 +1580,7 @@ async function showGroupProfileModal(person,group){
     showModal(html);
     document.getElementById('modalFollowBtn').addEventListener('click',function(){toggleFollow(person.id,this);});
     document.getElementById('modalMsgBtn').addEventListener('click',function(){
-        closeModal();navigateTo('messages');
+        closeModal();startConversation(person.id,person.display_name||person.name||person.username,person.avatar_url);
     });
     document.getElementById('modalViewProfileBtn').addEventListener('click',function(){closeModal();showProfileView(person);});
     var setModBtn=document.getElementById('grpSetMod');
@@ -2918,7 +2922,7 @@ function renderTrendingSidebar(){
     $('#trendingGroupsSidebar').innerHTML=html;
     $$('#trendingGroupsSidebar .group-item').forEach(function(el){
         el.addEventListener('click',function(){
-            var gid=parseInt(el.getAttribute('data-gid'));
+            var gid=el.getAttribute('data-gid');
             var group=groups.find(function(g){return g.id===gid;});
             if(group) showGroupView(group);
         });
@@ -2977,7 +2981,7 @@ function bindGroupEvents(container){
     $$(container+' .join-group-btn').forEach(function(btn){
         btn.addEventListener('click',function(e){
             e.stopPropagation();
-            var gid=parseInt(btn.getAttribute('data-gid'));
+            var gid=btn.getAttribute('data-gid');
             if(!state.joinedGroups[gid]){
                 state.joinedGroups[gid]=true;
                 var jg=groups.find(function(g){return g.id===gid;});
@@ -2990,14 +2994,14 @@ function bindGroupEvents(container){
     $$(container+' .view-group-btn').forEach(function(btn){
         btn.addEventListener('click',function(e){
             e.stopPropagation();
-            var gid=parseInt(btn.getAttribute('data-gid'));
+            var gid=btn.getAttribute('data-gid');
             var group=groups.find(function(g){return g.id===gid;});
             if(group) showGroupView(group);
         });
     });
     $$(container+' .group-card').forEach(function(card){
         card.addEventListener('click',function(){
-            var gid=parseInt(card.getAttribute('data-gid'));
+            var gid=card.getAttribute('data-gid');
             var group=groups.find(function(g){return g.id===gid;});
             if(group) showGroupView(group);
         });
@@ -3005,7 +3009,7 @@ function bindGroupEvents(container){
     $$(container+' .gc-icon-edit-btn').forEach(function(btn){
         btn.addEventListener('click',function(e){
             e.stopPropagation();
-            var gid=parseInt(btn.getAttribute('data-gid'));
+            var gid=btn.getAttribute('data-gid');
             var group=groups.find(function(g){return g.id===gid;});
             if(!group) return;
             var icons=['fa-users','fa-camera-retro','fa-gamepad','fa-utensils','fa-dumbbell','fa-music','fa-paw','fa-plane-departure','fa-book','fa-leaf','fa-film','fa-hammer','fa-mug-hot','fa-code','fa-palette','fa-rocket','fa-heart','fa-star','fa-fire','fa-bolt','fa-globe','fa-trophy','fa-gem','fa-shield'];
@@ -3213,7 +3217,7 @@ function renderGroupShop(groupId){
     function gShopPurchased(btn){var p=btn.parentElement;var priceEl=p.querySelector('.skin-price');if(priceEl)priceEl.remove();btn.className='btn btn-disabled';btn.textContent='Owned';btn.disabled=true;btn.replaceWith(btn.cloneNode(true));}
 
     $$('#gvShopContent .buy-gskin-btn').forEach(function(btn){btn.addEventListener('click',function(){
-        var sid=btn.getAttribute('data-sid');var gid=parseInt(btn.getAttribute('data-gid'));
+        var sid=btn.getAttribute('data-sid');var gid=btn.getAttribute('data-gid');
         var skin=skins.find(function(s){return s.id===sid;})||guildSkins.find(function(s){return s.id===sid;});
         if(!skin) return;
         var gc=getGroupCoinCount(gid);
@@ -3227,7 +3231,7 @@ function renderGroupShop(groupId){
     });});
 
     $$('#gvShopContent .buy-gspremium-btn').forEach(function(btn){btn.addEventListener('click',function(){
-        var pid=btn.getAttribute('data-pid');var gid=parseInt(btn.getAttribute('data-gid'));
+        var pid=btn.getAttribute('data-pid');var gid=btn.getAttribute('data-gid');
         var skin=premiumSkins.find(function(s){return s.id===pid;});
         if(!skin) return;
         var gc=getGroupCoinCount(gid);
@@ -3241,7 +3245,7 @@ function renderGroupShop(groupId){
     });});
 
     $$('#gvShopContent .apply-gskin-btn').forEach(function(btn){btn.addEventListener('click',function(){
-        var sid=btn.getAttribute('data-sid');var gid=parseInt(btn.getAttribute('data-gid'));
+        var sid=btn.getAttribute('data-sid');var gid=btn.getAttribute('data-gid');
         var isPremium=btn.getAttribute('data-premium')==='1';
         if(isPremium){state.groupActivePremiumSkin[gid]=sid;state.groupActiveSkin[gid]=null;}
         else{state.groupActiveSkin[gid]=sid;state.groupActivePremiumSkin[gid]=null;}
@@ -3589,56 +3593,156 @@ function renderMySkins(){
     });});
 }
 
-// ======================== MESSAGES ========================
-var activeChat=null;
+// ======================== MESSAGES (Supabase) ========================
+var activeChat=null; // { partnerId, partner: {id,username,display_name,avatar_url} }
+var msgConversations=[];
 
-function renderMsgContacts(){
-    var list=$('#msgContactList');
-    if(list) list.innerHTML='<div class="empty-state" style="padding:40px 20px;"><i class="fas fa-envelope-open-text"></i><p>No messages yet.</p></div>';
+async function loadConversations(){
+    if(!currentUser) return;
+    try{
+        msgConversations=await sbGetConversations(currentUser.id);
+    }catch(e){console.error('loadConversations:',e);msgConversations=[];}
+    renderMsgContacts();
 }
 
-function openChat(contact){
+function renderMsgContacts(search){
+    var list=$('#msgContactList');
+    if(!list) return;
+    var convos=msgConversations;
+    if(search){
+        var q=search.toLowerCase();
+        convos=convos.filter(function(c){
+            var name=(c.partner.display_name||c.partner.username||'').toLowerCase();
+            return name.indexOf(q)!==-1;
+        });
+    }
+    if(!convos.length){
+        list.innerHTML='<div class="empty-state" style="padding:40px 20px;"><i class="fas fa-envelope-open-text"></i><p>No messages yet.</p></div>';
+        return;
+    }
+    var html='';
+    convos.forEach(function(c){
+        var name=c.partner.display_name||c.partner.username||'User';
+        var avatar=c.partner.avatar_url||DEFAULT_AVATAR;
+        var preview=c.lastMessage.content||'';
+        if(preview.length>40) preview=preview.substring(0,40)+'...';
+        var time=timeAgoReal(c.lastMessage.created_at);
+        var isActive=activeChat&&activeChat.partnerId===c.partnerId;
+        html+='<div class="msg-contact'+(isActive?' active':'')+'" data-partner-id="'+c.partnerId+'">';
+        html+='<img src="'+avatar+'" alt="'+name+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
+        html+='<div class="msg-contact-info"><div class="msg-contact-name">'+name+(c.unread>0?' <span style="background:var(--primary);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;margin-left:6px;">'+c.unread+'</span>':'')+'</div>';
+        html+='<div class="msg-contact-preview">'+preview+'</div></div>';
+        html+='<span class="msg-contact-time">'+time+'</span>';
+        html+='</div>';
+    });
+    list.innerHTML=html;
+    // Click to open chat
+    list.querySelectorAll('.msg-contact').forEach(function(el){
+        el.addEventListener('click',function(){
+            var pid=el.getAttribute('data-partner-id');
+            var convo=msgConversations.find(function(c){return c.partnerId===pid;});
+            if(convo) openChat({partnerId:convo.partnerId,partner:convo.partner});
+        });
+    });
+}
+
+async function openChat(contact){
     activeChat=contact;
     renderMsgContacts();
-    var html='<div class="msg-chat-header"><img src="images/default-avatar.svg" alt="'+contact.name+'"><h4>'+contact.name+'</h4></div>';
-    html+='<div class="msg-chat-messages" id="chatMessages">';
-    contact.messages.forEach(function(m){
-        html+='<div class="msg-bubble '+(m.from==='me'?'sent':'received')+'">'+m.text+'</div>';
-    });
-    html+='</div>';
+    var name=contact.partner.display_name||contact.partner.username||'User';
+    var avatar=contact.partner.avatar_url||DEFAULT_AVATAR;
+    var html='<div class="msg-chat-header"><img src="'+avatar+'" alt="'+name+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;" data-uid="'+contact.partnerId+'"><h4>'+name+'</h4></div>';
+    html+='<div class="msg-chat-messages" id="chatMessages"><div style="text-align:center;padding:20px;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>';
     html+='<div class="msg-chat-input"><input type="text" placeholder="Type a message..." id="msgInput"><button id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button></div>';
     $('#msgChat').innerHTML=html;
 
-    var msgArea=$('#chatMessages');
-    msgArea.scrollTop=msgArea.scrollHeight;
+    // Load messages
+    try{
+        var messages=await sbGetMessages(currentUser.id,contact.partnerId);
+        var msgArea=$('#chatMessages');
+        if(!messages||!messages.length){
+            msgArea.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray);"><p>No messages yet. Say hello!</p></div>';
+        } else {
+            var mhtml='';
+            messages.forEach(function(m){
+                var isMine=m.sender_id===currentUser.id;
+                mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'">'+m.content+'</div>';
+            });
+            msgArea.innerHTML=mhtml;
+            msgArea.scrollTop=msgArea.scrollHeight;
+        }
+        // Mark as read
+        await sbMarkMessagesRead(currentUser.id,contact.partnerId);
+        var convo=msgConversations.find(function(c){return c.partnerId===contact.partnerId;});
+        if(convo) convo.unread=0;
+        renderMsgContacts();
+    }catch(e){
+        console.error('Load messages:',e);
+        $('#chatMessages').innerHTML='<div style="text-align:center;padding:40px;color:#e74c3c;"><p>Failed to load messages.</p></div>';
+    }
 
+    // Send handler
     $('#sendMsgBtn').addEventListener('click',sendMessage);
     $('#msgInput').addEventListener('keypress',function(e){if(e.key==='Enter')sendMessage();});
+    $('#msgInput').focus();
+
+    // Click avatar to view profile
+    var avatarEl=$('#msgChat').querySelector('.msg-chat-header img');
+    if(avatarEl) avatarEl.addEventListener('click',async function(){
+        try{var p=await sbGetProfile(contact.partnerId);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+    });
 }
 
-function sendMessage(){
+async function sendMessage(){
     var input=$('#msgInput');
+    if(!input) return;
     var text=input.value.trim();
-    if(!text||!activeChat) return;
-    activeChat.messages.push({from:'me',text:text});
+    if(!text||!activeChat||!currentUser) return;
     input.value='';
+    // Optimistically show the message
     var msgArea=$('#chatMessages');
+    var placeholder=msgArea.querySelector('div[style*="text-align:center"]');
+    if(placeholder&&placeholder.textContent.indexOf('No messages')!==-1) msgArea.innerHTML='';
     msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble sent">'+text+'</div>');
     msgArea.scrollTop=msgArea.scrollHeight;
-    renderMsgContacts();
+    try{
+        await sbSendMessage(currentUser.id,activeChat.partnerId,text);
+        // Update conversation list
+        await loadConversations();
+    }catch(e){
+        console.error('Send message:',e);
+        showToast('Message failed to send');
+    }
+}
 
-    // Auto reply after 1 second
+// Start a conversation from a profile (called by Message buttons)
+function startConversation(userId, userName, userAvatar){
+    navigateTo('messages');
     setTimeout(function(){
-        var replies=['Sounds great!','Haha nice','That\'s awesome!','I totally agree','Tell me more!','LOL','For sure!','Interesting...','Love that!','Cool!'];
-        var reply=replies[Math.floor(Math.random()*replies.length)];
-        activeChat.messages.push({from:'them',text:reply});
-        msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received">'+reply+'</div>');
-        msgArea.scrollTop=msgArea.scrollHeight;
-        renderMsgContacts();
-    },1000);
+        openChat({partnerId:userId,partner:{id:userId,display_name:userName,username:userName,avatar_url:userAvatar}});
+    },100);
 }
 
 $('#msgSearch').addEventListener('input',function(){renderMsgContacts(this.value);});
+
+// Subscribe to realtime messages
+function initMessageSubscription(){
+    if(!currentUser) return;
+    sbSubscribeMessages(currentUser.id, function(newMsg){
+        // Reload conversations to update sidebar
+        loadConversations();
+        // If we're in the chat with this sender, append the message
+        if(activeChat&&activeChat.partnerId===newMsg.sender_id){
+            var msgArea=$('#chatMessages');
+            if(msgArea){
+                msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received">'+newMsg.content+'</div>');
+                msgArea.scrollTop=msgArea.scrollHeight;
+                // Mark as read immediately
+                sbMarkMessagesRead(currentUser.id,newMsg.sender_id).catch(function(){});
+            }
+        }
+    });
+}
 
 // ======================== PHOTOS ========================
 function getAllPhotos(){

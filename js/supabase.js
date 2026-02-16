@@ -556,7 +556,92 @@ function sbSubscribeNotifications(userId, callback) {
     .subscribe();
 }
 
-// ---- 14. UTILITY: timeAgo for real timestamps --------------------------------
+// ---- 14. MESSAGES -----------------------------------------------------------
+
+async function sbGetConversations(userId) {
+  // Get all messages where user is sender or receiver, grouped by the other person
+  const { data, error } = await sb.from('messages')
+    .select(`
+      *,
+      sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url),
+      receiver:profiles!messages_receiver_id_fkey(id, username, display_name, avatar_url)
+    `)
+    .or('sender_id.eq.' + userId + ',receiver_id.eq.' + userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+
+  // Group by conversation partner
+  var convos = {};
+  (data || []).forEach(function(m) {
+    var partnerId = m.sender_id === userId ? m.receiver_id : m.sender_id;
+    if (!convos[partnerId]) {
+      var partner = m.sender_id === userId ? m.receiver : m.sender;
+      convos[partnerId] = {
+        partnerId: partnerId,
+        partner: partner,
+        lastMessage: m,
+        unread: 0
+      };
+    }
+    if (m.receiver_id === userId && !m.is_read) convos[partnerId].unread++;
+  });
+  // Sort by most recent message
+  return Object.values(convos).sort(function(a, b) {
+    return new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at);
+  });
+}
+
+async function sbGetMessages(userId, partnerId, limit = 100) {
+  const { data, error } = await sb.from('messages')
+    .select(`
+      *,
+      sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)
+    `)
+    .or(
+      'and(sender_id.eq.' + userId + ',receiver_id.eq.' + partnerId + '),' +
+      'and(sender_id.eq.' + partnerId + ',receiver_id.eq.' + userId + ')'
+    )
+    .order('created_at', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+async function sbSendMessage(senderId, receiverId, content) {
+  const { data, error } = await sb.from('messages')
+    .insert({ sender_id: senderId, receiver_id: receiverId, content: content })
+    .select(`
+      *,
+      sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)
+    `)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function sbMarkMessagesRead(userId, partnerId) {
+  const { error } = await sb.from('messages')
+    .update({ is_read: true })
+    .eq('receiver_id', userId)
+    .eq('sender_id', partnerId)
+    .eq('is_read', false);
+  if (error) throw error;
+}
+
+function sbSubscribeMessages(userId, callback) {
+  return sb.channel('messages:' + userId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: 'receiver_id=eq.' + userId
+    }, payload => {
+      callback(payload.new);
+    })
+    .subscribe();
+}
+
+// ---- 15. UTILITY: timeAgo for real timestamps --------------------------------
 
 function timeAgoReal(dateStr) {
   const now = Date.now();

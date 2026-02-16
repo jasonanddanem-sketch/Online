@@ -412,4 +412,28 @@ CREATE POLICY "Auth update avatars" ON storage.objects FOR UPDATE USING (bucket_
 DROP POLICY IF EXISTS "Auth update posts" ON storage.objects;
 CREATE POLICY "Auth update posts" ON storage.objects FOR UPDATE USING (bucket_id = 'posts' AND auth.role() = 'authenticated');
 
+-- 8. MESSAGES TABLE
+CREATE TABLE IF NOT EXISTS public.messages (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id   UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    receiver_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    content     TEXT NOT NULL CHECK (char_length(content) > 0),
+    is_read     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT messages_no_self CHECK (sender_id <> receiver_id)
+);
+CREATE INDEX IF NOT EXISTS idx_messages_sender   ON public.messages (sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON public.messages (receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created  ON public.messages (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_pair     ON public.messages (LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id), created_at DESC);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS messages_select ON public.messages;
+CREATE POLICY messages_select ON public.messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+DROP POLICY IF EXISTS messages_insert ON public.messages;
+CREATE POLICY messages_insert ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+DROP POLICY IF EXISTS messages_update ON public.messages;
+CREATE POLICY messages_update ON public.messages FOR UPDATE USING (auth.uid() = receiver_id);
+
 -- DONE! All tables, policies, triggers, and storage are set up.

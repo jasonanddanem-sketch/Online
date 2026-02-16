@@ -179,9 +179,10 @@ function populateUserUI() {
 // Sync all avatar images on the page when avatar changes
 function syncAllAvatars(newSrc) {
     var old = getMyAvatarUrl();
+    var oldBase = old ? old.split('?')[0] : '';
     if (currentUser) currentUser.avatar_url = newSrc;
     document.querySelectorAll('img').forEach(function (img) {
-        if (img.src === old) img.src = newSrc;
+        if (img.src === old || (oldBase && img.src.split('?')[0] === oldBase)) img.src = newSrc;
     });
     populateUserUI();
 }

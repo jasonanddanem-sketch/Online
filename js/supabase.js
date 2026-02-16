@@ -428,7 +428,8 @@ async function sbUploadFile(bucket, path, file) {
     .upload(path, file, { upsert: true });
   if (error) throw error;
   const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path);
-  return urlData.publicUrl;
+  // Append cache-buster so browser doesn't serve stale cached image
+  return urlData.publicUrl + '?t=' + Date.now();
 }
 
 async function sbUploadAvatar(userId, file) {

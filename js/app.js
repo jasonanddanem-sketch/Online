@@ -282,7 +282,15 @@ async function initApp() {
     initMessageSubscription();
     // Restore page from URL hash on refresh
     var hashPage=(location.hash||'').replace('#','');
-    if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'){
+    if(hashPage&&hashPage.indexOf('group-view:')===0){
+        // Restore specific group view by ID
+        var gvId=hashPage.split(':')[1];
+        if(gvId){
+            var gvGroup=groups.find(function(g){return g.id===gvId;});
+            if(gvGroup){_navFromPopstate=true;showGroupView(gvGroup);_navFromPopstate=false;}
+            else navigateTo('groups',true);
+        }
+    } else if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'){
         navigateTo(hashPage,true);
     }
     // Remove the pre-paint hash-nav style now that JS has taken over
@@ -597,6 +605,7 @@ async function loadGroups() {
                 description: g.description || '',
                 member_count: g.member_count,
                 mods: [],
+                rules: g.rules || null,
                 coverPhoto: g.cover_photo_url || null,
                 profileImg: g.avatar_url || null
             };
@@ -818,14 +827,23 @@ function navigateTo(page,skipPush){
 }
 // Browser back/forward support
 var _initHash=(location.hash||'#home').replace('#','');
-if(_initHash==='profile-view'||_initHash==='group-view') _initHash='home';
+if(_initHash==='profile-view') _initHash='home';
+if(_initHash==='group-view') _initHash='groups';
+if(_initHash.indexOf('group-view:')===0) _initHash=_initHash; // keep as-is, handled in initApp
 history.replaceState({page:_initHash},'','#'+_initHash);
 window.addEventListener('popstate',function(e){
     var page=(e.state&&e.state.page)?e.state.page:'home';
     _navFromPopstate=true;
-    // Profile view and group view can't be restored from history alone (need data),
-    // so navigate to a safe fallback
-    if(page==='profile-view'||page==='group-view') page='home';
+    if(page==='profile-view') page='home';
+    if(page==='group-view'){
+        // Try to restore group from state
+        var gid=e.state&&e.state.groupId;
+        if(gid){
+            var g=groups.find(function(gr){return gr.id===gid;});
+            if(g){showGroupView(g);_navFromPopstate=false;return;}
+        }
+        page='groups';
+    }
     navigateTo(page,true);
     _navFromPopstate=false;
 });
@@ -2089,7 +2107,7 @@ async function showGroupView(group){
     document.getElementById('page-group-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
     _navPrev=_navCurrent;_navCurrent='group-view';
-    if(!_navFromPopstate) history.pushState({page:'group-view'},'','#group-view');
+    if(!_navFromPopstate) history.pushState({page:'group-view',groupId:group.id},'','#group-view:'+group.id);
     window.scrollTo(0,0);
 
     var joined=state.joinedGroups[group.id];
@@ -2188,19 +2206,44 @@ async function showGroupView(group){
         $('#gvPostBar').innerHTML='';
     }
 
-    // Feed posts
-    var feedHtml='<div class="card"><h4 class="pv-posts-heading"><i class="fas fa-stream" style="color:var(--primary);margin-right:8px;"></i>Group Posts</h4></div>';
-    var groupPosts=state.groupPosts&&state.groupPosts[group.id]?state.groupPosts[group.id]:[];
-    groupPosts.forEach(function(p,i){
-        feedHtml+='<div class="card feed-post"><div class="post-header"><img src="'+p.avatar+'" alt="'+p.name+'" class="post-avatar"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+p.name+'</h4><span class="post-time">'+p.time+'</span></div><div class="post-badges"><span class="badge badge-green"><i class="fas fa-user"></i> You</span></div></div></div>';
-        feedHtml+='<div class="post-description"><p>'+p.text+'</p>'+(p.media||'')+'</div>';
-        feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="gvp-'+group.id+'-'+i+'"><i class="far fa-thumbs-up"></i><span class="like-count">0</span></button><button class="action-btn dislike-btn" data-post-id="gvp-'+group.id+'-'+i+'"><i class="far fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>0</span></button></div></div></div>';
-    });
-    if(!groupPosts.length){
-        feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts in this group yet.</p></div>';
-    }
-    $('#gvPostsFeed').innerHTML=feedHtml;
-    $('#gvPostCount').textContent=groupPosts.length;
+    // Feed posts — load from Supabase
+    $('#gvPostsFeed').innerHTML='<div class="card"><h4 class="pv-posts-heading"><i class="fas fa-stream" style="color:var(--primary);margin-right:8px;"></i>Group Posts</h4></div><div class="card" style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i> Loading posts...</div>';
+    $('#gvPostCount').textContent='0';
+    (async function(){
+        try{
+            var groupPosts=await sbGetGroupPosts(group.id);
+            var feedHtml='<div class="card"><h4 class="pv-posts-heading"><i class="fas fa-stream" style="color:var(--primary);margin-right:8px;"></i>Group Posts</h4></div>';
+            groupPosts.forEach(function(p){
+                var author=p.author||{};
+                var name=author.display_name||author.username||'User';
+                var avatar=author.avatar_url||DEFAULT_AVATAR;
+                var isMe=currentUser&&author.id===currentUser.id;
+                var timeStr=p.created_at?timeAgo(p.created_at):'just now';
+                var commentCount=p.comments&&p.comments[0]?p.comments[0].count:0;
+                feedHtml+='<div class="card feed-post" data-post-id="'+p.id+'"><div class="post-header"><img src="'+avatar+'" alt="'+name+'" class="post-avatar gv-post-author" data-uid="'+author.id+'" style="cursor:pointer;"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username gv-post-author" data-uid="'+author.id+'" style="cursor:pointer;">'+name+'</h4><span class="post-time">'+timeStr+'</span></div>';
+                if(isMe) feedHtml+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-user"></i> You</span></div>';
+                feedHtml+='</div></div>';
+                feedHtml+='<div class="post-description">';
+                if(p.content) feedHtml+='<p>'+p.content+'</p>';
+                if(p.image_url) feedHtml+='<div class="post-media-grid pm-count-1"><div class="pm-thumb"><img src="'+p.image_url+'"></div></div>';
+                feedHtml+='</div>';
+                feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+p.id+'"><i class="'+(state.likedPosts[p.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+(p.like_count||0)+'</span></button><button class="action-btn dislike-btn" data-post-id="'+p.id+'"><i class="'+(state.dislikedPosts[p.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+commentCount+'</span></button></div></div></div>';
+            });
+            if(!groupPosts.length){
+                feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts in this group yet.</p></div>';
+            }
+            var feedEl=$('#gvPostsFeed');
+            if(feedEl){feedEl.innerHTML=feedHtml;$('#gvPostCount').textContent=groupPosts.length;}
+            bindGvPostEvents();
+            // Author click → profile
+            $$('#gvPostsFeed .gv-post-author').forEach(function(el){
+                el.addEventListener('click',async function(){
+                    var uid=el.dataset.uid;if(!uid)return;
+                    try{var prof=await sbGetProfile(uid);if(prof)showProfileView(prof);}catch(e){}
+                });
+            });
+        }catch(e){console.error('Load group posts:',e);}
+    })();
 
     // Mode tabs (Feed / Group Shop) — remove old ones first to prevent duplicates
     var _oldTabs=document.getElementById('gvModeTabs');if(_oldTabs)_oldTabs.remove();
@@ -2284,9 +2327,11 @@ async function showGroupView(group){
         html+='<div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label><input type="text" class="post-input" id="editGrpDesc" value="'+(group.description||group.desc||'')+'" style="width:100%;"></div>';
         html+='<button class="btn btn-primary btn-block" id="saveGrpBtn">Save Changes</button></div>';
         showModal(html);
-        document.getElementById('saveGrpBtn').addEventListener('click',function(){
-            group.name=document.getElementById('editGrpName').value.trim()||group.name;
-            group.description=document.getElementById('editGrpDesc').value.trim()||group.description||group.desc||'';
+        document.getElementById('saveGrpBtn').addEventListener('click',async function(){
+            var newName=document.getElementById('editGrpName').value.trim()||group.name;
+            var newDesc=document.getElementById('editGrpDesc').value.trim()||group.description||group.desc||'';
+            try{await sbUpdateGroup(group.id,{name:newName,description:newDesc});}catch(e){console.warn('Save group:',e);}
+            group.name=newName;group.description=newDesc;group.desc=newDesc;
             closeModal();showGroupView(group);renderGroups();
         });
     });}
@@ -2385,9 +2430,11 @@ async function showGroupView(group){
             div.innerHTML='<span style="font-weight:600;color:var(--gray);">'+(idx+1)+'.</span><input type="text" class="post-input gv-rule-input" placeholder="New rule..." style="flex:1;"><button class="gv-rule-del" data-idx="'+idx+'" style="background:none;color:var(--gray);font-size:14px;padding:4px;"><i class="fas fa-trash"></i></button>';
             container.insertBefore(div,this);
         });
-        document.getElementById('gvSaveRules').addEventListener('click',function(){
+        document.getElementById('gvSaveRules').addEventListener('click',async function(){
             var inputs=$$('.gv-rule-input');
             group.rules=[];inputs.forEach(function(inp){var v=inp.value.trim();if(v)group.rules.push(v);});
+            // Persist rules to Supabase
+            try{await sbUpdateGroup(group.id,{rules:group.rules});}catch(e){console.warn('Save rules:',e);}
             closeModal();showGroupView(group);
         });
         $$('.gv-rule-del').forEach(function(btn){btn.addEventListener('click',function(){btn.parentElement.remove();});});
@@ -2466,17 +2513,34 @@ function openGroupPostModal(group){
         grid.querySelectorAll('.remove-thumb').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();mediaList.splice(parseInt(btn.dataset.idx),1);renderGrid();});});
     }
     fileInput.addEventListener('change',function(){Array.from(this.files).forEach(function(f){var isV=f.type.startsWith('video/');var r=new FileReader();r.onload=function(e){mediaList.push({src:e.target.result,type:isV?'video':'image'});renderGrid();};r.readAsDataURL(f);});this.value='';});
-    document.getElementById('gvCpmPublish').addEventListener('click',function(){
+    document.getElementById('gvCpmPublish').addEventListener('click',async function(){
         var text=document.getElementById('gvCpmText').value.trim();
         if(!text&&!mediaList.length)return;
-        if(!state.groupPosts) state.groupPosts={};
-        if(!state.groupPosts[group.id]) state.groupPosts[group.id]=[];
-        var mediaHtml='';
-        if(mediaList.length>0){var cnt=Math.min(mediaList.length,5);mediaHtml='<div class="post-media-grid pm-count-'+cnt+'">';mediaList.slice(0,5).forEach(function(m){mediaHtml+='<div class="pm-thumb">'+(m.type==='video'?'<video src="'+m.src+'" controls></video>':'<img src="'+m.src+'">')+'</div>';});mediaHtml+='</div>';}
-        state.groupPosts[group.id].unshift({name:currentUser?(currentUser.display_name||currentUser.username):'You',avatar:$('#profileAvatarImg').src,text:text,media:mediaHtml,time:'just now'});
-        if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
-        if(canEarnGroupPostCoin(group.id)){addGroupCoins(group.id,5);trackGroupPostCoin(group.id);}
-        closeModal();showGroupView(group);
+        if(!currentUser){showToast('Please sign in to post');return;}
+        var publishBtn=this;publishBtn.disabled=true;publishBtn.textContent='Publishing...';
+        try{
+            // Upload first image to Supabase Storage (if any)
+            var imageUrl=null;
+            if(mediaList.length>0){
+                try{
+                    var firstImg=mediaList[0];
+                    if(firstImg.type==='image'&&firstImg.src.startsWith('data:')){
+                        var resp=await fetch(firstImg.src);
+                        var blob=await resp.blob();
+                        var file=new File([blob],'gpost-'+Date.now()+'.jpg',{type:blob.type});
+                        imageUrl=await sbUploadPostImage(currentUser.id,file);
+                    }
+                }catch(e){console.error('Group image upload:',e);}
+            }
+            await sbCreatePost(currentUser.id,text||'',imageUrl,group.id);
+            if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
+            if(canEarnGroupPostCoin(group.id)){addGroupCoins(group.id,5);trackGroupPostCoin(group.id);}
+            closeModal();showGroupView(group);
+        }catch(e){
+            console.error('Group post:',e);
+            showToast('Failed to create post: '+(e.message||'Unknown error'));
+            publishBtn.disabled=false;publishBtn.textContent='Publish';
+        }
     });
 }
 

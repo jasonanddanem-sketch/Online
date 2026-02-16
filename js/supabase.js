@@ -598,6 +598,37 @@ async function sbLeaveGroup(groupId, userId) {
   if (error) throw error;
 }
 
+async function sbGetGroupPosts(groupId, limit = 50) {
+  const { data, error } = await sb.from('posts')
+    .select(`
+      *,
+      author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url),
+      comments:comments(count)
+    `)
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  for (const post of (data || [])) {
+    const { count } = await sb.from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'post')
+      .eq('target_id', post.id);
+    post.like_count = count || 0;
+  }
+  return data || [];
+}
+
+async function sbUpdateGroup(groupId, updates) {
+  const { data, error } = await sb.from('groups')
+    .update(updates)
+    .eq('id', groupId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // ---- 12. SKINS --------------------------------------------------------------
 
 async function sbGetSkins() {

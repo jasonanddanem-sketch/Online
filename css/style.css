@@ -1254,7 +1254,7 @@ body.nav-dock .messages-layout{height:calc(100vh - 130px);}
 
 /* ---------- Nav Style: Float ---------- */
 /* Floating glass navbar */
-body.nav-float .navbar{position:fixed;top:12px;left:12px;right:12px;border-radius:16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 8px 32px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);height:auto;}
+body.nav-float .navbar{position:fixed;top:12px;left:12px;right:12px;border-radius:16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 8px 32px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);height:auto;max-height:none;}
 body.nav-float .nav-container{padding:8px 14px;gap:10px;max-width:none;}
 /* Logo small */
 body.nav-float .nav-logo{font-size:15px;padding:4px 10px;border-radius:10px;}
@@ -1316,7 +1316,7 @@ body.nav-pill .messages-layout{height:calc(100vh - 140px);}
 
 /* ---------- Nav Style: Rail ---------- */
 /* Thin 60px icon-only left sidebar */
-body.nav-rail .navbar{position:fixed;top:0;left:0;bottom:0;right:auto;width:60px;height:100vh;box-shadow:2px 0 10px rgba(0,0,0,.12);overflow-y:auto;overflow-x:hidden;}
+body.nav-rail .navbar{position:fixed;top:0;left:0;bottom:0;right:auto;width:60px;height:100vh;max-height:100vh;box-shadow:2px 0 10px rgba(0,0,0,.12);overflow-y:auto;overflow-x:hidden;}
 body.nav-rail .nav-container{flex-direction:column;align-items:center;padding:10px 4px;gap:4px;height:100%;max-width:none;}
 body.nav-rail .nav-left{flex-direction:column;align-items:center;gap:6px;}
 body.nav-rail .nav-logo{font-size:14px;padding:6px 4px;text-align:center;letter-spacing:-1px;}
@@ -1351,7 +1351,7 @@ body.nav-rail .messages-layout{height:calc(100vh - 40px);}
 
 /* ---------- Nav Style: Shelf ---------- */
 /* Two-row navbar: branding row on top, nav tabs below */
-body.nav-shelf .navbar{height:auto;}
+body.nav-shelf .navbar{height:auto;max-height:none;}
 body.nav-shelf .nav-container{flex-wrap:wrap;padding:8px 16px 0;gap:0;}
 body.nav-shelf .nav-left{flex:1;min-width:180px;padding-bottom:8px;}
 body.nav-shelf .nav-right{padding-bottom:8px;}
@@ -1408,7 +1408,7 @@ body.nav-horizon .messages-layout{height:calc(100vh - 80px);}
 
 /* ---------- Nav Style: Mirror ---------- */
 /* Right-side vertical sidebar (flipped Metro) */
-body.nav-mirror .navbar{position:fixed;top:0;right:0;left:auto;bottom:0;width:210px;height:100vh;box-shadow:-2px 0 12px rgba(0,0,0,.15);overflow-y:auto;overflow-x:hidden;}
+body.nav-mirror .navbar{position:fixed;top:0;right:0;left:auto;bottom:0;width:210px;height:100vh;max-height:100vh;box-shadow:-2px 0 12px rgba(0,0,0,.15);overflow-y:auto;overflow-x:hidden;}
 body.nav-mirror .nav-container{flex-direction:column;align-items:stretch;height:100%;padding:14px 10px;gap:6px;max-width:none;}
 body.nav-mirror .nav-left{flex-direction:column;gap:10px;align-items:stretch;}
 body.nav-mirror .nav-logo{text-align:center;font-size:18px;padding:10px 8px;border-radius:8px;}
@@ -1521,9 +1521,9 @@ body.nav-arcade .nav-link span{font-size:8px!important;}
 body.nav-arcade .nav-coins{font-size:10px;border-radius:4px;}
 
 /* ---------- Nav Tooltips (icon-only styles) ---------- */
-body.nav-float .nav-link,body.nav-pill .nav-link,body.nav-slim .nav-link,body.nav-island .nav-link,body.nav-ribbon .nav-link,body.nav-minimal .nav-link{position:relative;}
-body.nav-float .nav-link:hover span:not(.notif-badge),body.nav-slim .nav-link:hover span:not(.notif-badge),body.nav-island .nav-link:hover span:not(.notif-badge),body.nav-ribbon .nav-link:hover span:not(.notif-badge),body.nav-minimal .nav-link:hover span:not(.notif-badge){display:block!important;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap;pointer-events:none;z-index:1001;margin-top:6px;line-height:1.4;}
-body.nav-pill .nav-link:hover span:not(.notif-badge){display:block!important;position:absolute;bottom:100%;top:auto;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap;pointer-events:none;z-index:1001;margin-bottom:6px;line-height:1.4;}
+body.nav-float .nav-link,body.nav-pill .nav-link,body.nav-slim .nav-link,body.nav-island .nav-link,body.nav-ribbon .nav-link,body.nav-minimal .nav-link,body.nav-split .nav-link{position:relative;}
+body.nav-float .nav-link:hover span:not(.notif-badge),body.nav-slim .nav-link:hover span:not(.notif-badge),body.nav-island .nav-link:hover span:not(.notif-badge),body.nav-ribbon .nav-link:hover span:not(.notif-badge),body.nav-minimal .nav-link:hover span:not(.notif-badge){display:block!important;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:4px 10px;border-radius:6px;font-size:calc(11px * var(--font-scale));font-family:inherit;white-space:nowrap;pointer-events:none;z-index:1001;margin-top:6px;line-height:1.4;}
+body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:hover span:not(.notif-badge){display:block!important;position:absolute;bottom:100%;top:auto;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:4px 10px;border-radius:6px;font-size:calc(11px * var(--font-scale));font-family:inherit;white-space:nowrap;pointer-events:none;z-index:1001;margin-bottom:6px;line-height:1.4;}
 
 /* ========== GROUP VIEW PAGE ========== */
 #page-group-view{padding-top:60px;}
@@ -1658,6 +1658,39 @@ body.nav-pill .nav-link:hover span:not(.notif-badge){display:block!important;pos
     .pv-layout{grid-template-columns:200px 1fr 220px;gap:16px;}
     .nav-link span{display:none;}
     .nav-link{padding:6px 8px;}
+
+    /* Sidebar navs → slim rail at medium widths */
+    body.nav-metro .navbar{width:60px!important;}
+    body.nav-metro .nav-link{flex-direction:column!important;align-items:center!important;gap:2px!important;padding:8px 2px!important;}
+    body.nav-metro .nav-link span{display:none!important;}
+    body.nav-metro .nav-link i{width:auto!important;}
+    body.nav-metro .search-bar{display:none!important;}
+    body.nav-metro .nav-username{display:none!important;}
+    body.nav-metro .nav-user .fa-chevron-down{display:none!important;}
+    body.nav-metro .nav-logo{font-size:12px!important;padding:6px 4px!important;letter-spacing:-1px!important;text-align:center!important;}
+    body.nav-metro .page{padding-left:60px!important;}
+    body.nav-metro .nav-coins{flex-direction:column!important;gap:1px!important;padding:4px!important;font-size:10px!important;border-radius:8px!important;}
+    body.nav-metro .nav-user{padding:3px!important;border-radius:50%!important;justify-content:center!important;}
+    body.nav-metro .nav-avatar{width:30px!important;height:30px!important;}
+    body.nav-metro .notif-badge{position:static!important;width:14px!important;height:14px!important;font-size:8px!important;margin-top:-2px!important;}
+    body.nav-metro .main-container{max-width:none!important;}
+    body.nav-metro .page-container{max-width:none!important;}
+
+    body.nav-mirror .navbar{width:60px!important;}
+    body.nav-mirror .nav-link{flex-direction:column!important;align-items:center!important;gap:2px!important;padding:8px 2px!important;}
+    body.nav-mirror .nav-link span{display:none!important;}
+    body.nav-mirror .nav-link i{width:auto!important;}
+    body.nav-mirror .search-bar{display:none!important;}
+    body.nav-mirror .nav-username{display:none!important;}
+    body.nav-mirror .nav-user .fa-chevron-down{display:none!important;}
+    body.nav-mirror .nav-logo{font-size:12px!important;padding:6px 4px!important;letter-spacing:-1px!important;text-align:center!important;}
+    body.nav-mirror .page{padding-right:60px!important;}
+    body.nav-mirror .nav-coins{flex-direction:column!important;gap:1px!important;padding:4px!important;font-size:10px!important;border-radius:8px!important;}
+    body.nav-mirror .nav-user{padding:3px!important;border-radius:50%!important;justify-content:center!important;}
+    body.nav-mirror .nav-avatar{width:30px!important;height:30px!important;}
+    body.nav-mirror .notif-badge{position:static!important;width:14px!important;height:14px!important;font-size:8px!important;margin-top:-2px!important;}
+    body.nav-mirror .main-container{max-width:none!important;}
+    body.nav-mirror .page-container{max-width:none!important;}
 }
 @media(max-width:900px){
     .main-container{grid-template-columns:1fr 220px!important;grid-template-rows:auto!important;max-width:100%!important;}

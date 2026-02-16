@@ -68,9 +68,9 @@ img{display:block;}
 .follow-list-item{border-color:var(--border);}
 .follow-list-info h4{color:var(--dark);}
 .follow-list-info p{color:var(--gray);}
-.skin-card-body{color:#333!important;}
-.skin-card-body h4{color:#333!important;}
-.skin-card-body p{color:#666!important;}
+.skin-card-body{color:#333;}
+.skin-card-body h4{color:#333;}
+.skin-card-body p{color:#666;}
 .skin-card .btn-primary{background:#5cbdb9!important;border-color:#5cbdb9!important;color:#fff!important;}
 .skin-card .btn-primary:hover{background:#4aa8a4!important;border-color:#4aa8a4!important;}
 .skin-card .btn-disabled{background:#ccc!important;border-color:#ccc!important;color:#fff!important;}

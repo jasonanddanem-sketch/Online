@@ -365,23 +365,27 @@ var settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,
 function saveState(){
     if(!currentUser) return;
     var key='blipvibe_'+currentUser.id;
+    // When viewing another profile/group, skin values are temporarily overridden.
+    // Always save the user's own values (from _pvSaved/_gvSaved backup if active).
+    var _bk=_pvSaved||_gvSaved||null;
     var save={
-        ownedSkins:state.ownedSkins,activeSkin:state.activeSkin,
-        ownedFonts:state.ownedFonts,activeFont:state.activeFont,
+        ownedSkins:state.ownedSkins,activeSkin:_bk?_bk.skin:state.activeSkin,
+        ownedFonts:state.ownedFonts,activeFont:_bk&&_bk.font!==undefined?_bk.font:state.activeFont,
         ownedLogos:state.ownedLogos,activeLogo:state.activeLogo,
         ownedIconSets:state.ownedIconSets,activeIconSet:state.activeIconSet,
         ownedCoinSkins:state.ownedCoinSkins,activeCoinSkin:state.activeCoinSkin,
-        ownedTemplates:state.ownedTemplates,activeTemplate:state.activeTemplate,
+        ownedTemplates:state.ownedTemplates,activeTemplate:_bk&&_bk.tpl!==undefined?_bk.tpl:state.activeTemplate,
         ownedNavStyles:state.ownedNavStyles,activeNavStyle:state.activeNavStyle,
-        ownedPremiumSkins:state.ownedPremiumSkins,activePremiumSkin:state.activePremiumSkin,
+        ownedPremiumSkins:state.ownedPremiumSkins,activePremiumSkin:_bk?_bk.premiumSkin:state.activePremiumSkin,
         joinedGroups:state.joinedGroups,privateFollowers:state.privateFollowers,
         groupCoins:state.groupCoins,groupOwnedSkins:state.groupOwnedSkins,
         groupOwnedPremiumSkins:state.groupOwnedPremiumSkins,
         groupActiveSkin:state.groupActiveSkin,groupActivePremiumSkin:state.groupActivePremiumSkin,
-        premiumBgUrl:premiumBgImage,premiumBgSaturation:premiumBgSaturation,
+        premiumBgUrl:_bk?_bk.bgImage:premiumBgImage,
+        premiumBgSaturation:_bk?_bk.bgSat:premiumBgSaturation,
         settings:settings
     };
-    try{localStorage.setItem(key,JSON.stringify(save));}catch(e){}
+    try{localStorage.setItem(key,JSON.stringify(save));}catch(e){console.warn('localStorage save failed (quota?):', e.message);}
     // Sync skin data to Supabase for cross-browser and profile viewing
     syncSkinDataToSupabase();
 }
@@ -391,17 +395,18 @@ function syncSkinDataToSupabase(){
     // Debounce — only sync after 2s of no changes (saveState runs every 10s too)
     clearTimeout(_skinSyncTimer);
     _skinSyncTimer=setTimeout(function(){
+        var _bk=_pvSaved||_gvSaved||null;
         var skinData={
-            activeSkin:state.activeSkin||null,
-            activePremiumSkin:state.activePremiumSkin||null,
-            activeFont:state.activeFont||null,
-            activeTemplate:state.activeTemplate||null,
+            activeSkin:(_bk?_bk.skin:state.activeSkin)||null,
+            activePremiumSkin:(_bk?_bk.premiumSkin:state.activePremiumSkin)||null,
+            activeFont:(_bk&&_bk.font!==undefined?_bk.font:state.activeFont)||null,
+            activeTemplate:(_bk&&_bk.tpl!==undefined?_bk.tpl:state.activeTemplate)||null,
             activeNavStyle:state.activeNavStyle||null,
             activeIconSet:state.activeIconSet||null,
             activeLogo:state.activeLogo||null,
             activeCoinSkin:state.activeCoinSkin||null,
-            premiumBgUrl:premiumBgImage||null,
-            premiumBgSaturation:premiumBgSaturation||100,
+            premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
+            premiumBgSaturation:(_bk?_bk.bgSat:premiumBgSaturation)||100,
             ownedSkins:state.ownedSkins||{},
             ownedPremiumSkins:state.ownedPremiumSkins||{},
             ownedFonts:state.ownedFonts||{},
@@ -3099,9 +3104,9 @@ $('#openPostModal').addEventListener('click',function(){
         var fullContent = text;
         if(linkUrl) fullContent += '\n\n' + linkUrl;
         var sbPost = null;
-        if(currentUser && fullContent) {
+        if(currentUser && (fullContent || imageUrl)) {
             try {
-                sbPost = await sbCreatePost(currentUser.id, fullContent, imageUrl);
+                sbPost = await sbCreatePost(currentUser.id, fullContent || '', imageUrl);
             } catch(e) {
                 console.error('Create post:', e);
                 showToast('Post failed to save: ' + (e.message || e.details || 'Unknown error'));

@@ -3152,8 +3152,15 @@ async function renderMyNetwork(container){
 async function renderDiscover(container,query){
     var html='';
     try{
-        var profiles=query?await sbSearchProfiles(query,20):await sbGetAllProfiles(20);
-        profiles=profiles.filter(function(p){return !currentUser||p.id!==currentUser.id;});
+        var profiles=query?await sbSearchProfiles(query,20):await sbGetAllProfiles(50);
+        // Filter out self, people you follow, and people who follow you
+        var networkIds={};
+        if(currentUser){
+            networkIds[currentUser.id]=true;
+            Object.keys(state.followedUsers).forEach(function(k){networkIds[k]=true;});
+            try{var myFollowers=await sbGetFollowers(currentUser.id);myFollowers.forEach(function(f){if(f&&f.id)networkIds[f.id]=true;});}catch(e){}
+        }
+        profiles=profiles.filter(function(p){return !networkIds[p.id];});
         if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>No users found.</p></div>';
         else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
     }catch(e){html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}

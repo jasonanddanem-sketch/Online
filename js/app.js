@@ -238,7 +238,16 @@ async function initApp() {
     } catch(e){ console.warn('Could not load cover history:', e); }
     try {
         var myPosts = await sbGetUserPosts(currentUser.id, 50);
-        state.photos.post = (myPosts||[]).filter(function(p){ return p.image_url; }).map(function(p){ return { src: p.image_url, date: new Date(p.created_at).getTime() }; });
+        var postPhotos = [];
+        (myPosts||[]).forEach(function(p){
+            var ts = new Date(p.created_at).getTime();
+            if(p.media_urls && p.media_urls.length){
+                p.media_urls.forEach(function(u){ postPhotos.push({src:u, date:ts}); });
+            } else if(p.image_url){
+                postPhotos.push({src:p.image_url, date:ts});
+            }
+        });
+        state.photos.post = postPhotos;
     } catch(e){ console.warn('Could not load post photos:', e); }
     renderPhotosCard();
     await loadFollowCounts();
@@ -1652,6 +1661,7 @@ function profileToPerson(p){
 }
 // ======================== PROFILE VIEW PAGE ========================
 async function showProfileView(person){
+    pvPhotoTab='photos';
     $$('.page').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-profile-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1711,24 +1721,26 @@ async function showProfileView(person){
     cardHtml+='</div>';
     $('#pvProfileCard').innerHTML=cardHtml;
 
-    // Photos card - spans full width, always has photos
+    // Photos card - tabbed: Photos | Albums
     var photosHtml='<div class="card photos-card"><h4 class="card-heading"><i class="fas fa-images" style="margin-right:8px;color:var(--primary);"></i>Photos</h4>';
-    photosHtml+='<div class="photos-preview">';
     if(isMe){
-        var allPhotos=getAllPhotos();
-        if(allPhotos.length){allPhotos.slice(0,9).forEach(function(p){photosHtml+='<img src="'+p.src+'">';});}
-        else{photosHtml+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos yet. Upload photos to see them here.</p>';}
-    } else {
-        photosHtml+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos available.</p>';
+        photosHtml+='<div class="search-tabs" id="pvPhotoTabs">';
+        photosHtml+='<button class="search-tab'+(pvPhotoTab==='photos'?' active':'')+'" data-pvpt="photos"><i class="fas fa-image"></i> Photos</button>';
+        photosHtml+='<button class="search-tab'+(pvPhotoTab==='albums'?' active':'')+'" data-pvpt="albums"><i class="fas fa-folder"></i> Albums</button>';
+        photosHtml+='</div>';
     }
-    photosHtml+='</div>';
-    if(isMe) photosHtml+='<a href="#" class="view-more-link pv-photos-link">View All</a>';
+    photosHtml+='<div id="pvPhotoContent"></div>';
     photosHtml+='</div>';
     document.getElementById('pvPhotosCard').innerHTML=photosHtml;
-    var pvPP=document.querySelector('#pvPhotosCard .photos-preview');
-    if(pvPP&&document.body.classList.contains('tpl-cinema')){pvPP.classList.add('shop-scroll-row');initDragScroll('#pvPhotosCard');}
-    var pvPhotosLink=document.querySelector('.pv-photos-link');
-    if(pvPhotosLink)pvPhotosLink.addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
+    renderPvPhotoTab(isMe);
+    if(isMe){
+        $$('#pvPhotoTabs .search-tab').forEach(function(tab){tab.addEventListener('click',function(){
+            pvPhotoTab=tab.dataset.pvpt;
+            $$('#pvPhotoTabs .search-tab').forEach(function(t){t.classList.remove('active');});
+            tab.classList.add('active');
+            renderPvPhotoTab(true);
+        });});
+    }
 
     // "What Skin Am I?" box - reads live state for own profile, person data for others
     var pvSkinId=isMe?(state.activePremiumSkin||state.activeSkin):(person.premiumSkin||person.skin);
@@ -3373,29 +3385,32 @@ $('#openPostModal').addEventListener('click',function(){
         if(!text&&!mediaList.length&&!linkUrl)return;
         var container=$('#feedContainer');
 
-        // Upload first image to Supabase Storage (if any)
+        // Upload all images to Supabase Storage
         var imageUrl = null;
+        var allImageUrls = [];
         if(mediaList.length > 0 && currentUser) {
-            try {
-                // Convert data URL to blob for upload
-                var firstImg = mediaList[0];
-                if(firstImg.type === 'image' && firstImg.src.startsWith('data:')) {
-                    var resp = await fetch(firstImg.src);
-                    var blob = await resp.blob();
-                    var file = new File([blob], 'post-' + Date.now() + '.jpg', { type: blob.type });
-                    imageUrl = await sbUploadPostImage(currentUser.id, file);
-                }
-            } catch(e) { console.error('Image upload:', e); }
+            for(var mi=0;mi<mediaList.length;mi++){
+                try {
+                    var mItem = mediaList[mi];
+                    if(mItem.type === 'image' && mItem.src.startsWith('data:')) {
+                        var resp = await fetch(mItem.src);
+                        var blob = await resp.blob();
+                        var file = new File([blob], 'post-' + Date.now() + '-' + mi + '.jpg', { type: blob.type });
+                        var url = await sbUploadPostImage(currentUser.id, file);
+                        if(url){allImageUrls.push(url);if(!imageUrl)imageUrl=url;}
+                    }
+                } catch(e) { console.error('Image upload ' + mi + ':', e); }
+            }
         }
 
         // Create post in Supabase
         var fullContent = text;
         if(linkUrl) fullContent += '\n\n' + linkUrl;
         var sbPost = null;
-        if(currentUser && (fullContent || imageUrl)) {
+        if(currentUser && (fullContent || imageUrl || allImageUrls.length)) {
             try {
                 var postLoc=settings.showLocation?userLocation:null;
-                sbPost = await sbCreatePost(currentUser.id, fullContent || '', imageUrl, null, null, postLoc);
+                sbPost = await sbCreatePost(currentUser.id, fullContent || '', imageUrl, null, null, postLoc, allImageUrls.length>1?allImageUrls:null);
             } catch(e) {
                 console.error('Create post:', e);
                 showToast('Post failed to save: ' + (e.message || e.details || 'Unknown error'));
@@ -4605,6 +4620,99 @@ function initMessageSubscription(){
 }
 
 // ======================== PHOTOS ========================
+var pvPhotoTab='photos';
+function renderPvPhotoTab(isMe){
+    var container=document.getElementById('pvPhotoContent');
+    if(!container)return;
+    if(pvPhotoTab==='photos'){
+        var allPhotos=getAllPhotos();
+        var html='<div class="photos-preview">';
+        if(isMe){
+            if(allPhotos.length){allPhotos.slice(0,9).forEach(function(p){html+='<img src="'+p.src+'" draggable="true" data-psrc="'+p.src+'">';});}
+            else{html+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos yet. Upload photos to see them here.</p>';}
+        } else {
+            html+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos available.</p>';
+        }
+        html+='</div>';
+        if(isMe) html+='<a href="#" class="view-more-link pv-photos-link">View All</a>';
+        container.innerHTML=html;
+        var pvPP=container.querySelector('.photos-preview');
+        if(pvPP&&document.body.classList.contains('tpl-cinema')){pvPP.classList.add('shop-scroll-row');initDragScroll('#pvPhotoContent');}
+        var pvPhotosLink=container.querySelector('.pv-photos-link');
+        if(pvPhotosLink)pvPhotosLink.addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
+        // Drag start for photos
+        if(isMe){container.querySelectorAll('img[draggable]').forEach(function(img){
+            img.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',img.dataset.psrc);e.dataTransfer.effectAllowed='copy';});
+        });}
+    } else {
+        // Albums tab
+        var html='';
+        if(!state.photos.albums.length){
+            html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet. Create one!</p></div>';
+        } else {
+            html+='<div class="pv-album-grid">';
+            state.photos.albums.forEach(function(album,ai){
+                html+='<div class="pv-album-card" data-ai="'+ai+'">';
+                html+='<div class="pv-album-thumbs">';
+                var thumbs=album.photos.slice(0,4);
+                for(var ti=0;ti<4;ti++){
+                    if(thumbs[ti]) html+='<img src="'+thumbs[ti].src+'">';
+                    else html+='<div class="pv-album-placeholder"><i class="fas fa-image"></i></div>';
+                }
+                html+='</div>';
+                html+='<h5>'+album.name+'</h5>';
+                html+='<p>'+album.photos.length+' photo'+(album.photos.length!==1?'s':'')+'</p>';
+                html+='</div>';
+            });
+            html+='</div>';
+        }
+        html+='<div style="padding:8px 14px 14px;"><button class="btn btn-primary" id="pvCreateAlbumBtn" style="width:100%;"><i class="fas fa-plus"></i> Create Album</button></div>';
+        container.innerHTML=html;
+        // Create album button
+        var cab=document.getElementById('pvCreateAlbumBtn');
+        if(cab)cab.addEventListener('click',function(){
+            var mHtml='<div class="modal-header"><h3>Create Album</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+            mHtml+='<div class="modal-body"><label style="display:block;font-size:14px;font-weight:500;margin-bottom:6px;">Album Name</label><input type="text" id="albumNameInput" placeholder="My Album" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit;">';
+            mHtml+='<button class="btn btn-primary" id="albumCreateConfirm" style="width:100%;">Create</button></div>';
+            showModal(mHtml);
+            document.getElementById('albumCreateConfirm').addEventListener('click',function(){
+                var name=document.getElementById('albumNameInput').value.trim();
+                if(!name)return;
+                state.photos.albums.push({name:name,photos:[]});
+                closeModal();renderPvPhotoTab(true);renderPhotosCard();saveState();
+            });
+        });
+        // Drag & drop onto album cards
+        container.querySelectorAll('.pv-album-card').forEach(function(card){
+            card.addEventListener('dragover',function(e){e.preventDefault();e.dataTransfer.dropEffect='copy';card.classList.add('drag-over');});
+            card.addEventListener('dragleave',function(){card.classList.remove('drag-over');});
+            card.addEventListener('drop',function(e){
+                e.preventDefault();card.classList.remove('drag-over');
+                var src=e.dataTransfer.getData('text/plain');
+                if(!src)return;
+                var ai=parseInt(card.dataset.ai);
+                var dup=state.photos.albums[ai].photos.some(function(p){return p.src===src;});
+                if(dup){showToast('Photo already in this album');return;}
+                state.photos.albums[ai].photos.unshift({src:src,date:Date.now()});
+                renderPvPhotoTab(true);renderPhotosCard();saveState();
+                showToast('Photo added to '+state.photos.albums[ai].name);
+            });
+            // Click album to add photos via file picker
+            card.addEventListener('click',function(){
+                var ai=parseInt(card.dataset.ai);
+                var input=document.createElement('input');input.type='file';input.accept='image/*';input.multiple=true;
+                input.addEventListener('change',function(){
+                    Array.from(input.files).forEach(function(f){
+                        var r=new FileReader();
+                        r.onload=function(ev){state.photos.albums[ai].photos.unshift({src:ev.target.result,date:Date.now()});renderPvPhotoTab(true);renderPhotosCard();saveState();};
+                        r.readAsDataURL(f);
+                    });
+                });
+                input.click();
+            });
+        });
+    }
+}
 function getAllPhotos(){
     var all=state.photos.profile.concat(state.photos.cover,state.photos.post);
     state.photos.albums.forEach(function(a){all=all.concat(a.photos);});

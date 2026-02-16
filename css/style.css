@@ -2230,6 +2230,20 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
 .pv-col-photos .photos-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px;}
 .pv-col-photos .photos-preview img{width:100%;aspect-ratio:4/3;object-fit:cover;object-position:center;border-radius:6px;cursor:pointer;transition:opacity .2s;}
 .pv-col-photos .photos-preview img:hover{opacity:.8;}
+.pv-col-photos .photos-preview img[draggable="true"]{cursor:grab;}
+.pv-col-photos .photos-preview img[draggable="true"]:active{cursor:grabbing;}
+.photos-card .search-tabs{margin-bottom:0;padding:0 14px 8px;}
+.pv-album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:10px 14px;}
+.pv-album-card{background:var(--card);border:2px dashed var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+.pv-album-card:hover{border-color:var(--primary);}
+.pv-album-card.drag-over{border-color:var(--primary);background:rgba(139,92,246,.08);border-style:solid;}
+.pv-album-card h5{font-size:13px;font-weight:600;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pv-album-card p{font-size:11px;color:var(--gray);}
+.pv-album-thumbs{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:6px;border-radius:6px;overflow:hidden;}
+.pv-album-thumbs img{width:100%;aspect-ratio:1;object-fit:cover;}
+.pv-album-placeholder{width:100%;aspect-ratio:1;background:var(--border);display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:18px;}
+.pv-album-create{border-style:dashed;border-color:var(--primary);opacity:.7;}
+.pv-album-create:hover{opacity:1;background:rgba(139,92,246,.05);}
 .pv-skin-box .card{padding:20px;}
 
 /* ========== PREMIUM SKINS — SHOP PREVIEW ========== */

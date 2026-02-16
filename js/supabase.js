@@ -135,10 +135,11 @@ async function sbGetAllProfiles(limit = 50) {
 
 // ---- 4. POSTS ---------------------------------------------------------------
 
-async function sbCreatePost(authorId, content, imageUrl = null, groupId = null, sharedPostId = null, location = null) {
+async function sbCreatePost(authorId, content, imageUrl = null, groupId = null, sharedPostId = null, location = null, mediaUrls = null) {
   var row = { author_id: authorId, content: content || '', image_url: imageUrl, group_id: groupId };
   if (sharedPostId) row.shared_post_id = sharedPostId;
   if (location) row.location = location;
+  if (mediaUrls && mediaUrls.length) row.media_urls = mediaUrls;
   const { data, error } = await sb.from('posts')
     .insert(row)
     .select(`

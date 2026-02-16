@@ -1,5 +1,5 @@
 -- =============================================================================
--- DabbleHQ Social Media — Supabase (Postgres) Schema
+-- BlipVibe Social Media — Supabase (Postgres) Schema
 -- Updated 2026-02-13 — production-ready, tested against js/supabase.js
 -- =============================================================================
 -- INSTRUCTIONS: Paste this entire file into Supabase SQL Editor and run it.

@@ -1,4 +1,4 @@
-# DabbleHQ Supabase Setup Checklist
+# BlipVibe Supabase Setup Checklist
 
 ## 1. Replace placeholders in `js/supabase.js`
 ```js

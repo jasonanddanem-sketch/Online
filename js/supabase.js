@@ -1,5 +1,5 @@
 // =============================================================================
-// DabbleHQ — Supabase Client + Data Layer
+// BlipVibe — Supabase Client + Data Layer
 // Drop-in replacement for fake/local data. Vanilla JS, async/await.
 // =============================================================================
 

@@ -446,4 +446,19 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS skin_data JSONB DEFAULT '{}
 DROP POLICY IF EXISTS "Auth delete avatars" ON storage.objects;
 CREATE POLICY "Auth delete avatars" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND auth.role() = 'authenticated');
 
--- DONE! All tables, policies, triggers, and storage are set up.
+-- 10. Realtime — enable for tables that use subscriptions
+-- (safe to re-run: will just say "already member" if present)
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.posts;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- DONE! All tables, policies, triggers, storage, and realtime are set up.

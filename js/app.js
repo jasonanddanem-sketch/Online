@@ -263,7 +263,8 @@ async function initApp() {
     try {
         var notifs = await sbGetNotifications(currentUser.id);
         state.notifications = (notifs||[]).map(function(n){
-            return { type: n.type||'system', text: n.title||n.body||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
+            var origType=(n.data&&n.data.originalType)||n.type||'system';
+            return { type: origType, text: n.title||n.body||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
         });
         updateNotifBadge();
         renderNotifications();
@@ -271,7 +272,8 @@ async function initApp() {
     // Subscribe to realtime notifications
     try {
         sbSubscribeNotifications(currentUser.id, function(newNotif){
-            state.notifications.unshift({ type: newNotif.type||'system', text: newNotif.title||newNotif.body||'', time: 'just now', read: false, id: newNotif.id });
+            var origType=(newNotif.data&&newNotif.data.originalType)||newNotif.type||'system';
+            state.notifications.unshift({ type: origType, text: newNotif.title||newNotif.body||'', time: 'just now', read: false, id: newNotif.id });
             updateNotifBadge();
             renderNotifications();
         });
@@ -1103,15 +1105,15 @@ var notifTabDefs=[
     {key:'like',label:'<i class="fas fa-heart"></i> Likes',filter:function(n){return n.type==='like';}},
     {key:'follow',label:'<i class="fas fa-user-plus"></i> Follows',filter:function(n){return n.type==='follow';}},
     {key:'message',label:'<i class="fas fa-envelope"></i> Messages',filter:function(n){return n.type==='message';}},
-    {key:'system',label:'<i class="fas fa-cog"></i> System',filter:function(n){return n.type==='system'||n.type==='skin'||n.type==='group'||n.type==='coin';}}
+    {key:'system',label:'<i class="fas fa-cog"></i> System',filter:function(n){return n.type==='system'||n.type==='skin'||n.type==='group'||n.type==='coin'||n.type==='purchase';}}
 ];
 function addNotification(type,text){
     state.notifications.unshift({type:type,text:text,time:new Date().toLocaleTimeString(),read:false});
     updateNotifBadge();
     renderNotifications();
-    // Persist to Supabase
+    // Persist to Supabase (pass original type in data so it survives DB enum mapping)
     if(currentUser){
-        sbCreateNotification(currentUser.id,type,text,'').catch(function(e){console.warn('Notif save error:',e);});
+        sbCreateNotification(currentUser.id,type,text,'',{originalType:type}).catch(function(e){console.warn('Notif save error:',e);});
     }
 }
 function updateNotifBadge(){

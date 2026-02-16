@@ -1250,7 +1250,7 @@ async function renderInlineComments(postId){
         user.forEach(function(t,i){all.push({name:_myN,img:null,text:t,likes:0,cid:postId+'-u-'+i});});
     }
     if(!all.length){el.innerHTML='';el.style.padding='';return;}
-    var shown=all.slice(0,3);
+    var shown=all.slice(0,5);
     var html='';
     shown.forEach(function(c){
         var liked=likedComments[c.cid];var lc=c.likes+(liked?1:0);
@@ -1258,7 +1258,7 @@ async function renderInlineComments(postId){
         var avatarSrc=c.img||DEFAULT_AVATAR;
         html+='<div class="inline-comment"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
     });
-    if(all.length>3) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
+    if(all.length>5) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
     el.style.padding='0 20px 14px';el.innerHTML=html;
     el.querySelectorAll('.inline-comment-like').forEach(function(btn){
         btn.onclick=function(e){
@@ -1866,8 +1866,9 @@ async function showGroupView(group){
     leftHtml+='<div class="gv-about-body"><div class="gv-about-meta"><span><i class="fas fa-calendar"></i> Created recently</span>';
     leftHtml+='<span><i class="fas fa-globe"></i> Public group</span></div></div></div>';
     leftHtml+='<div class="card gv-staff-card"><h4 class="card-heading"><i class="fas fa-shield-halved" style="color:var(--primary);margin-right:6px;"></i>Admin & Mods</h4><div class="gv-staff-list">';
-    leftHtml+='<div class="gv-staff-item"><img src="images/default-avatar.svg"><div><strong>'+adminName+'</strong><span class="gv-staff-role admin">Admin'+(amIAdmin?' (You)':'')+'</span></div></div>';
-    if(group.mods&&group.mods.length){group.mods.forEach(function(m){var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item"><img src="images/default-avatar.svg"><div><strong>'+m.name+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});}
+    var adminAvatar=(group.owner&&group.owner.avatar_url)?group.owner.avatar_url:(group.adminImg||DEFAULT_AVATAR);
+    leftHtml+='<div class="gv-staff-item"><img src="'+adminAvatar+'" style="object-fit:cover;"><div><strong>'+adminName+'</strong><span class="gv-staff-role admin">Admin'+(amIAdmin?' (You)':'')+'</span></div></div>';
+    if(group.mods&&group.mods.length){group.mods.forEach(function(m){var modAvatar=m.img||m.avatar_url||DEFAULT_AVATAR;var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item"><img src="'+modAvatar+'" style="object-fit:cover;"><div><strong>'+m.name+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});}
     leftHtml+='</div></div>';
     if(amIAdmin) leftHtml+='<button class="btn btn-outline btn-block" id="gvDeleteGroupBtn" style="color:#e74c3c;border-color:#e74c3c;margin-top:12px;"><i class="fas fa-trash"></i> Delete Group</button>';
     $('#gvLeftSidebar').innerHTML=leftHtml;
@@ -4085,7 +4086,7 @@ function showHiddenPostsModal(){
             if(!p) return;
             var short=p.text.substring(0,100)+(p.text.length>100?'...':'');
             h+='<div class="hidden-post-item" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">';
-            h+='<img src="images/default-avatar.svg" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
+            h+='<img src="'+(p.person.img||p.person.avatar_url||DEFAULT_AVATAR)+'" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;object-fit:cover;">';
             h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+p.person.name+'</div><p style="font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+short+'</p></div>';
             h+='<button class="btn btn-outline unhide-btn" data-pid="'+pid+'" style="padding:6px 14px;font-size:12px;flex-shrink:0;"><i class="fas fa-eye"></i> Unhide</button>';
             h+='</div>';
@@ -4243,7 +4244,7 @@ function renderSavedPostCard(p){
     var folder=findPostFolder(i);
     var html='<div class="card feed-post saved-post-item" data-spid="'+i+'">';
     html+='<div class="post-header">';
-    html+='<img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar">';
+    html+='<img src="'+(person.img||person.avatar_url||DEFAULT_AVATAR)+'" alt="'+person.name+'" class="post-avatar" style="object-fit:cover;">';
     html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
     html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span>';
     if(folder) html+='<span class="badge badge-blue"><i class="fas fa-folder"></i> '+folder.name+'</span>';

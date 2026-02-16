@@ -1348,14 +1348,14 @@ async function showProfileView(person){
         pvFollowingStat.addEventListener('click',async function(){
             var uid=isMe?currentUser.id:person.id;
             var title=isMe?'Following':person.name+'\'s Following';
-            try{var list=await sbGetFollowing(uid);showFollowListModal(title,list.map(function(f){return f.followed||f;}),isMe);}catch(e){console.error(e);}
+            try{var list=await sbGetFollowing(uid);showFollowListModal(title,list,isMe);}catch(e){console.error(e);}
         });
     }
     if(pvFollowersStat){
         pvFollowersStat.addEventListener('click',async function(){
             var uid=isMe?currentUser.id:person.id;
             var title=isMe?'Followers':person.name+'\'s Followers';
-            try{var list=await sbGetFollowers(uid);showFollowListModal(title,list.map(function(f){return f.follower||f;}),false);}catch(e){console.error(e);}
+            try{var list=await sbGetFollowers(uid);showFollowListModal(title,list,false);}catch(e){console.error(e);}
         });
     }
     // Event: Message
@@ -2220,11 +2220,11 @@ function showFollowListModal(title,list,isFollowingList){
 }
 $('#followingStat').addEventListener('click',async function(){
     if(!currentUser)return;
-    try{var list=await sbGetFollowing(currentUser.id);showFollowListModal('Following',list.map(function(f){return f.followed||f;}),true);}catch(e){console.error(e);}
+    try{var list=await sbGetFollowing(currentUser.id);showFollowListModal('Following',list,true);}catch(e){console.error(e);}
 });
 $('#followersStat').addEventListener('click',async function(){
     if(!currentUser)return;
-    try{var list=await sbGetFollowers(currentUser.id);showFollowListModal('Followers',list.map(function(f){return f.follower||f;}),false);}catch(e){console.error(e);}
+    try{var list=await sbGetFollowers(currentUser.id);showFollowListModal('Followers',list,false);}catch(e){console.error(e);}
 });
 
 // Avatar photo upload with selection modal
@@ -2997,6 +2997,9 @@ async function renderMyNetwork(container){
     try{
         var following=await sbGetFollowing(currentUser.id);
         var followers=await sbGetFollowers(currentUser.id);
+        // Filter out self from both lists
+        following=following.filter(function(p){return p&&p.id!==currentUser.id;});
+        followers=followers.filter(function(p){return p&&p.id!==currentUser.id;});
         if(following.length){html+='<h3 style="margin:16px 0 8px;">Following</h3><div class="search-results-grid">';following.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
         if(followers.length){html+='<h3 style="margin:16px 0 8px;">Followers</h3><div class="search-results-grid">';followers.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
         if(!following.length&&!followers.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Your network is empty. Follow some people!</p></div>';

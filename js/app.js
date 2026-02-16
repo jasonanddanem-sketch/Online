@@ -882,8 +882,8 @@ async function renderSearchResults(q,tab){
     // Post results counted from loaded feed
     var postResults=feedPosts.filter(function(p){return p.text.toLowerCase().indexOf(ql)!==-1;});
 
-    // Update tab counts
-    $$('.search-tab').forEach(function(t){
+    // Update tab counts (only search result tabs, not shop/skins/etc)
+    $$('.search-tab[data-tab]').forEach(function(t){
         var count=0;
         if(t.dataset.tab==='people') count=peopleResults.length;
         else if(t.dataset.tab==='groups') count=groupResults.length;

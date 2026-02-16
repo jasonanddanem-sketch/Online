@@ -471,7 +471,25 @@ var locations = ['New York','LA','Chicago','London','Tokyo','Paris','Berlin','To
 // Load groups from Supabase
 async function loadGroups() {
     try {
-        groups = await sbGetGroups();
+        var raw = await sbGetGroups();
+        groups = raw.map(function(g){
+            return {
+                id: g.id,
+                name: g.name,
+                desc: g.description || '',
+                icon: g.icon || 'fa-users',
+                color: g.color || '#5cbdb9',
+                members: (g.member_count && g.member_count[0]) ? g.member_count[0].count : 0,
+                owner_id: g.owner_id,
+                owner: g.owner,
+                createdBy: (currentUser && g.owner_id === currentUser.id) ? 'me' : g.owner_id,
+                description: g.description || '',
+                member_count: g.member_count,
+                mods: [],
+                coverPhoto: g.cover_photo_url || null,
+                profileImg: g.avatar_url || null
+            };
+        });
     } catch(e) { console.error('loadGroups:', e); groups = []; }
 }
 
@@ -1539,14 +1557,18 @@ function showGroupModal(group){
     html+='<span class="group-members"><i class="fas fa-users"></i> '+fmtNum(group.members)+' members</span></div>';
     html+='<div class="modal-actions"><button class="btn '+(joined?'btn-disabled':'btn-primary')+'" id="modalJoinBtn" data-gid="'+group.id+'">'+(joined?'Joined':'Join Group')+'</button></div></div>';
     showModal(html);
-    document.getElementById('modalJoinBtn').addEventListener('click',function(){
-        if(!state.joinedGroups[group.id]){
-            state.joinedGroups[group.id]=true;
-            group.members++;
-            this.textContent='Joined';
-            this.classList.remove('btn-primary');
-            this.classList.add('btn-disabled');
-            addNotification('group','You joined the group "'+group.name+'"');
+    document.getElementById('modalJoinBtn').addEventListener('click',async function(){
+        if(!state.joinedGroups[group.id]&&currentUser){
+            try{
+                await sbJoinGroup(group.id,currentUser.id);
+                state.joinedGroups[group.id]=true;
+                group.members++;
+                saveState();
+                this.textContent='Joined';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-disabled');
+                addNotification('group','You joined the group "'+group.name+'"');
+            }catch(e2){console.error('Join group:',e2);showToast('Failed to join group');}
         }
     });
 }
@@ -1733,12 +1755,14 @@ function showDeleteGroupModal(group){
     var inp=document.getElementById('deleteConfirmInput'),btn=document.getElementById('deleteConfirm');
     inp.addEventListener('input',function(){var match=inp.value===group.name;btn.disabled=!match;btn.style.opacity=match?'1':'.5';});
     document.getElementById('deleteCancel').addEventListener('click',closeModal);
-    btn.addEventListener('click',function(){
+    btn.addEventListener('click',async function(){
         if(inp.value!==group.name)return;
+        try{await sbDeleteGroup(group.id);}catch(e2){console.error('Delete group:',e2);}
         var idx=groups.indexOf(group);
         if(idx!==-1)groups.splice(idx,1);
         delete state.joinedGroups[group.id];
         if(state.groupPosts)delete state.groupPosts[group.id];
+        saveState();
         addNotification('group','You deleted the group "'+group.name+'"');
         closeModal();renderGroups();navigateTo('groups');
     });
@@ -1930,7 +1954,7 @@ async function showGroupView(group){
     // Event listeners
     document.getElementById('gvBack').addEventListener('click',function(e){e.preventDefault();navigateTo('groups');});
     var joinBtn=document.getElementById('gvJoinBtn');
-    if(joinBtn){joinBtn.addEventListener('click',function(){if(!state.joinedGroups[group.id]){state.joinedGroups[group.id]=true;group.members++;this.textContent='Joined';this.classList.remove('btn-primary');this.classList.add('btn-disabled');addNotification('group','You joined "'+group.name+'"');showGroupView(group);}});}
+    if(joinBtn){joinBtn.addEventListener('click',async function(){if(!state.joinedGroups[group.id]&&currentUser){try{await sbJoinGroup(group.id,currentUser.id);state.joinedGroups[group.id]=true;group.members++;saveState();this.textContent='Joined';this.classList.remove('btn-primary');this.classList.add('btn-disabled');addNotification('group','You joined "'+group.name+'"');showGroupView(group);}catch(e2){console.error('Join group:',e2);showToast('Failed to join group');}}});}
     var leaveBtn=document.getElementById('gvLeaveBtn');
     if(leaveBtn){leaveBtn.addEventListener('click',function(){
         var myRole=getMyGroupRole(group);
@@ -1972,8 +1996,10 @@ async function showGroupView(group){
             h+='<div class="modal-actions"><button class="btn btn-outline" id="gvLeaveCancel">Cancel</button><button class="btn btn-primary" id="gvLeaveConfirm" style="background:#e74c3c;border-color:#e74c3c;">Leave</button></div></div>';
             showModal(h);
             document.getElementById('gvLeaveCancel').addEventListener('click',closeModal);
-            document.getElementById('gvLeaveConfirm').addEventListener('click',function(){
+            document.getElementById('gvLeaveConfirm').addEventListener('click',async function(){
+                if(currentUser){try{await sbLeaveGroup(group.id,currentUser.id);}catch(e2){}}
                 delete state.joinedGroups[group.id];group.members=Math.max(0,group.members-1);
+                saveState();
                 addNotification('group','You left "'+group.name+'"');
                 closeModal();renderGroups();navigateTo('groups');
             });
@@ -2931,8 +2957,9 @@ $('#openPostModal').addEventListener('click',function(){
         }
         var myName = currentUser ? (currentUser.display_name || currentUser.username) : 'You';
         var myPostId = sbPost ? sbPost.id : 'my-'+Date.now();
-        var postHtml='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar">';
-        postHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+myName+'</h4><span class="post-time">just now</span></div>';
+        var myUid=currentUser?currentUser.id:'';
+        var postHtml='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar" data-person-id="'+myUid+'">';
+        postHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+myUid+'">'+myName+'</h4><span class="post-time">just now</span></div>';
         postHtml+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-user"></i> You</span></div></div></div>';
         var tagsHtml='';
         if(postTags.length>0){tagsHtml='<div class="post-tags">';postTags.forEach(function(t){tagsHtml+='<span class="skill-tag">#'+t+'</span>';});tagsHtml+='</div>';}
@@ -2951,6 +2978,7 @@ $('#openPostModal').addEventListener('click',function(){
         dislikeBtn.addEventListener('click',function(){var countEl=dislikeBtn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var pid=dislikeBtn.getAttribute('data-post-id');if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];dislikeBtn.classList.remove('disliked');dislikeBtn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{state.dislikedPosts[pid]=true;dislikeBtn.classList.add('disliked');dislikeBtn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}});
         newPost.querySelector('.comment-btn').addEventListener('click',function(){var postId=newPost.querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,newPost.querySelector('.comment-btn span'));});
         newPost.querySelector('.share-btn').addEventListener('click',function(){handleShare(newPost.querySelector('.share-btn'));});
+        newPost.querySelectorAll('.post-avatar, .post-username').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){var uid=el.getAttribute('data-person-id');if(!uid)return;try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}});});
         var moreBtn=newPost.querySelector('.pm-more');
         if(moreBtn){moreBtn.addEventListener('click',function(){showAllMedia(moreBtn.dataset.pgid,4);});}
     });
@@ -3066,15 +3094,19 @@ function renderGroups(filter){
 }
 function bindGroupEvents(container){
     $$(container+' .join-group-btn').forEach(function(btn){
-        btn.addEventListener('click',function(e){
+        btn.addEventListener('click',async function(e){
             e.stopPropagation();
             var gid=btn.getAttribute('data-gid');
-            if(!state.joinedGroups[gid]){
-                state.joinedGroups[gid]=true;
-                var jg=groups.find(function(g){return g.id===gid;});
-                if(jg)jg.members++;
-                addNotification('group','You joined "'+jg.name+'"');
-                renderGroups();
+            if(!state.joinedGroups[gid]&&currentUser){
+                try{
+                    await sbJoinGroup(gid,currentUser.id);
+                    state.joinedGroups[gid]=true;
+                    var jg=groups.find(function(g){return g.id===gid;});
+                    if(jg)jg.members++;
+                    saveState();
+                    addNotification('group','You joined "'+jg.name+'"');
+                    renderGroups();
+                }catch(e2){console.error('Join group:',e2);showToast('Failed to join group');}
             }
         });
     });
@@ -3110,16 +3142,27 @@ function bindGroupEvents(container){
 $('#groupSearch').addEventListener('input',function(){renderGroups(this.value);});
 $('#createGroupBtn').addEventListener('click',function(){
     showModal('<div class="modal-header"><h3>Create Group</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Group Name</label><input type="text" class="post-input" id="newGroupName" placeholder="Enter group name" style="width:100%;"></div><div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label><input type="text" class="post-input" id="newGroupDesc" placeholder="What is this group about?" style="width:100%;"></div><button class="btn btn-primary btn-block" id="submitGroupBtn">Create Group</button></div>');
-    document.getElementById('submitGroupBtn').addEventListener('click',function(){
+    document.getElementById('submitGroupBtn').addEventListener('click',async function(){
         var name=document.getElementById('newGroupName').value.trim();
         var desc=document.getElementById('newGroupDesc').value.trim();
         if(!name){return;}
-        var newGroup={id:groups.length+1,name:name,desc:desc||'A new group on BlipVibe',icon:'fa-users',members:1,color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),createdBy:'me',mods:[]};
-        groups.push(newGroup);
-        state.joinedGroups[newGroup.id]=true;
-        closeModal();
-        renderGroups();
-        addNotification('group','You created the group "'+name+'"');
+        if(!currentUser){showToast('You must be logged in to create a group.');return;}
+        var btn=this;btn.disabled=true;btn.textContent='Creating...';
+        try{
+            var g=await sbCreateGroup(currentUser.id,name,desc||'A new group on BlipVibe');
+            var newGroup={id:g.id,name:g.name,desc:g.description||'',icon:'fa-users',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),members:1,owner_id:g.owner_id,owner:g.owner,createdBy:'me',description:g.description||'',member_count:g.member_count,mods:[],coverPhoto:null,profileImg:null};
+            groups.push(newGroup);
+            state.joinedGroups[newGroup.id]=true;
+            saveState();
+            closeModal();
+            showGroupView(newGroup);
+            renderGroups();
+            addNotification('group','You created the group "'+name+'"');
+        }catch(e){
+            console.error('Create group:',e);
+            showToast('Failed to create group: '+(e.message||'Unknown error'));
+            btn.disabled=false;btn.textContent='Create Group';
+        }
     });
 });
 

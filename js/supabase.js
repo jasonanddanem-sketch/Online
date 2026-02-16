@@ -507,6 +507,27 @@ async function sbJoinGroup(groupId, userId) {
   if (error) throw error;
 }
 
+async function sbCreateGroup(ownerId, name, description) {
+  const { data, error } = await sb.from('groups')
+    .insert({ owner_id: ownerId, name, description: description || '' })
+    .select(`
+      *,
+      owner:profiles!groups_owner_id_fkey(id, username, display_name, avatar_url),
+      member_count:group_members(count)
+    `)
+    .single();
+  if (error) throw error;
+  // Auto-add owner as member
+  await sb.from('group_members')
+    .insert({ group_id: data.id, user_id: ownerId, role: 'owner' });
+  return data;
+}
+
+async function sbDeleteGroup(groupId) {
+  const { error } = await sb.from('groups').delete().eq('id', groupId);
+  if (error) throw error;
+}
+
 async function sbLeaveGroup(groupId, userId) {
   const { error } = await sb.from('group_members')
     .delete()

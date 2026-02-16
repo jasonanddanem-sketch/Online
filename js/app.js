@@ -212,6 +212,11 @@ async function initApp() {
     }
     state.coins = currentUser.coin_balance || 0;
     loadState(); // Restore skins, settings, purchases from localStorage
+    // If localStorage had no data, try loading from Supabase (cross-browser sync)
+    var localKey='blipvibe_'+currentUser.id;
+    if(!localStorage.getItem(localKey)){
+        await loadSkinDataFromSupabase();
+    }
     populateUserUI();
     showApp();
     reapplyCustomizations(); // Re-apply skins, fonts, nav styles, dark mode
@@ -373,9 +378,69 @@ function saveState(){
         groupCoins:state.groupCoins,groupOwnedSkins:state.groupOwnedSkins,
         groupOwnedPremiumSkins:state.groupOwnedPremiumSkins,
         groupActiveSkin:state.groupActiveSkin,groupActivePremiumSkin:state.groupActivePremiumSkin,
+        premiumBgUrl:premiumBgImage,premiumBgSaturation:premiumBgSaturation,
         settings:settings
     };
     try{localStorage.setItem(key,JSON.stringify(save));}catch(e){}
+    // Sync skin data to Supabase for cross-browser and profile viewing
+    syncSkinDataToSupabase();
+}
+var _skinSyncTimer=null;
+function syncSkinDataToSupabase(){
+    if(!currentUser) return;
+    // Debounce — only sync after 2s of no changes (saveState runs every 10s too)
+    clearTimeout(_skinSyncTimer);
+    _skinSyncTimer=setTimeout(function(){
+        var skinData={
+            activeSkin:state.activeSkin||null,
+            activePremiumSkin:state.activePremiumSkin||null,
+            activeFont:state.activeFont||null,
+            activeTemplate:state.activeTemplate||null,
+            activeNavStyle:state.activeNavStyle||null,
+            activeIconSet:state.activeIconSet||null,
+            activeLogo:state.activeLogo||null,
+            activeCoinSkin:state.activeCoinSkin||null,
+            premiumBgUrl:premiumBgImage||null,
+            premiumBgSaturation:premiumBgSaturation||100,
+            ownedSkins:state.ownedSkins||{},
+            ownedPremiumSkins:state.ownedPremiumSkins||{},
+            ownedFonts:state.ownedFonts||{},
+            ownedTemplates:state.ownedTemplates||{},
+            ownedNavStyles:state.ownedNavStyles||{},
+            ownedIconSets:state.ownedIconSets||{},
+            ownedLogos:state.ownedLogos||{},
+            ownedCoinSkins:state.ownedCoinSkins||{}
+        };
+        sbUpdateProfile(currentUser.id,{skin_data:skinData}).catch(function(e){
+            console.warn('Skin data sync error:',e);
+        });
+    },2000);
+}
+async function loadSkinDataFromSupabase(){
+    if(!currentUser) return;
+    try{
+        var profile=await sbGetProfile(currentUser.id);
+        if(!profile||!profile.skin_data) return;
+        var sd=profile.skin_data;
+        if(sd.activeSkin) state.activeSkin=sd.activeSkin;
+        if(sd.activePremiumSkin) state.activePremiumSkin=sd.activePremiumSkin;
+        if(sd.activeFont) state.activeFont=sd.activeFont;
+        if(sd.activeTemplate) state.activeTemplate=sd.activeTemplate;
+        if(sd.activeNavStyle) state.activeNavStyle=sd.activeNavStyle;
+        if(sd.activeIconSet) state.activeIconSet=sd.activeIconSet;
+        if(sd.activeLogo) state.activeLogo=sd.activeLogo;
+        if(sd.activeCoinSkin) state.activeCoinSkin=sd.activeCoinSkin;
+        if(sd.premiumBgUrl) premiumBgImage=sd.premiumBgUrl;
+        if(sd.premiumBgSaturation!==undefined) premiumBgSaturation=sd.premiumBgSaturation;
+        if(sd.ownedSkins) Object.assign(state.ownedSkins,sd.ownedSkins);
+        if(sd.ownedPremiumSkins) Object.assign(state.ownedPremiumSkins,sd.ownedPremiumSkins);
+        if(sd.ownedFonts) Object.assign(state.ownedFonts,sd.ownedFonts);
+        if(sd.ownedTemplates) Object.assign(state.ownedTemplates,sd.ownedTemplates);
+        if(sd.ownedNavStyles) Object.assign(state.ownedNavStyles,sd.ownedNavStyles);
+        if(sd.ownedIconSets) Object.assign(state.ownedIconSets,sd.ownedIconSets);
+        if(sd.ownedLogos) Object.assign(state.ownedLogos,sd.ownedLogos);
+        if(sd.ownedCoinSkins) Object.assign(state.ownedCoinSkins,sd.ownedCoinSkins);
+    }catch(e){console.warn('Load skin data from Supabase:',e);}
 }
 function loadState(){
     if(!currentUser) return;
@@ -408,6 +473,8 @@ function loadState(){
         if(save.groupOwnedPremiumSkins) state.groupOwnedPremiumSkins=save.groupOwnedPremiumSkins;
         if(save.groupActiveSkin) state.groupActiveSkin=save.groupActiveSkin;
         if(save.groupActivePremiumSkin) state.groupActivePremiumSkin=save.groupActivePremiumSkin;
+        if(save.premiumBgUrl) premiumBgImage=save.premiumBgUrl;
+        if(save.premiumBgSaturation!==undefined) premiumBgSaturation=save.premiumBgSaturation;
         if(save.settings){
             settings.darkMode=!!save.settings.darkMode;
             settings.notifSound=save.settings.notifSound!==false;
@@ -426,6 +493,7 @@ function reapplyCustomizations(){
     if(state.activeCoinSkin) applyCoinSkin(state.activeCoinSkin);
     if(state.activeTemplate) applyTemplate(state.activeTemplate,true);
     if(state.activeNavStyle) applyNavStyle(state.activeNavStyle);
+    if(premiumBgImage&&state.activePremiumSkin) updatePremiumBg();
     if(settings.darkMode){document.body.style.background='#1a1a2e';document.body.style.color='#eee';}
 }
 // Auto-save state on page leave and periodically
@@ -833,7 +901,7 @@ async function renderSearchResults(q,tab){
         $$('#searchResults .post-username, #searchResults .post-avatar').forEach(function(el){
             el.addEventListener('click',async function(){
                 var uid=el.dataset.personId;
-                if(uid){try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}}
+                if(uid){try{var p=await sbGetProfile(uid);if(p) showProfileView(profileToPerson(p));}catch(e){}}
             });
         });
     }
@@ -1373,6 +1441,22 @@ function showMyProfileModal(){
     });
 }
 
+// Convert Supabase profile to person object for showProfileView
+function profileToPerson(p){
+    var sd=p.skin_data||{};
+    return {
+        id:p.id,
+        name:p.display_name||p.username,
+        status:p.status||'',
+        bio:p.bio||'',
+        avatar_url:p.avatar_url,
+        premiumSkin:sd.activePremiumSkin||null,
+        skin:sd.activeSkin||null,
+        font:sd.activeFont||null,
+        template:sd.activeTemplate||null,
+        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,saturation:sd.premiumBgSaturation||100}:null
+    };
+}
 // ======================== PROFILE VIEW PAGE ========================
 async function showProfileView(person){
     $$('.page').forEach(function(p){p.classList.remove('active');});
@@ -2813,7 +2897,7 @@ function bindPostEvents(){
         el.addEventListener('click',async function(){
             var uid=el.getAttribute('data-person-id');
             if(!uid) return;
-            try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+            try{var p=await sbGetProfile(uid);if(p)showProfileView(profileToPerson(p));}catch(e){}
         });
     });
 
@@ -3025,7 +3109,7 @@ $('#openPostModal').addEventListener('click',function(){
         dislikeBtn.addEventListener('click',function(){var countEl=dislikeBtn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var pid=dislikeBtn.getAttribute('data-post-id');if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];dislikeBtn.classList.remove('disliked');dislikeBtn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{state.dislikedPosts[pid]=true;dislikeBtn.classList.add('disliked');dislikeBtn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}});
         newPost.querySelector('.comment-btn').addEventListener('click',function(){var postId=newPost.querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,newPost.querySelector('.comment-btn span'));});
         newPost.querySelector('.share-btn').addEventListener('click',function(){handleShare(newPost.querySelector('.share-btn'));});
-        newPost.querySelectorAll('.post-avatar, .post-username').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){var uid=el.getAttribute('data-person-id');if(!uid)return;try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}});});
+        newPost.querySelectorAll('.post-avatar, .post-username').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){var uid=el.getAttribute('data-person-id');if(!uid)return;try{var p=await sbGetProfile(uid);if(p)showProfileView(profileToPerson(p));}catch(e){}});});
         var moreBtn=newPost.querySelector('.pm-more');
         if(moreBtn){moreBtn.addEventListener('click',function(){showAllMedia(moreBtn.dataset.pgid,4);});}
     });
@@ -3067,7 +3151,7 @@ async function renderSuggestions(){
             el.addEventListener('click',async function(){
                 var item=el.closest('.suggestion-item');
                 var uid=item.querySelector('.suggestion-follow-btn').dataset.uid;
-                try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+                try{var p=await sbGetProfile(uid);if(p) showProfileView(profileToPerson(p));}catch(e){}
             });
         });
     }catch(e){console.error('renderSuggestions:',e);}
@@ -3308,11 +3392,11 @@ function bindProfileEvents(c){
     $$(c+' .profile-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(btn.dataset.uid,btn);});});
     $$(c+' .profile-view-btn').forEach(function(btn){btn.addEventListener('click',async function(){
         var uid=btn.dataset.uid;if(!uid)return;
-        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(uid);if(p)showProfileView(profileToPerson(p));}catch(e){}
     });});
     $$(c+' .profile-card-avatar, '+c+' .profile-card-name').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){
         var uid=el.dataset.uid;if(!uid)return;
-        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(uid);if(p)showProfileView(profileToPerson(p));}catch(e){}
     });});
 }
 $$('#profilesTabs .search-tab').forEach(function(tab){
@@ -3786,16 +3870,27 @@ function renderMySkins(){
     // Premium bg upload handler
     var bgUploadInput=document.getElementById('premiumBgUpload');
     if(bgUploadInput){
-        bgUploadInput.addEventListener('change',function(){
-            var file=bgUploadInput.files[0];if(!file)return;
-            var reader=new FileReader();
-            reader.onload=function(e){premiumBgImage=e.target.result;updatePremiumBg();renderMySkins();};
-            reader.readAsDataURL(file);
+        bgUploadInput.addEventListener('change',async function(){
+            var file=bgUploadInput.files[0];if(!file||!currentUser)return;
+            // Upload to Supabase Storage for persistence and sharing
+            try{
+                var ext=file.name.split('.').pop()||'jpg';
+                var path='backgrounds/'+currentUser.id+'/bg.'+ext;
+                var url=await sbUploadFile('avatars',path,file);
+                premiumBgImage=url;
+                updatePremiumBg();renderMySkins();saveState();
+            }catch(e){
+                console.warn('BG upload to storage failed, using local:',e);
+                // Fallback to base64 for local preview
+                var reader=new FileReader();
+                reader.onload=function(ev){premiumBgImage=ev.target.result;updatePremiumBg();renderMySkins();saveState();};
+                reader.readAsDataURL(file);
+            }
         });
     }
     var bgRemoveBtn=document.getElementById('premiumBgRemove');
     if(bgRemoveBtn){
-        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgSaturation=100;updatePremiumBg();renderMySkins();});
+        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgSaturation=100;updatePremiumBg();renderMySkins();saveState();});
     }
     var satSlider=document.getElementById('premiumBgSatSlider');
     if(satSlider){
@@ -3804,6 +3899,7 @@ function renderMySkins(){
             document.getElementById('satValLabel').textContent=premiumBgSaturation+'%';
             updatePremiumBg();
         });
+        satSlider.addEventListener('change',function(){saveState();});
     }
     function mySkinsRerender(){var row=$('#mySkinsGrid .shop-scroll-row');var sl=row?row.scrollLeft:0;renderMySkins();var row2=$('#mySkinsGrid .shop-scroll-row');if(row2)row2.scrollLeft=sl;saveState();}
     $$('#mySkinsGrid .apply-skin-btn').forEach(function(btn){btn.addEventListener('click',function(){applySkin(btn.dataset.sid==='default'?null:btn.dataset.sid);mySkinsRerender();});});
@@ -3952,7 +4048,7 @@ async function openChat(contact){
     // Click avatar to view profile
     var avatarEl=$('#msgChat').querySelector('.msg-chat-header img');
     if(avatarEl) avatarEl.addEventListener('click',async function(){
-        try{var p=await sbGetProfile(contact.partnerId);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(contact.partnerId);if(p)showProfileView(profileToPerson(p));}catch(e){}
     });
 }
 
@@ -3998,11 +4094,26 @@ function initMessageSubscription(){
         if(activeChat&&activeChat.partnerId===newMsg.sender_id){
             var msgArea=$('#chatMessages');
             if(msgArea){
-                msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received">'+newMsg.content+'</div>');
+                var content=newMsg.content;
+                if(/^\[img\]/.test(content)){
+                    var imgUrl=content.replace('[img]','').replace('[/img]','');
+                    msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received"><img src="'+imgUrl+'" style="max-width:200px;border-radius:8px;cursor:pointer;" onclick="window.open(this.src)"></div>');
+                } else {
+                    msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received">'+content+'</div>');
+                }
                 msgArea.scrollTop=msgArea.scrollHeight;
                 // Mark as read immediately
                 sbMarkMessagesRead(currentUser.id,newMsg.sender_id).catch(function(){});
             }
+        } else {
+            // Not viewing this chat — show notification
+            sbGetProfile(newMsg.sender_id).then(function(sender){
+                var senderName=sender?(sender.display_name||sender.username):'Someone';
+                var preview=/^\[img\]/.test(newMsg.content)?'sent an image':newMsg.content.substring(0,40);
+                addNotification('message',senderName+': '+preview);
+            }).catch(function(){
+                addNotification('message','New message received');
+            });
         }
     });
 }

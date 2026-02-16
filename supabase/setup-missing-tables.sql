@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     bio             TEXT DEFAULT '',
     avatar_url      TEXT,
     cover_photo_url TEXT,
+    skin_data       JSONB DEFAULT '{}',
     coin_balance    INTEGER NOT NULL DEFAULT 1000 CHECK (coin_balance >= 0),
     is_premium      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -439,5 +440,10 @@ CREATE POLICY messages_update ON public.messages FOR UPDATE USING (auth.uid() = 
 
 -- 9. MIGRATIONS for existing databases
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS skin_data JSONB DEFAULT '{}';
+
+-- Storage policy for backgrounds
+DROP POLICY IF EXISTS "Auth delete avatars" ON storage.objects;
+CREATE POLICY "Auth delete avatars" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND auth.role() = 'authenticated');
 
 -- DONE! All tables, policies, triggers, and storage are set up.

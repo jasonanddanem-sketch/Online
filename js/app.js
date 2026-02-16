@@ -282,6 +282,9 @@ async function initApp() {
     if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'){
         navigateTo(hashPage,true);
     }
+    // Remove the pre-paint hash-nav style now that JS has taken over
+    var hashFix=document.getElementById('hash-nav-fix');
+    if(hashFix) hashFix.remove();
     _initAppRunning = false;
 }
 

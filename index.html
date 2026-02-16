@@ -8,6 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&family=Rajdhani:wght@400;500;700&family=Quicksand:wght@400;500;700&family=Pacifico&family=Baloo+2:wght@400;500;700&family=Playfair+Display:wght@400;700&family=Space+Grotesk:wght@400;500;700&family=Caveat:wght@400;700&family=Archivo:wght@400;500;700&family=Silkscreen&family=Press+Start+2P&family=Righteous&family=Satisfy&family=Bungee&family=Monoton&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css?v=3">
+    <script>
+    // Prevent home page flash on reload — hide home before paint if hash says otherwise
+    (function(){
+        var h=(location.hash||'').replace('#','');
+        if(h&&h!=='home'&&h!=='profile-view'&&h!=='group-view'){
+            var s=document.createElement('style');
+            s.id='hash-nav-fix';
+            s.textContent='#page-home{display:none!important;}#page-'+h+'{display:block!important;}';
+            document.head.appendChild(s);
+        }
+    })();
+    </script>
 </head>
 <body>
     <div id="premiumBgLayer"></div>

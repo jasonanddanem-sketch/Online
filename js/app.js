@@ -210,6 +210,18 @@ async function initApp() {
     await loadGroups();
     generatePosts();
     renderSuggestions(); // will now fetch from Supabase
+
+    // Quick DB health check — log any missing tables
+    (async function(){
+        var tables=['posts','comments','likes','follows','groups','group_members','notifications'];
+        for(var i=0;i<tables.length;i++){
+            try{
+                var r=await sb.from(tables[i]).select('*',{count:'exact',head:true});
+                if(r.error) console.warn('DB table "'+tables[i]+'" error:',r.error.message);
+                else console.log('DB table "'+tables[i]+'": OK ('+r.count+' rows)');
+            }catch(e){console.warn('DB table "'+tables[i]+'" missing or inaccessible:',e);}
+        }
+    })();
 }
 
 // Listen for auth state changes
@@ -2755,7 +2767,10 @@ $('#openPostModal').addEventListener('click',function(){
         if(currentUser && fullContent) {
             try {
                 sbPost = await sbCreatePost(currentUser.id, fullContent, imageUrl);
-            } catch(e) { console.error('Create post:', e); }
+            } catch(e) {
+                console.error('Create post:', e);
+                showToast('Post failed to save: ' + (e.message || e.details || 'Unknown error'));
+            }
         }
 
         var mediaHtml='';

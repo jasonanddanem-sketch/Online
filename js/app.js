@@ -1650,6 +1650,9 @@ async function showProfileView(person){
     // Cover banner
     var coverUrl=person.cover_photo_url||(isMe?state.coverPhoto:null);
     $('#pvCoverBanner').style.backgroundImage=coverUrl?'url('+coverUrl+')':'';
+    // Show cover edit button on own profile
+    var pvCoverBtn=$('#pvCoverEditBtn');
+    if(pvCoverBtn) pvCoverBtn.style.display=isMe?'flex':'none';
 
     // Profile card - matches home sidebar style
     var cardHtml='<div class="profile-cover" style="background:linear-gradient(135deg,var(--primary),var(--primary-hover));"></div>';
@@ -2563,8 +2566,23 @@ function applyCoverPhoto(){
         $('#timelineCover').style.backgroundImage='url('+state.coverPhoto+')';
         var btn=$('#coverEditBtn');
         if(btn) btn.innerHTML='<i class="fas fa-camera"></i> Change Cover Photo';
+        var pvBtn=$('#pvCoverEditBtn');
+        if(pvBtn) pvBtn.innerHTML='<i class="fas fa-camera"></i> Change Cover Photo';
+        var pvBanner=$('#pvCoverBanner');
+        if(pvBanner) pvBanner.style.backgroundImage='url('+state.coverPhoto+')';
     }
 }
+
+// Profile view cover photo upload
+$('#pvCoverEditBtn').addEventListener('click',function(e){e.stopPropagation();$('#pvCoverFileInput').click();});
+$('#pvCoverFileInput').addEventListener('change',function(){
+    var file=this.files[0];
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(e){showCoverCropModal(e.target.result);};
+    reader.readAsDataURL(file);
+    this.value='';
+});
 
 // View Profile links
 $('#viewMyProfile').addEventListener('click',function(e){e.preventDefault();showMyProfileModal();});

@@ -361,7 +361,10 @@
 
     <!-- ========== PAGE: PROFILE VIEW ========== -->
     <div class="page" id="page-profile-view">
-        <div class="pv-cover-banner" id="pvCoverBanner"></div>
+        <div class="pv-cover-banner" id="pvCoverBanner">
+            <button class="timeline-cover-btn" id="pvCoverEditBtn" style="display:none;" title="Change Cover Photo"><i class="fas fa-camera"></i> Change Cover Photo</button>
+            <input type="file" id="pvCoverFileInput" accept="image/*" style="display:none;">
+        </div>
         <div class="pv-layout">
             <div class="pv-col-left">
                 <div class="card profile-card pv-profile-card" id="pvProfileCard"></div>

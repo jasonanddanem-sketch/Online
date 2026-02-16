@@ -252,7 +252,7 @@ async function initApp() {
     try {
         var notifs = await sbGetNotifications(currentUser.id);
         state.notifications = (notifs||[]).map(function(n){
-            return { type: n.type||'system', text: n.content||n.message||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
+            return { type: n.type||'system', text: n.title||n.body||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
         });
         updateNotifBadge();
         renderNotifications();
@@ -260,7 +260,7 @@ async function initApp() {
     // Subscribe to realtime notifications
     try {
         sbSubscribeNotifications(currentUser.id, function(newNotif){
-            state.notifications.unshift({ type: newNotif.type||'system', text: newNotif.content||newNotif.message||'', time: 'just now', read: false, id: newNotif.id });
+            state.notifications.unshift({ type: newNotif.type||'system', text: newNotif.title||newNotif.body||'', time: 'just now', read: false, id: newNotif.id });
             updateNotifBadge();
             renderNotifications();
         });
@@ -950,6 +950,10 @@ function addNotification(type,text){
     state.notifications.unshift({type:type,text:text,time:new Date().toLocaleTimeString(),read:false});
     updateNotifBadge();
     renderNotifications();
+    // Persist to Supabase
+    if(currentUser){
+        sbCreateNotification(currentUser.id,type,text,'').catch(function(e){console.warn('Notif save error:',e);});
+    }
 }
 function updateNotifBadge(){
     var unread=state.notifications.filter(function(n){return !n.read;}).length;

@@ -453,6 +453,15 @@ async function sbGetUnreadCount(userId) {
   return count || 0;
 }
 
+async function sbCreateNotification(userId, type, title, body, data) {
+  // Map app-internal types to the DB enum: comment, reply, like, follow, purchase, system
+  const typeMap = { group: 'system', skin: 'purchase', coin: 'purchase', message: 'system' };
+  const dbType = typeMap[type] || ((['comment','reply','like','follow','purchase','system'].indexOf(type) !== -1) ? type : 'system');
+  const { error } = await sb.from('notifications')
+    .insert({ user_id: userId, type: dbType, title: title || '', body: body || '', data: data || {} });
+  if (error) throw error;
+}
+
 // ---- 9. COINS ---------------------------------------------------------------
 
 async function sbGetCoinBalance(userId) {

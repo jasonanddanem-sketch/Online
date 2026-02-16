@@ -106,7 +106,7 @@ CREATE TABLE public.posts (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     author_id  UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     group_id   UUID REFERENCES public.groups(id) ON DELETE SET NULL,
-    content    TEXT NOT NULL CHECK (char_length(content) > 0),
+    content    TEXT NOT NULL DEFAULT '',
     image_url  TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

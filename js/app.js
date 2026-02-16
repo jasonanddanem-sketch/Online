@@ -242,6 +242,8 @@ async function initApp() {
     } catch(e){ console.warn('Could not load post photos:', e); }
     renderPhotosCard();
     await loadFollowCounts();
+    // Load friends-of-friends for discover tab
+    try { _fofIds = await sbGetFriendsOfFriends(currentUser.id); } catch(e){ console.warn('Could not load friends-of-friends:', e); _fofIds={}; }
     await loadGroups();
     // Load joined groups from group_members table
     try {
@@ -392,7 +394,7 @@ function saveState(){
         groupOwnedPremiumSkins:state.groupOwnedPremiumSkins,
         groupActiveSkin:state.groupActiveSkin,groupActivePremiumSkin:state.groupActivePremiumSkin,
         premiumBgUrl:_bk?_bk.bgImage:premiumBgImage,
-        premiumBgSaturation:_bk?_bk.bgSat:premiumBgSaturation,
+        premiumBgOverlay:_bk?_bk.bgOverlay:premiumBgOverlay,
         settings:settings
     };
     try{localStorage.setItem(key,JSON.stringify(save));}catch(e){console.warn('localStorage save failed (quota?):', e.message);}
@@ -416,7 +418,7 @@ function syncSkinDataToSupabase(){
             activeLogo:state.activeLogo||null,
             activeCoinSkin:state.activeCoinSkin||null,
             premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
-            premiumBgSaturation:(_bk?_bk.bgSat:premiumBgSaturation)||100,
+            premiumBgOverlay:(_bk?_bk.bgOverlay:premiumBgOverlay)!=null?(_bk?_bk.bgOverlay:premiumBgOverlay):0.4,
             ownedSkins:state.ownedSkins||{},
             ownedPremiumSkins:state.ownedPremiumSkins||{},
             ownedFonts:state.ownedFonts||{},
@@ -446,7 +448,8 @@ async function loadSkinDataFromSupabase(){
         if(sd.activeLogo) state.activeLogo=sd.activeLogo;
         if(sd.activeCoinSkin) state.activeCoinSkin=sd.activeCoinSkin;
         if(sd.premiumBgUrl) premiumBgImage=sd.premiumBgUrl;
-        if(sd.premiumBgSaturation!==undefined) premiumBgSaturation=sd.premiumBgSaturation;
+        if(sd.premiumBgOverlay!==undefined) premiumBgOverlay=sd.premiumBgOverlay;
+        else if(sd.premiumBgSaturation!==undefined) premiumBgOverlay=0.4; // migrate old saturation data
         if(sd.ownedSkins) Object.assign(state.ownedSkins,sd.ownedSkins);
         if(sd.ownedPremiumSkins) Object.assign(state.ownedPremiumSkins,sd.ownedPremiumSkins);
         if(sd.ownedFonts) Object.assign(state.ownedFonts,sd.ownedFonts);
@@ -489,7 +492,8 @@ function loadState(){
         if(save.groupActiveSkin) state.groupActiveSkin=save.groupActiveSkin;
         if(save.groupActivePremiumSkin) state.groupActivePremiumSkin=save.groupActivePremiumSkin;
         if(save.premiumBgUrl) premiumBgImage=save.premiumBgUrl;
-        if(save.premiumBgSaturation!==undefined) premiumBgSaturation=save.premiumBgSaturation;
+        if(save.premiumBgOverlay!==undefined) premiumBgOverlay=save.premiumBgOverlay;
+        else if(save.premiumBgSaturation!==undefined) premiumBgOverlay=0.4; // migrate old data
         if(save.settings){
             settings.darkMode=!!save.settings.darkMode;
             settings.notifSound=save.settings.notifSound!==false;
@@ -505,10 +509,10 @@ function reapplyCustomizations(){
     else if(state.activeSkin) applySkin(state.activeSkin,true);
     if(state.activeFont) applyFont(state.activeFont,true);
     if(state.activeLogo) applyLogo(state.activeLogo);
-    if(state.activeIconSet) applyIconSet(state.activeIconSet);
-    if(state.activeCoinSkin) applyCoinSkin(state.activeCoinSkin);
+    if(state.activeIconSet) applyIconSet(state.activeIconSet,true);
+    if(state.activeCoinSkin) applyCoinSkin(state.activeCoinSkin,true);
     if(state.activeTemplate) applyTemplate(state.activeTemplate,true);
-    if(state.activeNavStyle) applyNavStyle(state.activeNavStyle);
+    if(state.activeNavStyle) applyNavStyle(state.activeNavStyle,true);
     if(premiumBgImage&&state.activePremiumSkin) updatePremiumBg();
     if(settings.darkMode){document.body.style.background='#1a1a2e';document.body.style.color='#eee';}
 }
@@ -538,11 +542,15 @@ function getMyAvatar(){return getMyAvatarUrl();}
 // These stay in-memory for now — can be moved to a Supabase table later.
 var savedFolders=[{id:'fav',name:'Favorites',posts:[]}];
 var hiddenPosts={};
+var _fofIds={}; // friends-of-friends IDs for discover tab
 var reportedPosts=[];
 function persistSaved(){}
 function persistHidden(){}
 function persistReports(){}
 var blockedUsers={};
+var likedComments={};
+var dislikedComments={};
+var commentCoinAwarded={};
 function persistBlocked(){}
 function findPostFolder(pid){var s=String(pid);for(var i=0;i<savedFolders.length;i++){if(savedFolders[i].posts.indexOf(s)!==-1)return savedFolders[i];}return null;}
 
@@ -768,7 +776,7 @@ var _navCurrent='home';var _navPrev='home';var _navFromPopstate=false;
 function navigateTo(page,skipPush){
     // Restore user's skin/font/template when leaving profile view
     if(_pvSaved&&page!=='profile-view'){
-        premiumBgImage=_pvSaved.bgImage;premiumBgSaturation=_pvSaved.bgSat;
+        premiumBgImage=_pvSaved.bgImage;premiumBgOverlay=_pvSaved.bgOverlay;
         state.activePremiumSkin=_pvSaved.premiumSkin||null;
         applySkin(_pvSaved.skin||null,true);
         if(_pvSaved.premiumSkin)applyPremiumSkin(_pvSaved.premiumSkin,true);
@@ -777,7 +785,7 @@ function navigateTo(page,skipPush){
     }
     // Restore user's skin when leaving group view
     if(_gvSaved){
-        premiumBgImage=_gvSaved.bgImage;premiumBgSaturation=_gvSaved.bgSat;
+        premiumBgImage=_gvSaved.bgImage;premiumBgOverlay=_gvSaved.bgOverlay;
         if(_gvSaved.premiumSkin) applyPremiumSkin(_gvSaved.premiumSkin,true);
         else{applySkin(_gvSaved.skin||null,true);updatePremiumBg();}
         _gvSaved=null;
@@ -1053,6 +1061,8 @@ async function toggleFollow(userId,btn){
         }
         updateFollowCounts();
         renderSuggestions();
+        // Refresh friends-of-friends for discover tab
+        sbGetFriendsOfFriends(currentUser.id).then(function(fof){_fofIds=fof;}).catch(function(){});
     } catch(err) { console.error('toggleFollow:', err); }
 }
 
@@ -1210,16 +1220,17 @@ function handleShare(btn){
     });
 }
 
-function buildCommentHtml(cid,name,img,text,likes,isReply,authorId){
+function buildCommentHtml(cid,name,img,text,likes,isReply,authorId,replyToName){
     var liked=likedComments[cid];var lc=likes+(liked?1:0);
     var disliked=dislikedComments[cid];var dc=disliked?1:0;
     var avatarSrc=img||DEFAULT_AVATAR;
     var sz=isReply?'28':'32';
     var isOwn=currentUser&&authorId&&authorId===currentUser.id;
+    var replyTag=isReply&&replyToName?'<span style="color:var(--primary);font-size:12px;margin-right:4px;"><i class="fas fa-reply" style="transform:scaleX(-1);font-size:10px;margin-right:2px;"></i>@'+replyToName+'</span>':'';
     var h='<div class="comment-item'+(isReply?' comment-reply':'')+'" data-cid="'+cid+'">';
-    h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;">';
+    h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;object-fit:cover;">';
     h+='<div style="flex:1;"><strong style="font-size:13px;">'+name+'</strong>';
-    h+='<p style="font-size:13px;color:#555;margin-top:2px;">'+text+'</p>';
+    h+='<p style="font-size:13px;color:#555;margin-top:2px;">'+replyTag+text+'</p>';
     h+='<div class="comment-actions-row" style="display:flex;gap:10px;margin-top:4px;">';
     h+='<button class="comment-like-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
     h+='<button class="comment-dislike-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
@@ -1230,7 +1241,7 @@ function buildCommentHtml(cid,name,img,text,likes,isReply,authorId){
 }
 
 
-async function showComments(postId,countEl,sortMode){
+async function showComments(postId,countEl,sortMode,autoReplyToCid){
     sortMode=sortMode||settings.commentOrder||'top';
     var allComments=[];
     var isUUID=/^[0-9a-f]{8}-/.test(postId);
@@ -1265,12 +1276,18 @@ async function showComments(postId,countEl,sortMode){
         if(sortMode==='top'){allComments.sort(function(a,b){return b.likes-a.likes;});}
         else if(sortMode==='newest'){allComments.reverse();}
     }
-    // Separate top-level and replies
+    // Separate top-level and replies (flatten nested replies under their top-level ancestor)
+    var commentById={};
+    allComments.forEach(function(c){commentById[c.cid]=c;});
     var topLevel=allComments.filter(function(c){return !c.parentId;});
     var repliesByParent={};
     allComments.filter(function(c){return c.parentId;}).forEach(function(c){
-        if(!repliesByParent[c.parentId])repliesByParent[c.parentId]=[];
-        repliesByParent[c.parentId].push(c);
+        // Walk up to find the top-level ancestor
+        var root=c.parentId;
+        var visited={};
+        while(commentById[root]&&commentById[root].parentId&&!visited[root]){visited[root]=true;root=commentById[root].parentId;}
+        if(!repliesByParent[root])repliesByParent[root]=[];
+        repliesByParent[root].push(c);
     });
     var tabsHtml='<div class="search-tabs" style="margin-bottom:12px;">';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='top'?' active':'')+'" data-sort="top">Top Comments</button>';
@@ -1279,12 +1296,16 @@ async function showComments(postId,countEl,sortMode){
     tabsHtml+='</div>';
     var html='<div class="modal-header"><h3>Comments</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">'+tabsHtml+'<div id="commentsList">';
     if(!topLevel.length) html+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
+    // Build name lookup for "replying to" labels
+    var nameById={};
+    allComments.forEach(function(c){nameById[c.cid]=c.name;});
     topLevel.forEach(function(c){
         html+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false,c.authorId);
         var replies=repliesByParent[c.cid]||[];
-        var visibleReplies=replies.slice(0,2);
-        visibleReplies.forEach(function(r){html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId);});
-        if(replies.length>2) html+='<a href="#" class="view-more-replies" data-parent="'+c.cid+'" style="font-size:12px;color:var(--primary);margin-left:42px;display:block;margin-bottom:8px;">View more replies ('+replies.length+')</a>';
+        replies.forEach(function(r){
+            var replyToName=nameById[r.parentId]||c.name;
+            html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId,replyToName);
+        });
     });
     html+='</div><div style="display:flex;gap:10px;margin-top:12px;"><input type="text" class="post-input" id="commentInput" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary" id="postCommentBtn">Post</button></div><div id="replyIndicator" style="display:none;font-size:12px;color:var(--primary);margin-top:4px;">Replying to <span id="replyToName"></span> <button id="cancelReply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div></div>';
     showModal(html);
@@ -1311,22 +1332,12 @@ async function showComments(postId,countEl,sortMode){
             });
         });
     }
-    // View more replies — expand inline
-    $$('.view-more-replies').forEach(function(link){
-        link.addEventListener('click',function(e){
-            e.preventDefault();
-            var parentCid=link.dataset.parent;
-            var replies=repliesByParent[parentCid]||[];
-            var extraHtml='';
-            replies.slice(2).forEach(function(r){extraHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId);});
-            link.insertAdjacentHTML('beforebegin',extraHtml);
-            link.remove();
-            bindCommentLikes();
-            bindCommentDeletes(postId,countEl);
-            bindReplyBtns();
-        });
-    });
     bindReplyBtns();
+    // Auto-trigger reply if requested (e.g. from inline reply button)
+    if(autoReplyToCid){
+        var autoBtn=document.querySelector('.comment-reply-btn[data-cid="'+autoReplyToCid+'"]');
+        if(autoBtn) autoBtn.click();
+    }
     document.getElementById('cancelReply').addEventListener('click',function(){
         replyTarget=null;
         document.getElementById('replyIndicator').style.display='none';
@@ -1361,7 +1372,7 @@ async function showComments(postId,countEl,sortMode){
         }
         input.value='';if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
         renderInlineComments(postId);
-        showComments(postId,countEl,sortMode);
+        await showComments(postId,countEl,sortMode);
     });
     document.getElementById('commentInput').addEventListener('keypress',function(e){if(e.key==='Enter')document.getElementById('postCommentBtn').click();});
 }
@@ -1429,7 +1440,7 @@ async function renderInlineComments(postId){
                 var authorName=(c.author?c.author.display_name||c.author.username:'User');
                 var authorAvatar=(c.author?c.author.avatar_url:null);
                 var isReply=!!c.parent_comment_id;
-                all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply,authorId:c.author_id});
+                all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply,parentId:c.parent_comment_id||null,authorId:c.author_id});
             });
         }catch(e){
             console.error('Inline comments error for post '+postId+':',e);
@@ -1442,19 +1453,47 @@ async function renderInlineComments(postId){
         user.forEach(function(t,i){all.push({name:_myN,img:null,text:t,likes:0,cid:postId+'-u-'+i});});
     }
     if(!all.length){el.innerHTML='';el.style.padding='';return;}
-    var shown=all.slice(0,5);
+    // Separate top-level and replies for threaded display (flatten nested under top-level ancestor)
+    var commentById={};
+    all.forEach(function(c){commentById[c.cid]=c;});
+    var topLevel=all.filter(function(c){return !c.isReply;});
+    var repliesByParent={};
+    var nameById={};
+    all.forEach(function(c){nameById[c.cid]=c.name;});
+    all.filter(function(c){return c.isReply;}).forEach(function(c){
+        var root=c.parentId;
+        var visited={};
+        while(commentById[root]&&commentById[root].parentId&&!visited[root]){visited[root]=true;root=commentById[root].parentId;}
+        if(!repliesByParent[root])repliesByParent[root]=[];
+        repliesByParent[root].push(c);
+    });
+    // Show up to 3 top-level comments with their replies
+    var shownTop=topLevel.slice(0,3);
+    var totalShown=0;
     var html='';
-    shown.forEach(function(c){
+    shownTop.forEach(function(c){
+        totalShown++;
         var liked=likedComments[c.cid];var lc=c.likes+(liked?1:0);
         var disliked=dislikedComments[c.cid];var dc=disliked?1:0;
         var avatarSrc=c.img||DEFAULT_AVATAR;
-        var indent=c.isReply?'margin-left:28px;':'';
-        var replyIcon=c.isReply?'<i class="fas fa-reply" style="font-size:9px;color:#999;margin-right:4px;transform:scaleX(-1);"></i>':'';
         var isOwnComment=currentUser&&c.authorId&&c.authorId===currentUser.id;
         var deleteBtn=isOwnComment?'<button class="inline-comment-delete" data-cid="'+c.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
-        html+='<div class="inline-comment" style="'+indent+'" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble">'+replyIcon+'<strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+deleteBtn+'</div></div></div>';
+        html+='<div class="inline-comment" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+deleteBtn+'</div></div></div>';
+        // Show replies threaded under this comment
+        var replies=repliesByParent[c.cid]||[];
+        var shownReplies=replies.slice(0,2);
+        shownReplies.forEach(function(r){
+            totalShown++;
+            var rLiked=likedComments[r.cid];var rlc=r.likes+(rLiked?1:0);
+            var rDisliked=dislikedComments[r.cid];var rdc=rDisliked?1:0;
+            var rAvatar=r.img||DEFAULT_AVATAR;
+            var rIsOwn=currentUser&&r.authorId&&r.authorId===currentUser.id;
+            var rDel=rIsOwn?'<button class="inline-comment-delete" data-cid="'+r.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
+            html+='<div class="inline-comment" style="margin-left:28px;" data-cid="'+r.cid+'"><img src="'+rAvatar+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><i class="fas fa-reply" style="font-size:9px;color:var(--primary);margin-right:4px;transform:scaleX(-1);"></i><span style="color:var(--primary);font-size:11px;margin-right:3px;">@'+c.name+'</span><strong style="font-size:12px;">'+r.name+'</strong> <span style="font-size:12px;color:#555;">'+r.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rLiked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rLiked?'fas':'far')+' fa-thumbs-up"></i>'+rlc+'</button><button class="inline-comment-dislike" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rDisliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rDisliked?'fas':'far')+' fa-thumbs-down"></i>'+rdc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+rDel+'</div></div></div>';
+        });
+        if(replies.length>2) html+='<a href="#" class="show-more-comments" style="font-size:11px;color:var(--primary);display:block;margin-left:28px;margin-top:2px;margin-bottom:4px;">'+( replies.length-2)+' more repl'+(replies.length-2===1?'y':'ies')+'</a>';
     });
-    if(all.length>5) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
+    if(all.length>totalShown) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all '+all.length+' comments</a>';
     el.style.padding='0 20px 14px';el.innerHTML=html;
     el.querySelectorAll('.inline-comment-like').forEach(function(btn){
         btn.onclick=function(e){
@@ -1486,11 +1525,7 @@ async function renderInlineComments(postId){
     el.querySelectorAll('.inline-comment-reply').forEach(function(btn){
         btn.onclick=function(e){
             e.stopPropagation();
-            showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));
-            setTimeout(function(){
-                var rb=document.querySelector('.comment-reply-btn[data-cid="'+btn.dataset.cid+'"]');
-                if(rb)rb.click();
-            },100);
+            showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'),null,btn.dataset.cid);
         };
     });
     el.querySelectorAll('.inline-comment-delete').forEach(function(btn){
@@ -1506,8 +1541,9 @@ async function renderInlineComments(postId){
             }catch(err){showToast('Failed to delete comment');}
         };
     });
-    var link=el.querySelector('.show-more-comments');
-    if(link)link.addEventListener('click',function(e){e.preventDefault();showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));});
+    el.querySelectorAll('.show-more-comments').forEach(function(link){
+        link.addEventListener('click',function(e){e.preventDefault();showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));});
+    });
 }
 
 async function showProfileModal(person){
@@ -1576,7 +1612,7 @@ function profileToPerson(p){
         skin:sd.activeSkin||null,
         font:sd.activeFont||null,
         template:sd.activeTemplate||null,
-        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,saturation:sd.premiumBgSaturation||100}:null
+        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,overlay:sd.premiumBgOverlay!=null?sd.premiumBgOverlay:0.4}:null
     };
 }
 // ======================== PROFILE VIEW PAGE ========================
@@ -1595,12 +1631,12 @@ async function showProfileView(person){
     else { try{ var fc=await sbGetFollowCounts(person.id); following=fc.following; followers=fc.followers; }catch(e){} }
 
     // Apply viewed person's skin/font/template (silent, don't change state)
-    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgSat:premiumBgSaturation};
+    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay};
     if(!isMe){
         if(person.premiumSkin){
             applyPremiumSkin(person.premiumSkin,true);
-            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgSaturation=person.premiumBg.saturation||100;}
-            else{premiumBgImage=null;premiumBgSaturation=100;}
+            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgOverlay=person.premiumBg.overlay!=null?person.premiumBg.overlay:0.4;}
+            else{premiumBgImage=null;premiumBgOverlay=0.4;}
             // Temporarily set activePremiumSkin so updatePremiumBg shows the bg
             state.activePremiumSkin=person.premiumSkin;
             updatePremiumBg();
@@ -2891,12 +2927,16 @@ function renderFeed(tab){
         var ids=getFollowingIds();
         posts=feedPosts.filter(function(p){return ids[p.person.id]&&!hiddenPosts[p.idx]&&!blockedUsers[p.person.id];});
     } else {
-        // Discover tab: all public posts (sorted newest first)
-        posts=feedPosts.filter(function(p){return !hiddenPosts[p.idx]&&!blockedUsers[p.person.id];});
+        // Discover tab: posts from friends-of-friends (people followed by people you follow, but not already followed by you)
+        var myIds=getFollowingIds();
+        posts=feedPosts.filter(function(p){return _fofIds[p.person.id]&&!myIds[p.person.id]&&!hiddenPosts[p.idx]&&!blockedUsers[p.person.id];});
     }
     var container=$('#feedContainer');
     if(!posts.length){
-        container.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts yet. Be the first to post!</p></div>';
+        var emptyMsg=tab==='discover'?'Follow more people to discover posts from their friends!':'No posts yet. Be the first to post!';
+        var emptyIcon=tab==='discover'?'fa-compass':'fa-pen';
+        container.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas '+emptyIcon+'" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>'+emptyMsg+'</p></div>';
+        $$('#feedTabs .search-tab').forEach(function(t){t.classList.toggle('active',t.dataset.feedtab===tab);});
         return;
     }
     var html='';
@@ -2967,8 +3007,7 @@ function renderFeed(tab){
 document.getElementById('feedTabs').addEventListener('click',function(e){
     var tab=e.target.closest('[data-feedtab]');
     if(tab&&tab.dataset.feedtab!==activeFeedTab) {
-        activeFeedTab=tab.dataset.feedtab;
-        generatePosts();
+        renderFeed(tab.dataset.feedtab);
     }
 });
 
@@ -3564,17 +3603,17 @@ async function renderDiscover(container,query){
         } else {
             // No search: show friends-of-friends first, then fill with other users
             profiles=[];
+            var all=await sbGetAllProfiles(50);
             if(currentUser){
-                try{profiles=await sbGetFriendsOfFriends(currentUser.id,20);}catch(e){console.warn('FoF:',e);}
+                var fofKeys=Object.keys(_fofIds);
+                profiles=all.filter(function(p){return _fofIds[p.id];});
             }
             // If not enough friends-of-friends, add other profiles
             if(profiles.length<10){
-                var all=await sbGetAllProfiles(50);
                 var networkIds={};
                 if(currentUser){
                     networkIds[currentUser.id]=true;
                     Object.keys(state.followedUsers).forEach(function(k){networkIds[k]=true;});
-                    try{var myFollowers=await sbGetFollowers(currentUser.id);myFollowers.forEach(function(f){if(f&&f.id)networkIds[f.id]=true;});}catch(e){}
                 }
                 var existing={}; profiles.forEach(function(p){existing[p.id]=true;});
                 var extras=all.filter(function(p){return !networkIds[p.id]&&!existing[p.id];});
@@ -3869,7 +3908,7 @@ function applyGroupSkin(groupId){
     var grp=groups.find(function(g){return g.id===groupId;});
     var hasCover=grp&&grp.coverPhoto;
     // Save personal skin state once when entering group view
-    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgSat:premiumBgSaturation};
+    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay};
     // Hide premium bg in group view
     var _bgLayer=document.getElementById('premiumBgLayer');if(_bgLayer)_bgLayer.classList.remove('active');
     // Clear group-specific classes
@@ -3979,7 +4018,7 @@ function applyLogo(logoId){
     else{$('.nav-logo').textContent='BlipVibe';state.activeLogo=null;}
 }
 
-function applyIconSet(setId){
+function applyIconSet(setId,silent){
     var prev=JSON.parse(JSON.stringify(activeIcons));
     var icons=setId?iconSets.find(function(s){return s.id===setId;}).icons:defaultIcons;
     var newMap={};
@@ -3993,16 +4032,16 @@ function applyIconSet(setId){
     ['home','groups','skins','profiles','shop','messages','notifications'].forEach(function(page){var el=document.querySelector('.nav-link[data-page="'+page+'"] i');if(el){el.className='fas '+newMap[page];}});
     activeIcons=newMap;
     state.activeIconSet=setId;
-    if(setId)addNotification('skin','You applied the "'+iconSets.find(function(s){return s.id===setId;}).name+'" icon set!');
+    if(setId&&!silent)addNotification('skin','You applied the "'+iconSets.find(function(s){return s.id===setId;}).name+'" icon set!');
 }
 
-function applyCoinSkin(skinId){
+function applyCoinSkin(skinId,silent){
     var icon=skinId?coinSkins.find(function(s){return s.id===skinId;}).icon:'fa-coins';
     var color=skinId?coinSkins.find(function(s){return s.id===skinId;}).color:'#ffd700';
     $$('.nav-coins i, .profile-coins i').forEach(function(el){el.className='fas '+icon;});
     document.querySelector('.nav-coins').style.color=color;
     state.activeCoinSkin=skinId;
-    if(skinId)addNotification('skin','You applied the "'+coinSkins.find(function(s){return s.id===skinId;}).name+'" coin skin!');
+    if(skinId&&!silent)addNotification('skin','You applied the "'+coinSkins.find(function(s){return s.id===skinId;}).name+'" coin skin!');
 }
 
 function applyTemplate(tplId,silent){
@@ -4011,27 +4050,31 @@ function applyTemplate(tplId,silent){
     else{if(!silent)state.activeTemplate=null;}
 }
 
-function applyNavStyle(nsId){
+function applyNavStyle(nsId,silent){
     navStyles.forEach(function(n){document.body.classList.remove('nav-'+n.id);});
-    if(nsId){document.body.classList.add('nav-'+nsId);state.activeNavStyle=nsId;addNotification('skin','You applied the "'+navStyles.find(function(n){return n.id===nsId;}).name+'" nav style!');}
+    if(nsId){document.body.classList.add('nav-'+nsId);state.activeNavStyle=nsId;if(!silent)addNotification('skin','You applied the "'+navStyles.find(function(n){return n.id===nsId;}).name+'" nav style!');}
     else{state.activeNavStyle=null;}
 }
 
 // Premium background (runtime only, no persistence)
 var premiumBgImage=null;
-var premiumBgSaturation=100;
+var premiumBgOverlay=0.4;
 
 function updatePremiumBg(){
     var layer=document.getElementById('premiumBgLayer');
     if(!layer)return;
     if(premiumBgImage&&state.activePremiumSkin){
         layer.style.backgroundImage='url('+premiumBgImage+')';
-        layer.style.filter='saturate('+premiumBgSaturation+'%)';
+        layer.style.filter='';
+        var overlay=document.getElementById('premiumBgOverlay');
+        if(overlay) overlay.style.opacity=premiumBgOverlay;
         layer.classList.add('active');
+        document.body.classList.add('has-premium-bg');
     } else {
         layer.style.backgroundImage='';
         layer.style.filter='';
         layer.classList.remove('active');
+        document.body.classList.remove('has-premium-bg');
     }
 }
 
@@ -4113,8 +4156,8 @@ function renderMySkins(){
         bgHtml+='</div>';
         if(premiumBgImage){
             bgHtml+='<div style="margin-top:12px;">';
-            bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-sliders"></i>Saturation: <span id="satValLabel">'+premiumBgSaturation+'%</span></label>';
-            bgHtml+='<input type="range" id="premiumBgSatSlider" min="0" max="200" value="'+premiumBgSaturation+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
+            bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-sliders"></i>Darkness: <span id="overlayValLabel">'+Math.round(premiumBgOverlay*100)+'%</span></label>';
+            bgHtml+='<input type="range" id="premiumBgOverlaySlider" min="0" max="80" value="'+Math.round(premiumBgOverlay*100)+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
             bgHtml+='</div>';
         }
         bgHtml+='</div>';
@@ -4144,16 +4187,16 @@ function renderMySkins(){
     }
     var bgRemoveBtn=document.getElementById('premiumBgRemove');
     if(bgRemoveBtn){
-        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgSaturation=100;updatePremiumBg();renderMySkins();saveState();});
+        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgOverlay=0.4;updatePremiumBg();renderMySkins();saveState();});
     }
-    var satSlider=document.getElementById('premiumBgSatSlider');
-    if(satSlider){
-        satSlider.addEventListener('input',function(){
-            premiumBgSaturation=parseInt(satSlider.value);
-            document.getElementById('satValLabel').textContent=premiumBgSaturation+'%';
+    var overlaySlider=document.getElementById('premiumBgOverlaySlider');
+    if(overlaySlider){
+        overlaySlider.addEventListener('input',function(){
+            premiumBgOverlay=parseInt(overlaySlider.value)/100;
+            document.getElementById('overlayValLabel').textContent=Math.round(premiumBgOverlay*100)+'%';
             updatePremiumBg();
         });
-        satSlider.addEventListener('change',function(){saveState();});
+        overlaySlider.addEventListener('change',function(){saveState();});
     }
     function mySkinsRerender(){var row=$('#mySkinsGrid .shop-scroll-row');var sl=row?row.scrollLeft:0;renderMySkins();var row2=$('#mySkinsGrid .shop-scroll-row');if(row2)row2.scrollLeft=sl;saveState();}
     $$('#mySkinsGrid .apply-skin-btn').forEach(function(btn){btn.addEventListener('click',function(){applySkin(btn.dataset.sid==='default'?null:btn.dataset.sid);mySkinsRerender();});});

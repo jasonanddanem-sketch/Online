@@ -244,6 +244,8 @@ async function initApp() {
             }
         }
     } catch(e){ console.warn('Could not load group memberships:', e); }
+    renderGroups();
+    renderTrendingSidebar();
     await generatePosts();
     renderSuggestions();
     // Load notifications from Supabase
@@ -3036,11 +3038,14 @@ async function renderSuggestions(){
 
 // ======================== TRENDING GROUPS SIDEBAR ========================
 function renderTrendingSidebar(){
+    var sorted=groups.slice().sort(function(a,b){return (b.members||0)-(a.members||0);});
+    var top=sorted.slice(0,4);
     var html='';
-    groups.slice(0,4).forEach(function(g){
-        html+='<div class="group-item" data-gid="'+g.id+'"><div class="group-icon" style="background:'+g.color+'22;color:'+g.color+';"><i class="fas '+g.icon+'"></i></div>';
-        html+='<div class="group-info"><h5 class="group-name">'+g.name+'</h5><p class="group-desc">'+g.desc+'</p>';
-        html+='<span class="group-members"><i class="fas fa-users"></i> '+fmtNum(g.members)+' members</span></div></div>';
+    if(!top.length){html='<p style="color:var(--gray);font-size:13px;text-align:center;">No groups yet. Create one!</p>';}
+    top.forEach(function(g){
+        html+='<div class="group-item" data-gid="'+g.id+'"><div class="group-icon" style="background:'+(g.color||'#5cbdb9')+'22;color:'+(g.color||'#5cbdb9')+';"><i class="fas '+(g.icon||'fa-users')+'"></i></div>';
+        html+='<div class="group-info"><h5 class="group-name">'+g.name+'</h5><p class="group-desc">'+(g.desc||'')+'</p>';
+        html+='<span class="group-members"><i class="fas fa-users"></i> '+fmtNum(g.members||0)+' members</span></div></div>';
     });
     $('#trendingGroupsSidebar').innerHTML=html;
     $$('#trendingGroupsSidebar .group-item').forEach(function(el){

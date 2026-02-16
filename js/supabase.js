@@ -426,7 +426,7 @@ async function sbGetFollowCounts(userId) {
 
 // ---- 8. NOTIFICATIONS -------------------------------------------------------
 
-async function sbGetNotifications(userId, limit = 50) {
+async function sbGetNotifications(userId, limit = 500) {
   const { data, error } = await sb.from('notifications')
     .select('*')
     .eq('user_id', userId)

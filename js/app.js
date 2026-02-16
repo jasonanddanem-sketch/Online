@@ -261,14 +261,18 @@ async function initApp() {
     renderSuggestions();
     // Load notifications from Supabase
     try {
-        var notifs = await sbGetNotifications(currentUser.id);
+        var notifs = await sbGetNotifications(currentUser.id, 500);
+        console.log('[Notifications] Loaded', (notifs||[]).length, 'from Supabase for user', currentUser.id);
         state.notifications = (notifs||[]).map(function(n){
             var origType=(n.data&&n.data.originalType)||n.type||'system';
-            return { type: origType, text: n.title||n.body||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
+            var text=n.title||n.body||'';
+            if(!text&&n.data&&n.data.message) text=n.data.message;
+            if(!text) text='Notification';
+            return { type: origType, text: text, time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
         });
         updateNotifBadge();
         renderNotifications();
-    } catch(e){ console.warn('Could not load notifications:', e); }
+    } catch(e){ console.error('Could not load notifications:', e); }
     // Subscribe to realtime notifications
     try {
         sbSubscribeNotifications(currentUser.id, function(newNotif){

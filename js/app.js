@@ -205,7 +205,9 @@ async function initApp() {
     populateUserUI();
     showApp();
     await loadFollowCounts();
-    generatePosts(); // will now fetch from Supabase
+    await loadGroups();
+    generatePosts();
+    renderSuggestions(); // will now fetch from Supabase
 }
 
 // Listen for auth state changes
@@ -322,162 +324,9 @@ function persistBlocked(){}
 function findPostFolder(pid){var s=String(pid);for(var i=0;i<savedFolders.length;i++){if(savedFolders[i].posts.indexOf(s)!==-1)return savedFolders[i];}return null;}
 
 // ======================== DATA ========================
-var people = [
-    {id:1,name:'Sarah Miller',bio:'Photography lover',img:32,premiumSkin:'sakura',premiumBg:{src:'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80',saturation:120}},{id:2,name:'Mike Johnson',bio:'Music & Gaming',img:15,priv:true},
-    {id:3,name:'Emily Chen',bio:'Travel addict',img:25},{id:4,name:'David Park',bio:'Fitness & Food',img:45,priv:true},
-    {id:5,name:'James Wilson',bio:'Skater & Artist',img:11},{id:6,name:'Lisa Wang',bio:'Bookworm',img:16,priv:true},
-    {id:7,name:'Carlos Rivera',bio:'Music Producer',img:22},{id:8,name:'Anna Kowalski',bio:'Fitness Coach',img:35},
-    {id:9,name:'Tom Bradley',bio:'Gamer & Streamer',img:53,priv:true},{id:10,name:'Priya Sharma',bio:'Dog Mom & Chef',img:60},
-    {id:11,name:'Jordan Lee',bio:'Night owl coder',img:51,priv:true},{id:12,name:'Sophie Taylor',bio:'Plant parent',img:44},
-    {id:13,name:'Marcus Brown',bio:'Basketball fan',img:52,priv:true},{id:14,name:'Nina Patel',bio:'Yoga & Mindfulness',img:43},
-    {id:15,name:'Chris Anderson',bio:'Road trip junkie',img:54,priv:true},{id:16,name:'Olivia Martinez',bio:'Coffee snob',img:41},
-    {id:17,name:'Ryan Kim',bio:'Sneakerhead',img:55,priv:true},{id:18,name:'Zoe Williams',bio:'Cat lover',img:42},
-    {id:19,name:'Ethan Moore',bio:'Hiking enthusiast',img:56,priv:true},{id:20,name:'Mia Jackson',bio:'Art & Design',img:36,priv:true}
-];
-// Assign skins/fonts/templates to people for profile previews
-(function(){var sk=[null,'midnight','ocean','forest','royal','sunset','cherry','slate','ember','arctic','moss'];var fn=[null,'orbitron','rajdhani','quicksand','pacifico','baloo','playfair','space-grotesk','caveat','archivo'];var tp=[null,'panorama','compact','reverse','dashboard','cinema','magazine','spotlight','widescreen','duo','headline','stack','grid','journal','wing','hub','zen','focus'];people.forEach(function(p){p.skin=sk[p.id%sk.length];p.font=fn[p.id%fn.length];p.template=tp[p.id%tp.length];});})();
-
-// Friends map — each person's connections (bidirectional). People follow each other here.
-var friendsOf={
-    1:[2,3,6,10,12],2:[1,5,9,13],3:[1,4,7,14],4:[3,8,10,19],5:[2,11,15,17],
-    6:[1,12,16,18],7:[3,9,13,20],8:[4,14,19],9:[2,7,11,17],10:[1,4,12,20],
-    11:[5,9,15],12:[6,10,16],13:[2,7,17],14:[3,8,18],15:[5,11,19],
-    16:[6,12,20],17:[5,9,13],18:[6,14],19:[4,8,15],20:[7,10,16]
-};
-// Build follower/following counts per person from friendsOf
-var personFollowers={},personFollowing={};
-people.forEach(function(p){personFollowers[p.id]=[];personFollowing[p.id]=[];});
-Object.keys(friendsOf).forEach(function(id){
-    var uid=parseInt(id);
-    friendsOf[uid].forEach(function(fid){
-        if(personFollowing[uid].indexOf(fid)===-1) personFollowing[uid].push(fid);
-        if(personFollowers[fid].indexOf(uid)===-1) personFollowers[fid].push(uid);
-    });
-});
-
-// ======================== POST LIKERS ========================
-var postLikers={};
-function getLikers(postId,likeCount){
-    if(postLikers[postId]) return postLikers[postId];
-    // Deterministic shuffle using postId as seed
-    var seed=typeof postId==='string'?postId.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0):postId;
-    var shuffled=people.slice();
-    for(var i=shuffled.length-1;i>0;i--){
-        var j=(seed*(i+1)*31+7)%shuffled.length;
-        if(j<0) j=-j;
-        var tmp=shuffled[i];shuffled[i]=shuffled[j];shuffled[j]=tmp;
-    }
-    var count=Math.min(likeCount,shuffled.length);
-    postLikers[postId]=shuffled.slice(0,count);
-    return postLikers[postId];
-}
-
-// ======================== POST COMMENTS ========================
-var commentTexts=[
-    "Love this!","So true!","This is amazing","Wow, great post!","Totally agree",
-    "Need more of this","This made my day","Incredible!","Can relate to this","Goals!",
-    "Couldn't agree more","Beautiful!","That's awesome","This is everything","Absolutely love this",
-    "Haha yes!","So inspiring","Well said","This is gold","Perfect"
-];
-var postComments={};
-var likedComments={};
-var dislikedComments={};
-var commentCoinAwarded={};
-var commentReplies={};
-function getComments(postId){
-    if(postComments[postId]) return postComments[postId];
-    var seed=typeof postId==='string'?postId.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0):postId;
-    // Not all posts get comments — roughly 60% do
-    if((seed*7+3)%10<4){postComments[postId]=[];return [];}
-    var count=(seed*13+5)%8;// 0-7 comments
-    var shuffled=people.slice();
-    for(var i=shuffled.length-1;i>0;i--){
-        var j=(seed*(i+1)*17+11)%shuffled.length;if(j<0)j=-j;
-        var tmp=shuffled[i];shuffled[i]=shuffled[j];shuffled[j]=tmp;
-    }
-    var result=[];
-    for(var i=0;i<count;i++){
-        result.push({person:shuffled[i%shuffled.length],text:commentTexts[(seed+i*7)%commentTexts.length],likes:((seed+i*3)%6)});
-    }
-    postComments[postId]=result;
-    return result;
-}
-
-// Get recommended people: friends of who you follow, minus people you already follow
-function getFriendsOfFollowed(){
-    var seen={};
-    Object.keys(state.followedUsers).forEach(function(uid){
-        var flist=friendsOf[uid]||[];
-        flist.forEach(function(fid){if(!state.followedUsers[fid]) seen[fid]=true;});
-    });
-    return people.filter(function(p){return seen[p.id]&&!blockedUsers[p.id];});
-}
-
-var postTexts = [
-    "Just got back from the most incredible hiking trip! The views were absolutely unreal. Spent the whole weekend disconnected and it was exactly what I needed.",
-    "Made homemade pasta from scratch for the first time today and honestly? Life changing. The texture is completely different from store-bought.",
-    "Finally finished reading that book everyone's been talking about. No spoilers but WOW that ending hit different. Who else has read it?",
-    "Adopted a rescue puppy today!! Meet my new best friend. Still trying to pick a name - drop your suggestions below!",
-    "Just ran my first 10K! Never thought I'd be a runner but here we are. The feeling of crossing that finish line was incredible.",
-    "Tried that new ramen place downtown. The tonkotsu broth was next level. Already planning my next visit honestly.",
-    "Spent the morning at a farmers market and came home with way too many plants. My apartment is officially a jungle now.",
-    "Movie night recommendations? Looking for something mind-bending. Already seen Inception and Interstellar a million times.",
-    "Can't believe it's already been a year since I moved to this city. Best decision I ever made. The people here are amazing.",
-    "Just learned how to make latte art! It only took about 50 failed attempts but my rosetta is looking pretty decent now.",
-    "Weekend project: built a bookshelf from scratch! It's a little crooked but I'm proud of it. DIY life is the best life.",
-    "Golden hour at the beach today was absolutely magical. Sometimes you just need to watch a sunset and reset.",
-    "Anyone else obsessed with that new show? I've watched 3 seasons in 2 days. I need to go outside but also I need to know what happens.",
-    "Cooked dinner for friends tonight. Nothing fancy, just good food and great conversations. These are the moments that matter.",
-    "Just got tickets to the music festival next month! Already planning my outfits. Who else is going?",
-    "Took my camera out for the first time in months. Street photography hits different when the weather is perfect.",
-    "Tried rock climbing for the first time today. My arms are already sore but I'm hooked. When can I go again??",
-    "Made my own sourdough starter. Day 1 of waiting for it to do its thing. This is either going to be amazing or a disaster.",
-    "Finally organized my closet using that method everyone talks about. Does sparking joy actually work? TBD but it looks clean.",
-    "Road trip playlist suggestions needed! We're driving 8 hours this weekend and I need good vibes only.",
-    "Just finished a 30-day yoga challenge. My flexibility has improved so much and I actually feel calmer. Highly recommend.",
-    "Tried painting for the first time. Let's just say my cat could do better but it was therapeutic nonetheless.",
-    "Game night with friends was CHAOTIC. Who knew board games could get so competitive? Friendships were tested.",
-    "Early morning coffee on the balcony while it rains is peak existence. Nothing else matters in that moment.",
-    "Finally learned to ride a skateboard at 25. Only fell 47 times. Progress??",
-    "Started a garden on my balcony. So far I've successfully kept a basil plant alive for 2 weeks. Small wins.",
-    "That feeling when your favorite song comes on shuffle. Just vibing at the grocery store like nobody's watching.",
-    "Went stargazing last night and saw a shooting star! Made a wish but I can't tell you or it won't come true.",
-    "Baked cookies for my neighbors just because. The look on their faces was worth every minute of effort.",
-    "Sunday morning routine: pancakes, coffee, and zero plans. This is what happiness looks like.",
-    "Just discovered a hidden waterfall on a random trail. Nature really said 'surprise!' Best detour ever.",
-    "Hosted a potluck dinner. Everyone brought their signature dish. My kitchen is a mess but my heart is full.",
-    "Learned three chords on guitar today. I'm basically a musician now right? Anyway here's wonderwall.",
-    "Volunteered at the animal shelter today. I almost came home with 5 cats. Self-control was really tested.",
-    "First time making sushi at home. It looks nothing like the restaurant but tastes pretty good honestly!",
-    "Caught the most beautiful rainbow after the storm today. Reminder that good things come after tough times.",
-    "Started journaling before bed and wow, it really helps clear the mind. Should've started this years ago.",
-    "Bike ride through the park this morning. Perfect weather, no traffic, just pure freedom on two wheels.",
-    "Tried that viral recipe everyone's been posting. Actually turned out amazing! Sometimes the internet delivers.",
-    "Spent the day at a pottery class. Made a very questionable bowl but the process was so relaxing and fun."
-];
-
-var tagSets = [
-    ['#hiking','#nature','#outdoors','#adventure'],['#cooking','#homemade','#foodie','#yum'],
-    ['#reading','#books','#bookworm','#literature'],['#puppy','#rescue','#dogsoftwitter','#adopt'],
-    ['#running','#fitness','#10k','#goals'],['#ramen','#foodie','#downtown','#eats'],
-    ['#plants','#plantparent','#jungle','#green'],['#movies','#filmrec','#cinema','#watchlist'],
-    ['#citylife','#newbeginnings','#blessed','#grateful'],['#coffee','#latteart','#barista','#morning'],
-    ['#diy','#woodwork','#handmade','#weekend'],['#beach','#sunset','#goldenhour','#vibes'],
-    ['#tvshow','#binge','#streaming','#addicted'],['#dinner','#friends','#goodtimes','#love'],
-    ['#music','#festival','#concert','#livemusic'],['#photography','#street','#urban','#camera'],
-    ['#climbing','#bouldering','#adventure','#active'],['#sourdough','#baking','#bread','#patience'],
-    ['#organize','#declutter','#minimalist','#clean'],['#roadtrip','#playlist','#drive','#travel'],
-    ['#yoga','#wellness','#mindful','#challenge'],['#painting','#art','#creative','#therapy'],
-    ['#gamenight','#boardgames','#friends','#fun'],['#coffee','#rain','#cozy','#mornings'],
-    ['#skateboard','#newskills','#falling','#learning'],['#garden','#balcony','#herbs','#growing'],
-    ['#music','#vibing','#shuffle','#mood'],['#stargazing','#nature','#night','#wonder'],
-    ['#baking','#cookies','#neighbors','#kindness'],['#sunday','#pancakes','#noplan','#bliss'],
-    ['#waterfall','#hike','#discover','#nature'],['#potluck','#community','#food','#friends'],
-    ['#guitar','#music','#learning','#beginner'],['#volunteer','#animals','#shelter','#love'],
-    ['#sushi','#homemade','#japanese','#cooking'],['#rainbow','#storm','#hope','#beautiful'],
-    ['#journal','#mindfulness','#writing','#reflect'],['#biking','#park','#freedom','#exercise'],
-    ['#viral','#recipe','#trending','#delicious'],['#pottery','#craft','#creative','#relaxing']
-];
+// All user/group/message data is loaded from Supabase. No fake data.
+var groups = []; // Loaded from Supabase
+var msgContacts = []; // Messages not yet implemented
 
 var badgeTypes = [
     {text:'Trending',icon:'fa-fire',cls:'badge-red'},{text:'Creator',icon:'fa-camera',cls:'badge-purple'},
@@ -487,47 +336,29 @@ var badgeTypes = [
 var locations = ['New York','LA','Chicago','London','Tokyo','Paris','Berlin','Toronto','Sydney','Miami',
     'Seattle','Austin','Denver','Portland','Boston','SF','Dublin','Amsterdam','Seoul','Mumbai'];
 
-var groups = [
-    {id:1,name:'Street Photography',desc:'Share your best urban shots with the community.',icon:'fa-camera-retro',members:9,color:'#e74c3c'},
-    {id:2,name:'Indie Gamers',desc:'Discuss and discover the best indie games.',icon:'fa-gamepad',members:6,color:'#3b82f6'},
-    {id:3,name:'Home Cooks Unite',desc:'Recipes, tips, and kitchen fails welcome.',icon:'fa-utensils',members:9,color:'#e67e22'},
-    {id:4,name:'Fitness Motivation',desc:'Daily workouts and progress check-ins.',icon:'fa-dumbbell',members:7,color:'#2ecc71'},
-    {id:5,name:'Lo-Fi Beats Collective',desc:'Chill beats, playlists, and new drops.',icon:'fa-music',members:5,color:'#8b5cf6'},
-    {id:6,name:'Pet Parents',desc:'Cute pics and pet care advice.',icon:'fa-paw',members:11,color:'#ec4899'},
-    {id:7,name:'Budget Travel Hacks',desc:'Explore the world without breaking the bank.',icon:'fa-plane-departure',members:8,color:'#14b8a6'},
-    {id:8,name:'Book Club Central',desc:'Monthly reads, reviews, and recommendations.',icon:'fa-book',members:4,color:'#6366f1'},
-    {id:9,name:'Plant People',desc:'From succulents to monstera, all plants welcome.',icon:'fa-leaf',members:6,color:'#22c55e'},
-    {id:10,name:'Movie Buffs',desc:'Reviews, watchlists, and hot takes.',icon:'fa-film',members:10,color:'#f59e0b'},
-    {id:11,name:'DIY & Crafts',desc:'Build it, paint it, craft it yourself.',icon:'fa-hammer',members:3,color:'#ef4444'},
-    {id:12,name:'Coffee Enthusiasts',desc:'Pour-overs, espresso, and everything in between.',icon:'fa-mug-hot',members:5,color:'#92400e'},
-    {id:13,name:'Palasade',desc:'A cozy little corner of the internet where chaos meets creativity. Share wins, random thoughts, spicy takes, and the occasional unhinged meme.',icon:'fa-fire',members:16,color:'#f97316',createdBy:'me',memberIds:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}
-];
-// Initialize per-group roles: mods array holds Co-Admin and Moderator entries
-groups.forEach(function(g){g.mods=[];});
-// Palasade (id:13) — I am Admin, Emily Chen is Co-Admin, Sarah Miller & Mike Johnson are Mods
-groups[12].mods=[{name:'Emily Chen',img:25,role:'Co-Admin'},{name:'Sarah Miller',img:32,role:'Moderator'},{name:'Mike Johnson',img:15,role:'Moderator'}];
-// Street Photography (id:1) — I am just a Member
-groups[0].mods=[{name:'Sarah Miller',img:32,role:'Moderator'},{name:'Mike Johnson',img:15,role:'Moderator'}];
-// Home Cooks Unite (id:3) — I am a Moderator
-groups[2].mods=[{name:'John Doe',img:12,role:'Moderator'},{name:'Sarah Miller',img:32,role:'Moderator'}];
+// Load groups from Supabase
+async function loadGroups() {
+    try {
+        groups = await sbGetGroups();
+    } catch(e) { console.error('loadGroups:', e); groups = []; }
+}
 
-// Helper: get my role in a group
-function getMyGroupRole(group){
-    if(group.createdBy==='me') return 'Admin';
-    var entry=group.mods.find(function(m){return m.name==='John Doe';});
-    if(entry) return entry.role;
-    return state.joinedGroups[group.id]?'Member':null;
-}
-// Helper: get a person's role in a group
-function getPersonGroupRole(person,group){
-    var adminName=group.adminName||'John Doe';
-    if(group.createdBy&&person.name===adminName) return 'Admin';
-    if(group.createdBy==='me'&&person.name==='John Doe') return 'Admin';
-    var entry=group.mods.find(function(m){return m.name===person.name;});
-    return entry?entry.role:'Member';
-}
-// Role hierarchy rank
-function roleRank(role){return role==='Admin'?4:role==='Co-Admin'?3:role==='Moderator'?2:1;}
+// Stubs for removed fake data (prevents crashes in code that still references these)
+var people = [];
+var friendsOf = {};
+var personFollowers = {};
+var personFollowing = {};
+var postLikers = {};
+var postComments = {};
+var commentTexts = [];
+var postTexts = [];
+var tagSets = [];
+function getLikers(){ return []; }
+function getComments(){ return []; }
+function getFriendsOfFollowed(){ return []; }
+function getMyGroupRole(group){ return currentUser && group.owner && group.owner.id === currentUser.id ? 'Admin' : (state.joinedGroups[group.id] ? 'Member' : null); }
+function getPersonGroupRole(){ return 'Member'; }
+function roleRank(role){ return role==='Admin'?4:role==='Co-Admin'?3:role==='Moderator'?2:1; }
 
 var skins = [
     {id:'classic',name:'Classic',desc:'Clean teal and white. The original BlipVibe look.',price:1,preview:'linear-gradient(135deg,#5cbdb9,#4aada9)',cardBg:'#fff',cardText:'#333',cardMuted:'#777'},
@@ -681,36 +512,6 @@ var guildSkins = [
 
 var gfLink=document.createElement('link');gfLink.rel='stylesheet';gfLink.href='https://fonts.googleapis.com/css2?family=Orbitron&family=Rajdhani&family=Quicksand&family=Pacifico&family=Baloo+2&display=swap';document.head.appendChild(gfLink);
 
-var msgContacts = [
-    {id:1,name:'Sarah Miller',img:32,messages:[
-        {from:'them',text:'Hey! Love your latest post!'},
-        {from:'me',text:'Thanks Sarah! Means a lot'},
-        {from:'them',text:'We should hang out sometime!'},
-        {from:'me',text:'Definitely! Are you free this weekend?'},
-        {from:'them',text:'Saturday works for me!'}
-    ]},
-    {id:2,name:'Mike Johnson',img:15,messages:[
-        {from:'them',text:'Yo did you see the new game trailer??'},
-        {from:'me',text:'YES it looks incredible'},
-        {from:'them',text:'We gotta play it when it drops'},
-        {from:'me',text:'Day one for sure'}
-    ]},
-    {id:3,name:'Emily Chen',img:25,messages:[
-        {from:'them',text:'Those travel pics are amazing!'},
-        {from:'me',text:'Thanks! You should come next time'},
-        {from:'them',text:'I would love that!'}
-    ]},
-    {id:4,name:'James Wilson',img:11,messages:[
-        {from:'me',text:'Hey James, cool art piece!'},
-        {from:'them',text:'Thanks man! Took me 3 days'},
-        {from:'me',text:'Totally worth it'}
-    ]},
-    {id:5,name:'Priya Sharma',img:60,messages:[
-        {from:'them',text:'Can you share that recipe?'},
-        {from:'me',text:'Of course! I will DM you the link'},
-        {from:'them',text:'You are the best!'}
-    ]}
-];
 
 // ======================== UTILITIES ========================
 function $(sel){return document.querySelector(sel);}
@@ -816,22 +617,17 @@ document.addEventListener('click',function(e){
     }
 });
 
-function renderSearchResults(q,tab){
+async function renderSearchResults(q,tab){
     var ql=q.toLowerCase();
     var container=$('#searchResults');
     var html='';
 
-    // Count results for each tab
-    var peopleResults=people.filter(function(p){return p.name.toLowerCase().indexOf(ql)!==-1||p.bio.toLowerCase().indexOf(ql)!==-1;});
-    var groupResults=groups.filter(function(g){return g.name.toLowerCase().indexOf(ql)!==-1||g.desc.toLowerCase().indexOf(ql)!==-1;});
-    // Search posts by text content and tags
-    var postResults=[];
-    for(var i=0;i<100;i++){
-        var text=postTexts[i%postTexts.length].toLowerCase();
-        var tags=tagSets[i%tagSets.length];
-        var tagMatch=tags.some(function(t){return t.toLowerCase().indexOf(ql)!==-1;});
-        if(text.indexOf(ql)!==-1||tagMatch) postResults.push(i);
-    }
+    // Fetch results from Supabase
+    var peopleResults=[];
+    try { peopleResults=await sbSearchProfiles(q, 20); } catch(e){}
+    var groupResults=groups.filter(function(g){return g.name.toLowerCase().indexOf(ql)!==-1||(g.description||'').toLowerCase().indexOf(ql)!==-1;});
+    // Post results counted from loaded feed
+    var postResults=feedPosts.filter(function(p){return p.text.toLowerCase().indexOf(ql)!==-1;});
 
     // Update tab counts
     $$('.search-tab').forEach(function(t){
@@ -846,7 +642,7 @@ function renderSearchResults(q,tab){
 
     if(tab==='people'){
         if(!peopleResults.length){html='<div class="empty-state"><i class="fas fa-user-slash"></i><p>No people found for "'+q+'"</p></div>';}
-        else{html='<div class="search-results-grid">';peopleResults.forEach(function(p){html+=profileCardHtml(p);});html+='</div>';}
+        else{html='<div class="search-results-grid">';peopleResults.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
         container.innerHTML=html;
         bindProfileEvents('#searchResults');
     } else if(tab==='groups'){
@@ -855,19 +651,22 @@ function renderSearchResults(q,tab){
         container.innerHTML=html;
         bindGroupEvents('#searchResults');
     } else if(tab==='posts'){
+        // Search posts from feed
+        var postResults=feedPosts.filter(function(p){return p.text.toLowerCase().indexOf(ql)!==-1;});
         if(!postResults.length){html='<div class="empty-state"><i class="fas fa-file-circle-xmark"></i><p>No posts found for "'+q+'"</p></div>';}
         else{
-            postResults.forEach(function(i){
-                var person=people[i%people.length];
-                var text=postTexts[i%postTexts.length];
-                var tags=tagSets[i%tagSets.length];
-                var badge=badgeTypes[i%badgeTypes.length];
+            postResults.forEach(function(fp){
+                var person=fp.person;
+                var text=fp.text;
+                var tags=fp.tags||[];
+                var badge=fp.badge||badgeTypes[0];
                 var short=text.substring(0,200);
                 var rest=text.substring(200);
                 var hasMore=rest.length>0;
                 html+='<div class="card feed-post search-post-card">';
-                html+='<div class="post-header"><img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar" data-person-id="'+person.id+'">';
-                html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+person.id+'">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
+                var avatarSrc=person.avatar_url||DEFAULT_AVATAR;
+                html+='<div class="post-header"><img src="'+avatarSrc+'" alt="'+person.name+'" class="post-avatar" data-person-id="'+person.id+'">';
+                html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+person.id+'">'+person.name+'</h4><span class="post-time">'+(fp.created_at?timeAgoReal(fp.created_at):'')+'</span></div>';
                 html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span></div></div></div>';
                 html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';
                 html+='<div class="post-tags">';
@@ -886,9 +685,9 @@ function renderSearchResults(q,tab){
         });
         // Bind username clicks to profile view
         $$('#searchResults .post-username, #searchResults .post-avatar').forEach(function(el){
-            el.addEventListener('click',function(){
-                var p=people.find(function(x){return x.id===parseInt(el.dataset.personId);});
-                if(p) showProfileView(p);
+            el.addEventListener('click',async function(){
+                var uid=el.dataset.personId;
+                if(uid){try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}}
             });
         });
     }
@@ -1158,7 +957,7 @@ function renderCommentThread(cid,name,img,text,likes,showAllReplies){
 
 function showComments(postId,countEl,sortMode){
     sortMode=sortMode||settings.commentOrder||'top';
-    var gen=getComments(postId);
+    var gen=[];
     var user=state.comments[postId]||[];
     var allComments=[];
     gen.forEach(function(c,i){allComments.push({cid:postId+'-g-'+i,name:c.person.name,img:c.person.img,text:c.text,likes:c.likes});});
@@ -1291,7 +1090,7 @@ function bindCommentLikes(){
 function renderInlineComments(postId){
     var el=document.querySelector('.post-comments[data-post-id="'+postId+'"]');
     if(!el)return;
-    var gen=getComments(postId);
+    var gen=[];
     var user=state.comments[postId]||[];
     var all=gen.map(function(c,i){return{name:c.person.name,img:c.person.img,text:c.text,likes:c.likes,cid:postId+'-g-'+i};});
     var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';
@@ -1312,7 +1111,7 @@ function renderInlineComments(postId){
     el.querySelectorAll('.inline-comment-like').forEach(function(btn){
         btn.onclick=function(e){
             e.stopPropagation();var cid=btn.dataset.cid;var liked=likedComments[cid];
-            var gen=getComments(postId);var base=0;
+            var gen=[];var base=0;
             gen.forEach(function(c,i){if(postId+'-g-'+i===cid)base=c.likes;});
             var disBtn=btn.parentNode.querySelector('.inline-comment-dislike');
             if(liked){delete likedComments[cid];btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-up';btn.lastChild.textContent=base;}
@@ -1330,7 +1129,7 @@ function renderInlineComments(postId){
             var likeBtn=btn.parentNode.querySelector('.inline-comment-like');
             if(disliked){delete dislikedComments[cid];btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-down';btn.lastChild.textContent=0;}
             else{
-                if(likedComments[cid]&&likeBtn){delete likedComments[cid];var gen2=getComments(postId);var base2=0;gen2.forEach(function(c,i){if(postId+'-g-'+i===cid)base2=c.likes;});likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';likeBtn.lastChild.textContent=base2;}
+                if(likedComments[cid]&&likeBtn){delete likedComments[cid];var gen2=[];var base2=0;gen2.forEach(function(c,i){if(postId+'-g-'+i===cid)base2=c.likes;});likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';likeBtn.lastChild.textContent=base2;}
                 dislikedComments[cid]=true;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-down';btn.lastChild.textContent=1;
                 var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
                 if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
@@ -1461,7 +1260,7 @@ function showProfileView(person){
     // Profile card - matches home sidebar style
     var cardHtml='<div class="profile-cover" style="background:linear-gradient(135deg,var(--primary),var(--primary-hover));"></div>';
     cardHtml+='<div class="profile-info">';
-    var pvAvatarSrc=person.avatar_url||'images/default-avatar.svg';
+    var pvAvatarSrc=person.avatar_url||DEFAULT_AVATAR;
     cardHtml+='<div class="profile-avatar-wrap"><img src="'+pvAvatarSrc+'" alt="'+person.name+'" class="profile-avatar"></div>';
     cardHtml+='<h3 class="profile-name">'+person.name+'</h3>';
     cardHtml+='<p class="profile-title">'+(person.bio||'')+'</p>';
@@ -1533,7 +1332,7 @@ function showProfileView(person){
         var badge=badgeTypes[i%badgeTypes.length];
         var loc=locations[i%locations.length];
         var likes=Math.floor(Math.random()*people.length);
-        var pvGenComments=getComments('pv-'+i);
+        var pvGenComments=[];
         var shares=Math.floor(Math.random()*10);
 
         feedHtml+='<div class="card feed-post">';
@@ -1993,7 +1792,7 @@ function showGroupView(group){
         var text=postTexts[(group.id*5+i)%postTexts.length];
         var tags=tagSets[(group.id*5+i)%tagSets.length];
         var likes=Math.floor(Math.random()*people.length);
-        var gvGenComments=getComments('gv-'+group.id+'-'+i);
+        var gvGenComments=[];
         feedHtml+='<div class="card feed-post"><div class="post-header"><img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div><div class="post-badges"><span class="badge badge-blue"><i class="fas fa-users"></i> '+group.name+'</span></div></div></div>';
         feedHtml+='<div class="post-description"><p>'+text+'</p></div>';
         feedHtml+='<div class="post-tags">';tags.forEach(function(t){feedHtml+='<span class="skill-tag">'+t+'</span>';});feedHtml+='</div>';
@@ -2562,13 +2361,6 @@ document.addEventListener('click',function(e){
 // ======================== GENERATE FEED (100 POSTS) ========================
 var feedPosts=[];
 var activeFeedTab='following';
-var feedPostImages={
-    0:['https://picsum.photos/seed/hike1/800/600'],
-    3:['https://picsum.photos/seed/puppy1/800/600','https://picsum.photos/seed/puppy2/800/600'],
-    5:['https://picsum.photos/seed/ramen1/800/600','https://picsum.photos/seed/ramen2/800/600','https://picsum.photos/seed/ramen3/800/600'],
-    11:['https://picsum.photos/seed/beach1/800/600','https://picsum.photos/seed/beach2/800/600','https://picsum.photos/seed/beach3/800/600','https://picsum.photos/seed/beach4/800/600'],
-    14:['https://picsum.photos/seed/fest1/800/600','https://picsum.photos/seed/fest2/800/600','https://picsum.photos/seed/fest3/800/600','https://picsum.photos/seed/fest4/800/600','https://picsum.photos/seed/fest5/800/600']
-};
 async function generatePosts(){
     feedPosts=[];
     try {
@@ -2601,12 +2393,6 @@ async function generatePosts(){
         });
     } catch(e) {
         console.error('generatePosts:', e);
-        // Fallback: generate from static data if Supabase is empty/unavailable
-        for(var i=0;i<100;i++){
-            var person=people[i%people.length];
-            var likes=Math.floor(Math.random()*people.length);
-            feedPosts.push({idx:i,person:person,text:postTexts[i%postTexts.length],tags:tagSets[i%tagSets.length],badge:badgeTypes[i%badgeTypes.length],loc:locations[i%locations.length],likes:likes,comments:getComments(i),shares:Math.floor(Math.random()*10),images:feedPostImages[i%postTexts.length]||null});
-        }
     }
     renderFeed(activeFeedTab);
 }
@@ -2647,7 +2433,7 @@ function renderFeed(tab){
         tags.forEach(function(t){html+='<span class="skill-tag">'+t+'</span>';});
         html+='</div>';
         if(p.images){var imgs=p.images;html+='<div class="post-media-grid pm-count-'+imgs.length+'">';imgs.forEach(function(src){html+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});html+='</div>';}
-        var likers=getLikers(i,likes);
+        var likers=[];// likers loaded on demand
         html+='<div class="post-actions"><div class="action-left">';
         html+='<button class="action-btn like-btn" data-post-id="'+i+'"><i class="'+(state.likedPosts[i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
         html+='<button class="action-btn dislike-btn" data-post-id="'+i+'"><i class="'+(state.dislikedPosts[i]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
@@ -3001,36 +2787,40 @@ function showAllMedia(pgid,startIdx){
 }
 
 // ======================== SUGGESTIONS ========================
-function getRankedSuggestions(limit){
-    var myF=Object.keys(state.followedUsers).map(Number);
-    return getFriendsOfFollowed().map(function(p){
-        var mutual=(personFollowers[p.id]||[]).filter(function(id){return myF.indexOf(id)!==-1;}).length;
-        return{person:p,mutual:mutual};
-    }).sort(function(a,b){return b.mutual-a.mutual;}).slice(0,limit||5).map(function(o){return o.person;});
-}
-function renderSuggestions(){
-    var html='';
-    getRankedSuggestions(5).forEach(function(p){
-        var followed=state.followedUsers[p.id];
-        html+='<div class="suggestion-item"><img src="images/default-avatar.svg" alt="'+p.name+'" class="suggestion-avatar">';
-        html+='<div class="suggestion-info"><span class="suggestion-name" data-person-id="'+p.id+'">'+p.name+'</span><span class="suggestion-role">'+p.bio+'</span></div>';
-        html+='<button class="follow-btn-small'+(followed?' followed':'')+'" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
-    });
-    $('#suggestionList').innerHTML=html;
-
-    $$('#suggestionList .follow-btn-small').forEach(function(btn){
-        btn.addEventListener('click',function(){
-            var uid=parseInt(btn.getAttribute('data-uid'));
-            toggleFollow(uid,btn);
+async function renderSuggestions(){
+    var list=$('#suggestionList');
+    if(!list||!currentUser) return;
+    try{
+        var all=await sbGetAllProfiles(20);
+        var suggestions=all.filter(function(p){return p.id!==currentUser.id&&!state.followedUsers[p.id];}).slice(0,5);
+        if(!suggestions.length){list.innerHTML='<p style="text-align:center;color:var(--gray);font-size:13px;">No suggestions yet</p>';return;}
+        var html='';
+        suggestions.forEach(function(p){
+            var name=p.display_name||p.username;
+            var avatar=p.avatar_url||DEFAULT_AVATAR;
+            html+='<div class="suggestion-item"><img src="'+avatar+'" alt="'+name+'" class="suggestion-avatar">';
+            html+='<div class="suggestion-info"><h4>'+name+'</h4><p>'+((p.bio||'').substring(0,40))+'</p></div>';
+            html+='<button class="suggestion-follow-btn" data-uid="'+p.id+'"><i class="fas fa-user-plus"></i></button></div>';
         });
-    });
-    $$('#suggestionList .suggestion-name').forEach(function(el){
-        el.addEventListener('click',function(){
-            var pid=parseInt(el.getAttribute('data-person-id'));
-            var person=people.find(function(p){return p.id===pid;});
-            if(person) showProfileModal(person);
+        list.innerHTML=html;
+        list.querySelectorAll('.suggestion-follow-btn').forEach(function(btn){
+            btn.addEventListener('click',async function(){
+                var uid=btn.dataset.uid;
+                if(state.followedUsers[uid]){await sbUnfollow(currentUser.id,uid);delete state.followedUsers[uid];}
+                else{await sbFollow(currentUser.id,uid);state.followedUsers[uid]=true;}
+                await loadFollowCounts();
+                renderSuggestions();
+            });
         });
-    });
+        list.querySelectorAll('.suggestion-avatar,.suggestion-info').forEach(function(el){
+            el.style.cursor='pointer';
+            el.addEventListener('click',async function(){
+                var item=el.closest('.suggestion-item');
+                var uid=item.querySelector('.suggestion-follow-btn').dataset.uid;
+                try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+            });
+        });
+    }catch(e){console.error('renderSuggestions:',e);}
 }
 
 // ======================== TRENDING GROUPS SIDEBAR ========================
@@ -3160,55 +2950,43 @@ $('#createGroupBtn').addEventListener('click',function(){
 
 // ======================== PROFILES PAGE ========================
 var currentProfileTab='network';
-function profileCardHtml(p,showRel){
-    var followed=state.followedUsers[p.id];
-    var relHtml='';
-    if(showRel){
-        var theyFollowMe=myFollowers.indexOf(p.id)!==-1;
-        var rel=followed&&theyFollowMe?'Mutual':theyFollowMe?'Follows You':'Not Following You';
-        relHtml='<span style="font-size:11px;color:var(--gray);font-style:italic;display:block;margin-top:2px;">'+rel+'</span>';
-    }
-    return '<div class="profile-card-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><h4 data-person-id="'+p.id+'">'+p.name+'</h4><p>'+p.bio+'</p>'+relHtml+'<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn '+(followed?'btn-disabled':'btn-green')+' profile-follow-btn" data-uid="'+p.id+'" style="flex:1;">'+(followed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button><button class="btn btn-outline profile-view-btn" data-uid="'+p.id+'" style="flex:1;"><i class="fas fa-user"></i> View</button></div></div>';
+function profileCardHtml(p){
+    var name=p.display_name||p.name||p.username||'User';
+    var bio=p.bio||'';
+    var avatar=p.avatar_url||DEFAULT_AVATAR;
+    var isFollowed=state.followedUsers[p.id];
+    var isSelf=currentUser&&p.id===currentUser.id;
+    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4><p class="profile-card-bio">'+bio.substring(0,60)+'</p>'+(isSelf?'':'<button class="btn '+(isFollowed?'btn-outline':'btn-primary')+' profile-follow-btn" data-uid="'+p.id+'">'+(isFollowed?'Following':'Follow')+'</button>')+'</div>';
 }
-function renderMyNetwork(){
+async function renderMyNetwork(container){
+    if(!currentUser){container.innerHTML='';return;}
     var html='';
-    var followingList=people.filter(function(p){return state.followedUsers[p.id];});
-    var followerList=myFollowers.map(function(id){return people.find(function(p){return p.id===id;});}).filter(Boolean);
-    html+='<div class="shop-section-title"><i class="fas fa-user-check"></i> Following <span style="font-size:12px;color:var(--gray);font-weight:400;">('+followingList.length+')</span></div>';
-    if(followingList.length){html+='<div class="shop-scroll-row">';followingList.forEach(function(p){html+=profileCardHtml(p,true);});html+='</div>';}
-    else{html+='<p style="text-align:center;color:var(--gray);padding:20px 0;">You\'re not following anyone yet.</p>';}
-    html+='<div class="shop-section-title"><i class="fas fa-users"></i> Followers <span style="font-size:12px;color:var(--gray);font-weight:400;">('+followerList.length+')</span></div>';
-    if(followerList.length){html+='<div class="shop-scroll-row">';followerList.forEach(function(p){html+=profileCardHtml(p,true);});html+='</div>';}
-    else{html+='<p style="text-align:center;color:var(--gray);padding:20px 0;">No followers yet.</p>';}
-    $('#profilesSections').innerHTML=html;
-    bindProfileEvents('#profilesSections');
-    initDragScroll('#profilesSections');
+    try{
+        var following=await sbGetFollowing(currentUser.id);
+        var followers=await sbGetFollowers(currentUser.id);
+        if(following.length){html+='<h3 style="margin:16px 0 8px;">Following</h3><div class="search-results-grid">';following.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
+        if(followers.length){html+='<h3 style="margin:16px 0 8px;">Followers</h3><div class="search-results-grid">';followers.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
+        if(!following.length&&!followers.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Your network is empty. Follow some people!</p></div>';
+    }catch(e){html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Could not load network.</p></div>';}
+    container.innerHTML=html;
+    bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
 }
-function renderDiscover(filter){
+async function renderDiscover(container,query){
     var html='';
-    var list=people;
-    if(filter){
-        list=people.filter(function(p){return !blockedUsers[p.id]&&(p.name.toLowerCase().indexOf(filter.toLowerCase())!==-1||p.bio.toLowerCase().indexOf(filter.toLowerCase())!==-1);});
-        if(!list.length){html='<div class="empty-state"><i class="fas fa-search"></i><p>No people found matching "'+filter+'"</p></div>';}
-        else{html+='<div class="shop-section-title"><i class="fas fa-search"></i> Results for "'+filter+'"</div><div class="shop-scroll-row">';list.forEach(function(p){html+=profileCardHtml(p);});html+='</div>';}
-    } else {
-        var recs=getFriendsOfFollowed();
-        if(recs.length){
-            html+='<div class="shop-section-title"><i class="fas fa-user-plus"></i> Recommended For You</div><div class="shop-scroll-row">';
-            recs.forEach(function(p){html+=profileCardHtml(p);});
-            html+='</div>';
-        }
-        html+='<div class="shop-section-title"><i class="fas fa-users"></i> Discover People</div><div class="shop-scroll-row scroll-2row">';
-        people.filter(function(p){return !blockedUsers[p.id];}).slice(0,20).forEach(function(p){html+=profileCardHtml(p);});
-        html+='</div>';
-    }
-    $('#profilesSections').innerHTML=html;
-    bindProfileEvents('#profilesSections');
-    initDragScroll('#profilesSections');
+    try{
+        var profiles=query?await sbSearchProfiles(query,20):await sbGetAllProfiles(20);
+        profiles=profiles.filter(function(p){return !currentUser||p.id!==currentUser.id;});
+        if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>No users found.</p></div>';
+        else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
+    }catch(e){html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}
+    container.innerHTML=html;
+    bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
 }
-function renderProfiles(filter){
-    if(filter||currentProfileTab==='discover') renderDiscover(filter);
-    else renderMyNetwork();
+function renderProfiles(tab,query){
+    var container=$('#profilesSections');
+    if(!container) return;
+    if(tab==='network') renderMyNetwork(container);
+    else renderDiscover(container,query||'');
 }
 function bindProfileEvents(c){
     $$(c+' .profile-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(parseInt(btn.dataset.uid),btn);});});
@@ -3721,27 +3499,9 @@ function renderMySkins(){
 // ======================== MESSAGES ========================
 var activeChat=null;
 
-function renderMsgContacts(filter){
-    var filtered=msgContacts;
-    if(filter){filtered=msgContacts.filter(function(c){return c.name.toLowerCase().indexOf(filter.toLowerCase())!==-1;});}
-    var html='';
-    filtered.forEach(function(c){
-        var lastMsg=c.messages[c.messages.length-1];
-        var preview=lastMsg?(lastMsg.from==='me'?'You: ':'')+lastMsg.text:'';
-        html+='<div class="msg-contact'+(activeChat&&activeChat.id===c.id?' active':'')+'" data-cid="'+c.id+'">';
-        html+='<img src="images/default-avatar.svg" alt="'+c.name+'">';
-        html+='<div class="msg-contact-info"><div class="msg-contact-name">'+c.name+'</div><div class="msg-contact-preview">'+preview+'</div></div>';
-        html+='<span class="msg-contact-time">now</span></div>';
-    });
-    $('#msgContactList').innerHTML=html;
-
-    $$('.msg-contact').forEach(function(el){
-        el.addEventListener('click',function(){
-            var cid=parseInt(el.getAttribute('data-cid'));
-            var contact=msgContacts.find(function(c){return c.id===cid;});
-            if(contact) openChat(contact);
-        });
-    });
+function renderMsgContacts(){
+    var list=$('#msgContactList');
+    if(list) list.innerHTML='<div class="empty-state" style="padding:40px 20px;"><i class="fas fa-envelope-open-text"></i><p>No messages yet.</p></div>';
 }
 
 function openChat(contact){

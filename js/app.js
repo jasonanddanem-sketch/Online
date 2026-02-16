@@ -2551,7 +2551,9 @@ async function generatePosts(){
         var posts;
         if(activeFeedTab==='following' && currentUser){
             posts = await sbGetFollowingFeed(currentUser.id, 50);
-        } else {
+        }
+        // If following tab returned nothing, also try all posts
+        if(!posts||!posts.length){
             posts = await sbGetFeed(50);
         }
         posts.forEach(function(p,i){
@@ -2597,6 +2599,10 @@ function renderFeed(tab){
         posts=feedPosts.filter(function(p){return !hiddenPosts[p.idx]&&!blockedUsers[p.person.id];}).sort(function(a,b){return b.likes-a.likes;});
     }
     var container=$('#feedContainer');
+    if(!posts.length){
+        container.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts yet. Be the first to post!</p></div>';
+        return;
+    }
     var html='';
     posts.forEach(function(p){
         var i=p.idx,person=p.person,text=p.text,tags=p.tags||[],badge=p.badge,loc=p.loc,likes=p.likes,genComments=p.comments||[],shares=p.shares;
@@ -4333,7 +4339,7 @@ function initDragScroll(container){
 
 // ======================== INITIALIZE ========================
 if(!state.activeTemplate){applyTemplate('spotlight',true);state.activeTemplate='spotlight';}
-generatePosts();
+// generatePosts() is called in initApp() after auth — don't call here to avoid race condition
 renderSuggestions();
 renderTrendingSidebar();
 renderGroups();

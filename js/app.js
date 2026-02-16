@@ -1102,7 +1102,18 @@ async function showComments(postId,countEl,sortMode){
                 var likeCount=c.like_count||0;
                 allComments.push({cid:c.id,name:authorName,img:authorAvatar,text:c.content,likes:likeCount,parentId:c.parent_comment_id,authorId:c.author_id});
             });
-        }catch(e){console.error('Load comments error:',e);}
+        }catch(e){
+            console.error('Load comments error:',e);
+            // Fallback: try direct query without FK hints
+            try{
+                var res=await sb.from('comments').select('*, author:profiles(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:sortMode==='oldest'});
+                if(!res.error)(res.data||[]).forEach(function(c){
+                    var authorName=(c.author?c.author.display_name||c.author.username:'User');
+                    var authorAvatar=(c.author?c.author.avatar_url:null);
+                    allComments.push({cid:c.id,name:authorName,img:authorAvatar,text:c.content,likes:0,parentId:c.parent_comment_id,authorId:c.author_id});
+                });
+            }catch(e2){console.error('Fallback comments error:',e2);}
+        }
     }
     // Also include local-only comments (for non-UUID posts or as fallback)
     if(!isUUID){
@@ -1243,15 +1254,28 @@ async function renderInlineComments(postId){
     var isUUID=/^[0-9a-f]{8}-/.test(postId);
     if(isUUID){
         try{
-            var sbComments=await sbGetComments(postId,'newest');
-            (sbComments||[]).forEach(function(c){
+            // Direct lightweight query — skip per-comment like counts for inline preview
+            var res=await sb.from('comments').select('*, author:profiles!comments_author_id_fkey(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:false}).limit(20);
+            if(res.error) throw res.error;
+            (res.data||[]).forEach(function(c){
                 var authorName=(c.author?c.author.display_name||c.author.username:'User');
                 var authorAvatar=(c.author?c.author.avatar_url:null);
-                var likeCount=c.like_count||0;
                 var isReply=!!c.parent_comment_id;
-                all.push({name:authorName,img:authorAvatar,text:c.content,likes:likeCount,cid:c.id,isReply:isReply});
+                all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
             });
-        }catch(e){}
+        }catch(e){
+            console.error('Inline comments error for post '+postId+':',e);
+            // Fallback: try without FK hint
+            try{
+                var res2=await sb.from('comments').select('*, author:profiles(id, username, display_name, avatar_url)').eq('post_id',postId).order('created_at',{ascending:false}).limit(20);
+                if(!res2.error)(res2.data||[]).forEach(function(c){
+                    var authorName=(c.author?c.author.display_name||c.author.username:'User');
+                    var authorAvatar=(c.author?c.author.avatar_url:null);
+                    var isReply=!!c.parent_comment_id;
+                    all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
+                });
+            }catch(e2){console.error('Inline comments fallback error:',e2);}
+        }
     } else {
         var user=state.comments[postId]||[];
         var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';
@@ -2695,6 +2719,12 @@ function bindPostEvents(){
             // If this is a UUID (Supabase post), call Supabase toggle
             var isUUID = /^[0-9a-f]{8}-/.test(postId);
             if(isUUID && currentUser) {
+                // Clear dislike if active
+                if(state.dislikedPosts[postId]){
+                    var db=btn.closest('.action-left').querySelector('.dislike-btn');
+                    if(db){var dc=db.querySelector('.dislike-count');dc.textContent=Math.max(0,parseInt(dc.textContent)-1);db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}
+                    delete state.dislikedPosts[postId];
+                }
                 try {
                     var nowLiked = await sbToggleLike(currentUser.id, 'post', postId);
                     if(nowLiked) {
@@ -2731,7 +2761,7 @@ function bindPostEvents(){
 
     // Dislike buttons
     _$$('.dislike-btn').forEach(function(btn){
-        btn.addEventListener('click',function(){
+        btn.addEventListener('click', async function(){
             var postId=btn.getAttribute('data-post-id');
             var countEl=btn.querySelector('.dislike-count');
             var count=parseInt(countEl.textContent);
@@ -2742,7 +2772,13 @@ function bindPostEvents(){
                 btn.querySelector('i').className='far fa-thumbs-down';
                 countEl.textContent=count-1;
             } else {
-                if(state.likedPosts[postId]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[postId];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}
+                // Clear like if active
+                if(state.likedPosts[postId]){
+                    var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=Math.max(0,parseInt(lc.textContent)-1);delete state.likedPosts[postId];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';
+                    // Remove Supabase like
+                    var isUUID=/^[0-9a-f]{8}-/.test(postId);
+                    if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',postId);}catch(e){}}
+                }
                 state.dislikedPosts[postId]=true;
                 btn.classList.add('disliked');
                 btn.querySelector('i').className='fas fa-thumbs-down';
@@ -3809,6 +3845,16 @@ async function loadConversations(){
         msgConversations=await sbGetConversations(currentUser.id);
     }catch(e){console.error('loadConversations:',e);msgConversations=[];}
     renderMsgContacts();
+    updateMsgBadge();
+}
+function updateMsgBadge(){
+    var total=0;
+    msgConversations.forEach(function(c){total+=c.unread||0;});
+    var badge=$('#msgBadge');
+    if(badge){
+        if(total>0){badge.style.display='flex';badge.textContent=total;}
+        else{badge.style.display='none';}
+    }
 }
 
 function renderMsgContacts(search){
@@ -3831,7 +3877,8 @@ function renderMsgContacts(search){
         var name=c.partner.display_name||c.partner.username||'User';
         var avatar=c.partner.avatar_url||DEFAULT_AVATAR;
         var preview=c.lastMessage.content||'';
-        if(preview.length>40) preview=preview.substring(0,40)+'...';
+        if(/^\[img\]/.test(preview)) preview='Sent an image';
+        else if(preview.length>40) preview=preview.substring(0,40)+'...';
         var time=timeAgoReal(c.lastMessage.created_at);
         var isActive=activeChat&&activeChat.partnerId===c.partnerId;
         html+='<div class="msg-contact'+(isActive?' active':'')+'" data-partner-id="'+c.partnerId+'">';
@@ -3859,7 +3906,7 @@ async function openChat(contact){
     var avatar=contact.partner.avatar_url||DEFAULT_AVATAR;
     var html='<div class="msg-chat-header"><img src="'+avatar+'" alt="'+name+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;" data-uid="'+contact.partnerId+'"><h4>'+name+'</h4></div>';
     html+='<div class="msg-chat-messages" id="chatMessages"><div style="text-align:center;padding:20px;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>';
-    html+='<div class="msg-chat-input"><input type="text" placeholder="Type a message..." id="msgInput"><button id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button></div>';
+    html+='<div class="msg-chat-input"><button id="msgImgBtn" title="Send image" style="background:none;border:none;color:var(--primary);font-size:18px;padding:8px;cursor:pointer;"><i class="fas fa-image"></i></button><input type="file" id="msgImgInput" accept="image/*" style="display:none;"><input type="text" placeholder="Type a message..." id="msgInput" style="flex:1;"><button id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button></div>';
     $('#msgChat').innerHTML=html;
 
     // Load messages
@@ -3872,7 +3919,11 @@ async function openChat(contact){
             var mhtml='';
             messages.forEach(function(m){
                 var isMine=m.sender_id===currentUser.id;
-                mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'">'+m.content+'</div>';
+                var content=m.content;
+                // Render image messages
+                var imgMatch=content.match(/^\[img\](.*?)\[\/img\]$/);
+                if(imgMatch){content='<img src="'+imgMatch[1]+'" style="max-width:200px;border-radius:8px;">';}
+                mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'">'+content+'</div>';
             });
             msgArea.innerHTML=mhtml;
             msgArea.scrollTop=msgArea.scrollHeight;
@@ -3882,6 +3933,7 @@ async function openChat(contact){
         var convo=msgConversations.find(function(c){return c.partnerId===contact.partnerId;});
         if(convo) convo.unread=0;
         renderMsgContacts();
+        updateMsgBadge();
     }catch(e){
         console.error('Load messages:',e);
         $('#chatMessages').innerHTML='<div style="text-align:center;padding:40px;color:#e74c3c;"><p>Failed to load messages.</p></div>';
@@ -3891,6 +3943,25 @@ async function openChat(contact){
     $('#sendMsgBtn').addEventListener('click',sendMessage);
     $('#msgInput').addEventListener('keypress',function(e){if(e.key==='Enter')sendMessage();});
     $('#msgInput').focus();
+
+    // Image send handler
+    $('#msgImgBtn').addEventListener('click',function(){$('#msgImgInput').click();});
+    $('#msgImgInput').addEventListener('change',async function(){
+        var file=this.files[0];if(!file||!activeChat||!currentUser) return;
+        try{
+            var path=currentUser.id+'/msg-'+Date.now()+'-'+file.name;
+            var url=await sbUploadFile('posts',path,file);
+            var imgContent='[img]'+url+'[/img]';
+            var msgArea=$('#chatMessages');
+            var placeholder=msgArea.querySelector('div[style*="text-align:center"]');
+            if(placeholder&&placeholder.textContent.indexOf('No messages')!==-1) msgArea.innerHTML='';
+            msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble sent"><img src="'+url+'" style="max-width:200px;border-radius:8px;"></div>');
+            msgArea.scrollTop=msgArea.scrollHeight;
+            await sbSendMessage(currentUser.id,activeChat.partnerId,imgContent);
+            await loadConversations();
+        }catch(e){console.error('Send image:',e);showToast('Failed to send image');}
+        this.value='';
+    });
 
     // Click avatar to view profile
     var avatarEl=$('#msgChat').querySelector('.msg-chat-header img');

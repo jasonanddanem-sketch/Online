@@ -784,8 +784,7 @@ async function toggleFollow(userId,btn){
                 btn.classList.add('btn-disabled');
                 btn.innerHTML=btn.classList.contains('follow-btn-small')?'<i class="fas fa-check"></i>':'<i class="fas fa-check"></i> Following';
             }
-            var person=people.find(function(p){return p.id===userId;});
-            if(person) addNotification('follow','You are now following '+person.name);
+            sbGetProfile(userId).then(function(p){if(p)addNotification('follow','You are now following '+(p.display_name||p.username));}).catch(function(){});
         }
         updateFollowCounts();
         renderSuggestions();
@@ -893,7 +892,7 @@ function handleShare(btn){
         var container=$('#feedContainer');
         var postId='share-'+Date.now();
         var ph='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar">';
-        ph+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">John Doe</h4><span class="post-time">just now</span></div>';
+        ph+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</h4><span class="post-time">just now</span></div>';
         ph+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-share"></i> Shared</span></div></div></div>';
         if(comment) ph+='<div class="post-description"><p>'+comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p></div>';
         ph+='<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 14px;background:var(--light-bg);">';
@@ -1020,7 +1019,7 @@ function showComments(postId,countEl,sortMode){
     document.getElementById('postCommentBtn').addEventListener('click', async function(){
         var input=document.getElementById('commentInput');var text=input.value.trim();if(!text)return;
         var isUUID = /^[0-9a-f]{8}-/.test(postId);
-        var myName = currentUser ? (currentUser.display_name || currentUser.username) : 'John Doe';
+        var myName = currentUser ? (currentUser.display_name || currentUser.username) : 'You';
 
         if(replyTarget){
             if(!commentReplies[replyTarget])commentReplies[replyTarget]=[];
@@ -1154,44 +1153,27 @@ function renderInlineComments(postId){
     });
 }
 
-function showProfileModal(person){
+async function showProfileModal(person){
+    var name=person.display_name||person.name||person.username||'User';
+    var bio=person.bio||'';
+    var avatar=person.avatar_url||DEFAULT_AVATAR;
     var isFollowed=state.followedUsers[person.id];
+    var following=0,followers=0;
+    try{var fc=await sbGetFollowCounts(person.id);following=fc.following;followers=fc.followers;}catch(e){}
     var html='<div class="modal-header"><h3>Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    html+='<div class="modal-body"><div class="modal-profile-top"><img src="images/default-avatar.svg" alt="'+person.name+'"><h3>'+person.name+'</h3><p>'+person.bio+'</p></div>';
-    html+='<div class="modal-profile-stats"><div class="stat"><span class="stat-count">'+Math.floor(Math.random()*500)+'</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-count">'+Math.floor(Math.random()*2000)+'</span><span class="stat-label">Followers</span></div></div>';
+    html+='<div class="modal-body"><div class="modal-profile-top"><img src="'+avatar+'" alt="'+name+'"><h3>'+name+'</h3><p>'+bio+'</p></div>';
+    html+='<div class="modal-profile-stats"><div class="stat"><span class="stat-count">'+following+'</span><span class="stat-label">Following</span></div><div class="stat"><span class="stat-count">'+followers+'</span><span class="stat-label">Followers</span></div></div>';
     html+='<div class="modal-actions"><button class="btn '+(isFollowed?'btn-disabled':'btn-green')+'" id="modalFollowBtn" data-uid="'+person.id+'">'+(isFollowed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button>';
     html+='<button class="btn btn-primary" id="modalMsgBtn" data-uid="'+person.id+'"><i class="fas fa-envelope"></i> Message</button>';
     html+='<button class="btn btn-outline" id="modalViewProfileBtn"><i class="fas fa-user"></i> View Profile</button>';
     html+='<button class="btn btn-outline" id="modalBlockBtn" data-uid="'+person.id+'" style="color:#e74c3c;border-color:#e74c3c;">'+(blockedUsers[person.id]?'<i class="fas fa-unlock"></i> Unblock':'<i class="fas fa-ban"></i> Block')+'</button></div>';
-    var recs=getRankedSuggestions(5).filter(function(p){return p.id!==person.id&&!blockedUsers[p.id];});
-    if(recs.length){
-        html+='<div style="margin-top:16px;"><h4 style="font-size:14px;font-weight:600;margin-bottom:8px;"><i class="fas fa-user-plus" style="color:var(--primary);margin-right:6px;"></i>People You May Know</h4>';
-        html+='<div class="suggestion-list" id="modalSuggestScroll">';
-        recs.forEach(function(p){
-            var followed=state.followedUsers[p.id];
-            html+='<div class="suggestion-item"><img src="images/default-avatar.svg" alt="'+p.name+'" class="suggestion-avatar">';
-            html+='<div class="suggestion-info"><span class="suggestion-name" data-person-id="'+p.id+'">'+p.name+'</span></div>';
-            html+='<button class="follow-btn-small'+(followed?' followed':'')+'" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
-        });
-        html+='</div></div>';
-    }
     html+='</div>';
     showModal(html);
-    $$('#modalSuggestScroll .follow-btn-small').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(parseInt(btn.dataset.uid),btn);});});
-    $$('#modalSuggestScroll .suggestion-name').forEach(function(el){el.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(el.dataset.personId);});if(p)showProfileModal(p);});});
     document.getElementById('modalFollowBtn').addEventListener('click',function(){
         toggleFollow(person.id,this);
     });
     document.getElementById('modalMsgBtn').addEventListener('click',function(){
-        closeModal();
-        navigateTo('messages');
-        var existing=msgContacts.find(function(c){return c.name===person.name;});
-        if(!existing){
-            existing={id:msgContacts.length+1,name:person.name,img:person.img,messages:[{from:'me',text:'Hey '+person.name+'!'}]};
-            msgContacts.push(existing);
-            renderMsgContacts();
-        }
-        openChat(existing);
+        closeModal();navigateTo('messages');
     });
     document.getElementById('modalViewProfileBtn').addEventListener('click',function(){
         closeModal();
@@ -1224,7 +1206,7 @@ function showMyProfileModal(){
 }
 
 // ======================== PROFILE VIEW PAGE ========================
-function showProfileView(person){
+async function showProfileView(person){
     $$('.page').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-profile-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1233,8 +1215,9 @@ function showProfileView(person){
 
     var isMe=person.isMe||false;
     var isFollowed=state.followedUsers[person.id];
-    var following=isMe?state.following:(personFollowing[person.id]||[]).length;
-    var followers=isMe?state.followers:(personFollowers[person.id]||[]).length;
+    var following=0, followers=0;
+    if(isMe){ following=state.following; followers=state.followers; }
+    else { try{ var fc=await sbGetFollowCounts(person.id); following=fc.following; followers=fc.followers; }catch(e){} }
 
     // Apply viewed person's skin/font/template (silent, don't change state)
     _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgSat:premiumBgSaturation};
@@ -1286,8 +1269,7 @@ function showProfileView(person){
         if(allPhotos.length){allPhotos.slice(0,9).forEach(function(p){photosHtml+='<img src="'+p.src+'">';});}
         else{photosHtml+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos yet. Upload photos to see them here.</p>';}
     } else {
-        var photoCount=6+((person.id*3)%6);
-        for(var pi=0;pi<photoCount;pi++){photosHtml+='<img src="https://picsum.photos/seed/'+person.id+'-'+pi+'/200">';}
+        photosHtml+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos available.</p>';
     }
     photosHtml+='</div>';
     if(isMe) photosHtml+='<a href="#" class="view-more-link pv-photos-link">View All</a>';
@@ -1314,50 +1296,38 @@ function showProfileView(person){
     skinHtml+='</div></div>';
     document.getElementById('pvSkinCard').innerHTML=skinHtml;
 
-    // Posts feed (same card style as home center-feed posts)
+    // Posts feed - load from Supabase
     var feedHtml='';
-    var personPosts=[];
-    for(var i=0;i<postTexts.length;i++){
-        if(isMe||people[i%people.length].id===person.id){
-            personPosts.push(i);
+    var userId=isMe?currentUser.id:person.id;
+    try{
+        var userPosts=await sbGetUserPosts(userId,10);
+        if(!userPosts||!userPosts.length){
+            feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts yet.</p></div>';
+        } else {
+            userPosts.forEach(function(post){
+                var authorName=person.name||(post.profiles?post.profiles.display_name||post.profiles.username:'User');
+                var authorAvatar=(post.profiles?post.profiles.avatar_url:person.avatar_url)||DEFAULT_AVATAR;
+                var postTime=post.created_at?timeAgo(Math.floor((Date.now()-new Date(post.created_at).getTime())/60000)):'';
+                feedHtml+='<div class="card feed-post">';
+                feedHtml+='<div class="post-header">';
+                feedHtml+='<img src="'+authorAvatar+'" alt="'+authorName+'" class="post-avatar">';
+                feedHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+authorName+'</h4><span class="post-time">'+postTime+'</span></div></div></div>';
+                feedHtml+='<div class="post-description"><p>'+post.content+'</p>';
+                if(post.image_url) feedHtml+='<img src="'+post.image_url+'" class="post-image" style="max-width:100%;border-radius:8px;margin-top:8px;">';
+                feedHtml+='</div>';
+                feedHtml+='<div class="post-actions"><div class="action-left">';
+                feedHtml+='<button class="action-btn like-btn" data-post-id="'+post.id+'"><i class="'+(state.likedPosts[post.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">0</span></button>';
+                feedHtml+='<button class="action-btn dislike-btn" data-post-id="'+post.id+'"><i class="'+(state.dislikedPosts[post.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
+                feedHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>0</span></button>';
+                feedHtml+='</div></div>';
+                feedHtml+='</div>';
+            });
         }
-        if(personPosts.length>=5) break;
-    }
-    if(personPosts.length===0){
+    }catch(e){
+        console.error('pvPosts:',e);
         feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts yet.</p></div>';
     }
-    personPosts.forEach(function(i){
-        var text=postTexts[i%postTexts.length];
-        var tags=tagSets[i%tagSets.length];
-        var badge=badgeTypes[i%badgeTypes.length];
-        var loc=locations[i%locations.length];
-        var likes=Math.floor(Math.random()*people.length);
-        var pvGenComments=[];
-        var shares=Math.floor(Math.random()*10);
-
-        feedHtml+='<div class="card feed-post">';
-        feedHtml+='<div class="post-header">';
-        feedHtml+='<img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar">';
-        feedHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
-        feedHtml+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span><span class="badge badge-blue"><i class="fas fa-map-marker-alt"></i> '+loc+'</span></div></div></div>';
-        feedHtml+='<div class="post-description"><p>'+text+'</p></div>';
-        feedHtml+='<div class="post-tags">';
-        tags.forEach(function(t){feedHtml+='<span class="skill-tag">'+t+'</span>';});
-        feedHtml+='</div>';
-        var pvLikers=getLikers('pv-'+i,likes);
-        feedHtml+='<div class="post-actions"><div class="action-left">';
-        feedHtml+='<button class="action-btn like-btn" data-post-id="pv-'+i+'"><i class="'+(state.likedPosts['pv-'+i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
-        feedHtml+='<button class="action-btn dislike-btn" data-post-id="pv-'+i+'"><i class="'+(state.dislikedPosts['pv-'+i]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
-        feedHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+pvGenComments.length+'</span></button>';
-        feedHtml+='<button class="action-btn share-btn"><i class="fas fa-share-from-square"></i><span>'+shares+'</span></button>';
-        feedHtml+='</div><div class="action-right"><div class="liked-avatars" data-post-id="pv-'+i+'">';
-        for(var a=0;a<Math.min(3,pvLikers.length);a++){feedHtml+='<img src="images/default-avatar.svg" alt="'+pvLikers[a].name+'">';}
-        feedHtml+='</div></div></div>';
-        feedHtml+='<div class="post-comments" data-post-id="pv-'+i+'"></div>';
-        feedHtml+='</div>';
-    });
     $('#pvPostsFeed').innerHTML=feedHtml;
-    personPosts.forEach(function(i){renderInlineComments('pv-'+i);});
 
     // Event: Back
     document.getElementById('pvBack').addEventListener('click',function(e){e.preventDefault();navigateTo('home');});
@@ -1370,15 +1340,17 @@ function showProfileView(person){
     var pvFollowingStat=document.querySelector('.pv-stat-following');
     var pvFollowersStat=document.querySelector('.pv-stat-followers');
     if(pvFollowingStat){
-        pvFollowingStat.addEventListener('click',function(){
-            if(isMe){var list=people.filter(function(p){return state.followedUsers[p.id];});showFollowListModal('Following',list,true);}
-            else{var flist=(personFollowing[person.id]||[]).map(function(id){return people.find(function(p){return p.id===id;});});showFollowListModal(person.name+'\'s Following',flist,false);}
+        pvFollowingStat.addEventListener('click',async function(){
+            var uid=isMe?currentUser.id:person.id;
+            var title=isMe?'Following':person.name+'\'s Following';
+            try{var list=await sbGetFollowing(uid);showFollowListModal(title,list.map(function(f){return f.followed||f;}),isMe);}catch(e){console.error(e);}
         });
     }
     if(pvFollowersStat){
-        pvFollowersStat.addEventListener('click',function(){
-            if(isMe){var list=myFollowers.map(function(id){return people.find(function(p){return p.id===id;});});showFollowListModal('Followers',list,false);}
-            else{var flist=(personFollowers[person.id]||[]).map(function(id){return people.find(function(p){return p.id===id;});});showFollowListModal(person.name+'\'s Followers',flist,false);}
+        pvFollowersStat.addEventListener('click',async function(){
+            var uid=isMe?currentUser.id:person.id;
+            var title=isMe?'Followers':person.name+'\'s Followers';
+            try{var list=await sbGetFollowers(uid);showFollowListModal(title,list.map(function(f){return f.follower||f;}),false);}catch(e){console.error(e);}
         });
     }
     // Event: Message
@@ -1386,13 +1358,6 @@ function showProfileView(person){
     if(msgBtn){
         msgBtn.addEventListener('click',function(){
             navigateTo('messages');
-            var existing=msgContacts.find(function(c){return c.name===person.name;});
-            if(!existing){
-                existing={id:msgContacts.length+1,name:person.name,img:person.img,messages:[{from:'me',text:'Hey '+person.name+'!'}]};
-                msgContacts.push(existing);
-                renderMsgContacts();
-            }
-            openChat(existing);
         });
     }
     var blockBtn=document.getElementById('pvBlockBtn');
@@ -1527,21 +1492,26 @@ function showGroupCoverCropModal(src,group,banner){
         closeModal();
     });
 }
-function showGroupProfileModal(person,group){
+async function showGroupProfileModal(person,group){
+    var personName=person.display_name||person.name||person.username||'User';
+    var personBio=person.bio||'';
+    var personAvatar=person.avatar_url||DEFAULT_AVATAR;
     var isFollowed=state.followedUsers[person.id];
     var myRole=getMyGroupRole(group);
     var myRank=roleRank(myRole);
     var theirRole=getPersonGroupRole(person,group);
     var theirRank=roleRank(theirRole);
     var gc=getGroupThemeColor(group);
+    var following=0,followers=0;
+    try{var fc=await sbGetFollowCounts(person.id);following=fc.following;followers=fc.followers;}catch(e){}
     var html='<div class="modal-header"><h3>Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body" style="padding:16px;">';
     html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">';
-    html+='<img src="images/default-avatar.svg" alt="'+person.name+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
-    html+='<div><h3 style="font-size:16px;font-weight:600;margin:0;">'+person.name+'</h3><p style="font-size:13px;color:var(--gray);margin:2px 0 0;">'+person.bio+'</p>';
+    html+='<img src="'+personAvatar+'" alt="'+personName+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
+    html+='<div><h3 style="font-size:16px;font-weight:600;margin:0;">'+personName+'</h3><p style="font-size:13px;color:var(--gray);margin:2px 0 0;">'+personBio+'</p>';
     if(theirRole!=='Member') html+='<span style="font-size:10px;background:'+(theirRole==='Admin'?'#e74c3c':gc)+';color:#fff;padding:1px 7px;border-radius:8px;display:inline-block;margin-top:3px;">'+theirRole+'</span>';
     html+='</div></div>';
-    html+='<div style="display:flex;justify-content:center;gap:24px;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px;"><div class="stat"><span class="stat-count" style="font-size:15px;color:'+gc+';">'+Math.floor(Math.random()*500)+'</span><span class="stat-label" style="font-size:11px;">Following</span></div><div class="stat"><span class="stat-count" style="font-size:15px;color:'+gc+';">'+Math.floor(Math.random()*2000)+'</span><span class="stat-label" style="font-size:11px;">Followers</span></div></div>';
+    html+='<div style="display:flex;justify-content:center;gap:24px;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px;"><div class="stat"><span class="stat-count" style="font-size:15px;color:'+gc+';">'+following+'</span><span class="stat-label" style="font-size:11px;">Following</span></div><div class="stat"><span class="stat-count" style="font-size:15px;color:'+gc+';">'+followers+'</span><span class="stat-label" style="font-size:11px;">Followers</span></div></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">';
     html+='<button class="btn '+(isFollowed?'btn-disabled':'btn-green')+'" id="modalFollowBtn" data-uid="'+person.id+'" style="font-size:12px;padding:6px 12px;">'+(isFollowed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button>';
     html+='<button class="btn btn-primary" id="modalMsgBtn" data-uid="'+person.id+'" style="font-size:12px;padding:6px 12px;background:'+gc+';border-color:'+gc+';"><i class="fas fa-envelope"></i> Message</button>';
@@ -1569,9 +1539,6 @@ function showGroupProfileModal(person,group){
     document.getElementById('modalFollowBtn').addEventListener('click',function(){toggleFollow(person.id,this);});
     document.getElementById('modalMsgBtn').addEventListener('click',function(){
         closeModal();navigateTo('messages');
-        var existing=msgContacts.find(function(c){return c.name===person.name;});
-        if(!existing){existing={id:msgContacts.length+1,name:person.name,img:person.img,messages:[{from:'me',text:'Hey '+person.name+'!'}]};msgContacts.push(existing);renderMsgContacts();}
-        openChat(existing);
     });
     document.getElementById('modalViewProfileBtn').addEventListener('click',function(){closeModal();showProfileView(person);});
     var setModBtn=document.getElementById('grpSetMod');
@@ -1615,7 +1582,8 @@ function showTransferOwnershipModal(person,group){
         // Remove person from mods, make them admin
         group.mods=group.mods.filter(function(m){return m.name!==person.name;});
         // Add me as Co-Admin
-        group.mods.unshift({name:'John Doe',img:12,role:'Co-Admin'});
+        var myName=currentUser?(currentUser.display_name||currentUser.username):'Me';
+        group.mods.unshift({name:myName,role:'Co-Admin'});
         // Transfer ownership
         group.createdBy=person.name;
         group.adminName=person.name;group.adminImg=person.img;
@@ -1647,60 +1615,52 @@ function showDeleteGroupModal(group){
 }
 
 function showSelfRoleRemovalModal(group,callback){
+    var myName=currentUser?(currentUser.display_name||currentUser.username):'User';
     var h='<div class="modal-header"><h3>Remove Your Role</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
     h+='<p style="text-align:center;margin-bottom:8px;">You will be downgraded to <strong>Member</strong>.</p>';
-    h+='<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Type your first name to confirm:</label>';
-    h+='<input type="text" class="post-input" id="selfRemoveInput" placeholder="John" style="width:100%;margin-bottom:16px;">';
+    h+='<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Type your name to confirm:</label>';
+    h+='<input type="text" class="post-input" id="selfRemoveInput" placeholder="'+myName+'" style="width:100%;margin-bottom:16px;">';
     h+='<div class="modal-actions"><button class="btn btn-outline" id="selfRemoveCancel">Cancel</button><button class="btn btn-primary" id="selfRemoveConfirm" disabled style="background:#e74c3c;border-color:#e74c3c;opacity:.5;">Confirm</button></div></div>';
     showModal(h);
     var inp=document.getElementById('selfRemoveInput'),btn=document.getElementById('selfRemoveConfirm');
-    inp.addEventListener('input',function(){var match=inp.value==='John';btn.disabled=!match;btn.style.opacity=match?'1':'.5';});
+    inp.addEventListener('input',function(){var match=inp.value===myName;btn.disabled=!match;btn.style.opacity=match?'1':'.5';});
     document.getElementById('selfRemoveCancel').addEventListener('click',closeModal);
-    btn.addEventListener('click',function(){if(inp.value!=='John')return;callback();});
+    btn.addEventListener('click',function(){if(inp.value!==myName)return;callback();});
 }
 
-function showGroupMembersModal(group){
-    var memberList=group.memberIds?people.filter(function(p){return group.memberIds.indexOf(p.id)!==-1;}):people;
-    var myRole=getMyGroupRole(group);
-    var myRank=roleRank(myRole);
-    var canManage=myRank>=2; // Mod+
+async function showGroupMembersModal(group){
+    var members=[];
+    try{members=await sbGetGroupMembers(group.id);}catch(e){console.error(e);}
     var html='<div class="modal-header"><h3>'+group.name+' — Members</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
-    html+='<div class="follow-list">';
-    memberList.forEach(function(p){
-        var followed=state.followedUsers[p.id];
-        var pRole=getPersonGroupRole(p,group);
-        var pRank=roleRank(pRole);
-        var roleColors={'Co-Admin':'#8b5cf6','Moderator':'var(--primary)','Admin':'#e74c3c'};
-        var roleTag=pRole!=='Member'?' <span style="font-size:10px;background:'+(roleColors[pRole]||'var(--primary)')+';color:#fff;padding:2px 6px;border-radius:8px;margin-left:4px;">'+pRole+'</span>':'';
-        html+='<div class="follow-list-item" style="flex-wrap:wrap;"><img src="images/default-avatar.svg" alt="'+p.name+'" class="gvm-click" data-person-id="'+p.id+'" style="cursor:pointer;"><div class="follow-list-info" style="flex:1;"><h4>'+p.name+roleTag+'</h4><p>'+p.bio+'</p></div>';
-        html+='<div style="display:flex;gap:6px;">';
-        html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' gvm-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button>';
-        if(canManage&&myRank>pRank&&p.name!=='John Doe') html+='<button class="btn follow-btn-small gvm-remove-btn" data-uid="'+p.id+'" style="background:#e74c3c;color:#fff;border-color:#e74c3c;" title="Remove Member"><i class="fas fa-user-minus"></i></button>';
-        html+='</div></div>';
-    });
-    html+='</div></div>';
-    showModal(html);
-    $$('.gvm-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(+btn.dataset.uid,btn);});});
-    $$('.gvm-click').forEach(function(img){img.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(img.dataset.personId);});if(p){closeModal();showGroupProfileModal(p,group);}});});
-    $$('.gvm-remove-btn').forEach(function(btn){btn.addEventListener('click',function(){
-        var uid=parseInt(btn.dataset.uid);var p=people.find(function(x){return x.id===uid;});if(!p)return;
-        var ch='<div class="modal-header"><h3>Remove Member</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
-        ch+='<p style="text-align:center;margin-bottom:16px;">Remove <strong>'+p.name+'</strong> from <strong>'+group.name+'</strong>?</p>';
-        ch+='<div class="modal-actions"><button class="btn btn-outline" id="rmCancel">Cancel</button><button class="btn btn-primary" id="rmConfirm" style="background:#e74c3c;border-color:#e74c3c;">Remove</button></div></div>';
-        showModal(ch);
-        document.getElementById('rmCancel').addEventListener('click',function(){closeModal();showGroupMembersModal(group);});
-        document.getElementById('rmConfirm').addEventListener('click',function(){
-            group.mods=group.mods.filter(function(m){return m.name!==p.name;});
-            if(group.memberIds){group.memberIds=group.memberIds.filter(function(id){return id!==uid;});}
-            group.members=Math.max(0,group.members-1);
-            addNotification('group','You removed '+p.name+' from "'+group.name+'"');
-            closeModal();showGroupView(group);
+    if(!members.length){html+='<p style="text-align:center;color:var(--gray);">No members yet.</p>';}
+    else{
+        html+='<div class="follow-list">';
+        members.forEach(function(m){
+            var p=m.user||{};
+            var name=p.display_name||p.username||'User';
+            var avatar=p.avatar_url||DEFAULT_AVATAR;
+            var bio=p.bio||'';
+            var followed=state.followedUsers[p.id];
+            var isSelf=currentUser&&p.id===currentUser.id;
+            var isOwner=p.id===group.owner_id;
+            var roleTag=isOwner?' <span style="font-size:10px;background:#e74c3c;color:#fff;padding:2px 6px;border-radius:8px;margin-left:4px;">Admin</span>':'';
+            html+='<div class="follow-list-item" style="flex-wrap:wrap;"><img src="'+avatar+'" alt="'+name+'" class="gvm-click" data-person-id="'+p.id+'" style="cursor:pointer;"><div class="follow-list-info" style="flex:1;"><h4>'+name+roleTag+'</h4><p>'+bio+'</p></div>';
+            if(!isSelf) html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' gvm-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button>';
+            html+='</div>';
         });
+        html+='</div>';
+    }
+    html+='</div>';
+    showModal(html);
+    $$('.gvm-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(btn.dataset.uid,btn);});});
+    $$('.gvm-click').forEach(function(img){img.addEventListener('click',async function(){
+        var uid=img.dataset.personId;if(!uid)return;
+        try{var p=await sbGetProfile(uid);if(p){closeModal();showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}}catch(e){}
     });});
 }
 
 // ======================== GROUP VIEW PAGE ========================
-function showGroupView(group){
+async function showGroupView(group){
     $$('.page').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-group-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1708,7 +1668,7 @@ function showGroupView(group){
     window.scrollTo(0,0);
 
     var joined=state.joinedGroups[group.id];
-    var isOwner=group.createdBy==='me';
+    var isOwner=currentUser&&group.owner_id===currentUser.id;
     var themeColor=getGroupThemeColor(group);
     var banner=$('#gvCoverBanner');
     banner.style.background=group.coverPhoto?'url('+group.coverPhoto+') center/cover':themeColor;
@@ -1731,8 +1691,9 @@ function showGroupView(group){
         cardHtml+='</div></div>';
     }
     cardHtml+='<h3 class="profile-name">'+group.name+'</h3>';
-    cardHtml+='<p class="profile-title">'+group.desc+'</p>';
-    cardHtml+='<div class="profile-stats"><div class="stat"><span class="stat-count">'+fmtNum(group.members)+'</span><span class="stat-label">Members</span></div><div class="stat"><span class="stat-count" id="gvPostCount">0</span><span class="stat-label">Posts</span></div><div class="stat" id="gvGroupCoins"><span class="stat-count" id="gvGroupCoinCount" style="color:#f59e0b;">'+getGroupCoinCount(group.id)+'</span><span class="stat-label"><i class="fas fa-coins" style="color:#f59e0b;font-size:11px;"></i> Group Coins</span></div></div>';
+    cardHtml+='<p class="profile-title">'+(group.description||group.desc||'')+'</p>';
+    var memberCount=group.member_count&&group.member_count[0]?group.member_count[0].count:(group.members||0);
+    cardHtml+='<div class="profile-stats"><div class="stat"><span class="stat-count">'+fmtNum(memberCount)+'</span><span class="stat-label">Members</span></div><div class="stat"><span class="stat-count" id="gvPostCount">0</span><span class="stat-label">Posts</span></div><div class="stat" id="gvGroupCoins"><span class="stat-count" id="gvGroupCoinCount" style="color:#f59e0b;">'+getGroupCoinCount(group.id)+'</span><span class="stat-label"><i class="fas fa-coins" style="color:#f59e0b;font-size:11px;"></i> Group Coins</span></div></div>';
     cardHtml+='<div class="pv-actions">';
     if(isOwner) cardHtml+='<button class="btn btn-outline" id="gvEditBtn"><i class="fas fa-pen"></i> Edit Group</button>';
     cardHtml+='<button class="btn '+(joined?'btn-disabled':'btn-primary')+'" id="gvJoinBtn" data-gid="'+group.id+'">'+(joined?'Joined':'Join Group')+'</button>';
@@ -1743,15 +1704,14 @@ function showGroupView(group){
     $('#gvProfileCard').innerHTML=cardHtml;
 
     // Left sidebar - About + Admin/Mods
-    var adminName=group.adminName||'John Doe';
-    var adminImg=group.adminImg||12;
-    var amIAdmin=group.createdBy==='me';
+    var adminName=group.owner?(group.owner.display_name||group.owner.username):(group.adminName||'Admin');
+    var amIAdmin=currentUser&&group.owner_id===currentUser.id;
     var leftHtml='<div class="card gv-about-card"><h4 class="card-heading"><i class="fas fa-info-circle" style="color:var(--primary);margin-right:6px;"></i>About</h4>';
     leftHtml+='<div class="gv-about-body"><div class="gv-about-meta"><span><i class="fas fa-calendar"></i> Created recently</span>';
     leftHtml+='<span><i class="fas fa-globe"></i> Public group</span></div></div></div>';
     leftHtml+='<div class="card gv-staff-card"><h4 class="card-heading"><i class="fas fa-shield-halved" style="color:var(--primary);margin-right:6px;"></i>Admin & Mods</h4><div class="gv-staff-list">';
     leftHtml+='<div class="gv-staff-item"><img src="images/default-avatar.svg"><div><strong>'+adminName+'</strong><span class="gv-staff-role admin">Admin'+(amIAdmin?' (You)':'')+'</span></div></div>';
-    group.mods.forEach(function(m){var mp=people.find(function(x){return x.name===m.name;});var isSelf=m.name==='John Doe';var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item">'+((joined||isOwner)&&mp?'<img src="images/default-avatar.svg" class="gv-staff-click" data-person-id="'+mp.id+'" style="cursor:pointer;">':'<img src="images/default-avatar.svg">')+'<div><strong>'+m.name+(isSelf?' (You)':'')+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});
+    if(group.mods&&group.mods.length){group.mods.forEach(function(m){var roleClass=m.role==='Co-Admin'?'coadmin':'mod';leftHtml+='<div class="gv-staff-item"><img src="images/default-avatar.svg"><div><strong>'+m.name+'</strong><span class="gv-staff-role '+roleClass+'">'+m.role+'</span></div></div>';});}
     leftHtml+='</div></div>';
     if(amIAdmin) leftHtml+='<button class="btn btn-outline btn-block" id="gvDeleteGroupBtn" style="color:#e74c3c;border-color:#e74c3c;margin-top:12px;"><i class="fas fa-trash"></i> Delete Group</button>';
     $('#gvLeftSidebar').innerHTML=leftHtml;
@@ -1763,13 +1723,36 @@ function showGroupView(group){
     rightHtml+='</h4><div class="gv-rules-body"><ol>';
     group.rules.forEach(function(r){rightHtml+='<li>'+r+'</li>';});
     rightHtml+='</ol></div></div>';
-    var gvMembers=group.memberIds?people.filter(function(p){return group.memberIds.indexOf(p.id)!==-1;}):people;
-    var moreCount=Math.max(0,group.members-6);
-    rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview">';
-    gvMembers.slice(0,6).forEach(function(p){rightHtml+='<img src="images/default-avatar.svg" title="'+p.name+'"'+((joined||isOwner)?' class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;"':'')+'>';});
-    if(moreCount>0) rightHtml+='<span class="gv-members-more"'+((joined||isOwner)?' id="gvShowAllMembers" style="cursor:pointer;"':'')+'>+'+fmtNum(moreCount)+' more</span>';
+    rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview" id="gvMembersPreview">';
+    rightHtml+='<p style="color:var(--gray);font-size:13px;">Loading members...</p>';
     rightHtml+='</div></div>';
     $('#gvRightSidebar').innerHTML=rightHtml;
+
+    // Load members preview asynchronously
+    (async function(){
+        try{
+            var members=await sbGetGroupMembers(group.id);
+            var preview=document.getElementById('gvMembersPreview');
+            if(!preview)return;
+            if(!members.length){preview.innerHTML='<p style="color:var(--gray);font-size:13px;">No members yet.</p>';return;}
+            var html='';
+            members.slice(0,6).forEach(function(m){
+                var p=m.user||{};
+                var name=p.display_name||p.username||'User';
+                var avatar=p.avatar_url||DEFAULT_AVATAR;
+                html+='<img src="'+avatar+'" title="'+name+'" class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;">';
+            });
+            var moreCount=Math.max(0,members.length-6);
+            if(moreCount>0) html+='<span class="gv-members-more" id="gvShowAllMembers" style="cursor:pointer;">+'+moreCount+' more</span>';
+            preview.innerHTML=html;
+            $$('.gv-member-click').forEach(function(img){img.addEventListener('click',async function(){
+                var uid=img.dataset.personId;if(!uid)return;
+                try{var p=await sbGetProfile(uid);if(p)showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}catch(e){}
+            });});
+            var showAllBtn=document.getElementById('gvShowAllMembers');
+            if(showAllBtn)showAllBtn.addEventListener('click',function(){showGroupMembersModal(group);});
+        }catch(e){console.error('gvMembers:',e);}
+    })();
 
     // Post bar (only if joined)
     if(joined||isOwner){
@@ -1787,25 +1770,11 @@ function showGroupView(group){
         feedHtml+='<div class="post-description"><p>'+p.text+'</p>'+(p.media||'')+'</div>';
         feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="gvp-'+group.id+'-'+i+'"><i class="far fa-thumbs-up"></i><span class="like-count">0</span></button><button class="action-btn dislike-btn" data-post-id="gvp-'+group.id+'-'+i+'"><i class="far fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>0</span></button></div></div></div>';
     });
-    for(var i=0;i<8;i++){
-        var person=people[i%people.length];
-        var text=postTexts[(group.id*5+i)%postTexts.length];
-        var tags=tagSets[(group.id*5+i)%tagSets.length];
-        var likes=Math.floor(Math.random()*people.length);
-        var gvGenComments=[];
-        feedHtml+='<div class="card feed-post"><div class="post-header"><img src="images/default-avatar.svg" alt="'+person.name+'" class="post-avatar"><div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div><div class="post-badges"><span class="badge badge-blue"><i class="fas fa-users"></i> '+group.name+'</span></div></div></div>';
-        feedHtml+='<div class="post-description"><p>'+text+'</p></div>';
-        feedHtml+='<div class="post-tags">';tags.forEach(function(t){feedHtml+='<span class="skill-tag">'+t+'</span>';});feedHtml+='</div>';
-        var gvLikers=getLikers('gv-'+group.id+'-'+i,likes);
-        feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="gv-'+group.id+'-'+i+'"><i class="far fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button><button class="action-btn dislike-btn" data-post-id="gv-'+group.id+'-'+i+'"><i class="far fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+gvGenComments.length+'</span></button></div><div class="action-right"><div class="liked-avatars" data-post-id="gv-'+group.id+'-'+i+'">';
-        for(var a=0;a<Math.min(3,gvLikers.length);a++){feedHtml+='<img src="images/default-avatar.svg" alt="'+gvLikers[a].name+'">';}
-        feedHtml+='</div></div></div>';
-        feedHtml+='<div class="post-comments" data-post-id="gv-'+group.id+'-'+i+'"></div>';
-        feedHtml+='</div>';
+    if(!groupPosts.length){
+        feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts in this group yet.</p></div>';
     }
     $('#gvPostsFeed').innerHTML=feedHtml;
-    for(var k=0;k<8;k++) renderInlineComments('gv-'+group.id+'-'+k);
-    $('#gvPostCount').textContent=groupPosts.length+8;
+    $('#gvPostCount').textContent=groupPosts.length;
 
     // Mode tabs (Feed / Group Shop) — remove old ones first to prevent duplicates
     var _oldTabs=document.getElementById('gvModeTabs');if(_oldTabs)_oldTabs.remove();
@@ -1861,7 +1830,8 @@ function showGroupView(group){
             }
         } else if(myRole==='Co-Admin'||myRole==='Moderator'){
             showSelfRoleRemovalModal(group,function(){
-                group.mods=group.mods.filter(function(m){return m.name!=='John Doe';});
+                var _myName=currentUser?(currentUser.display_name||currentUser.username):'Me';
+                group.mods=group.mods.filter(function(m){return m.name!==_myName;});
                 delete state.joinedGroups[group.id];group.members=Math.max(0,group.members-1);
                 addNotification('group','You left "'+group.name+'"');
                 closeModal();renderGroups();navigateTo('groups');
@@ -1883,12 +1853,12 @@ function showGroupView(group){
     if(editBtn){editBtn.addEventListener('click',function(){
         var html='<div class="modal-header"><h3>Edit Group</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
         html+='<div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Group Name</label><input type="text" class="post-input" id="editGrpName" value="'+group.name+'" style="width:100%;"></div>';
-        html+='<div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label><input type="text" class="post-input" id="editGrpDesc" value="'+group.desc+'" style="width:100%;"></div>';
+        html+='<div style="margin-bottom:14px;"><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label><input type="text" class="post-input" id="editGrpDesc" value="'+(group.description||group.desc||'')+'" style="width:100%;"></div>';
         html+='<button class="btn btn-primary btn-block" id="saveGrpBtn">Save Changes</button></div>';
         showModal(html);
         document.getElementById('saveGrpBtn').addEventListener('click',function(){
             group.name=document.getElementById('editGrpName').value.trim()||group.name;
-            group.desc=document.getElementById('editGrpDesc').value.trim()||group.desc;
+            group.description=document.getElementById('editGrpDesc').value.trim()||group.description||group.desc||'';
             closeModal();showGroupView(group);renderGroups();
         });
     });}
@@ -1994,8 +1964,14 @@ function showGroupView(group){
         });
         $$('.gv-rule-del').forEach(function(btn){btn.addEventListener('click',function(){btn.parentElement.remove();});});
     });}
-    $$('.gv-member-click').forEach(function(img){img.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(img.dataset.personId);});if(p)showGroupProfileModal(p,group);});});
-    $$('.gv-staff-click').forEach(function(img){img.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(img.dataset.personId);});if(p)showGroupProfileModal(p,group);});});
+    $$('.gv-member-click').forEach(function(img){img.addEventListener('click',async function(){
+        var uid=img.dataset.personId;if(!uid)return;
+        try{var p=await sbGetProfile(uid);if(p)showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}catch(e){}
+    });});
+    $$('.gv-staff-click').forEach(function(img){img.addEventListener('click',async function(){
+        var uid=img.dataset.personId;if(!uid)return;
+        try{var p=await sbGetProfile(uid);if(p)showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}catch(e){}
+    });});
     var showAllBtn=document.getElementById('gvShowAllMembers');
     if(showAllBtn){showAllBtn.addEventListener('click',function(){showGroupMembersModal(group);});}
     var deleteGrpBtn=document.getElementById('gvDeleteGroupBtn');
@@ -2069,7 +2045,7 @@ function openGroupPostModal(group){
         if(!state.groupPosts[group.id]) state.groupPosts[group.id]=[];
         var mediaHtml='';
         if(mediaList.length>0){var cnt=Math.min(mediaList.length,5);mediaHtml='<div class="post-media-grid pm-count-'+cnt+'">';mediaList.slice(0,5).forEach(function(m){mediaHtml+='<div class="pm-thumb">'+(m.type==='video'?'<video src="'+m.src+'" controls></video>':'<img src="'+m.src+'">')+'</div>';});mediaHtml+='</div>';}
-        state.groupPosts[group.id].unshift({name:'John Doe',avatar:$('#profileAvatarImg').src,text:text,media:mediaHtml,time:'just now'});
+        state.groupPosts[group.id].unshift({name:currentUser?(currentUser.display_name||currentUser.username):'You',avatar:$('#profileAvatarImg').src,text:text,media:mediaHtml,time:'just now'});
         if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
         if(canEarnGroupPostCoin(group.id)){addGroupCoins(group.id,5);trackGroupPostCoin(group.id);}
         closeModal();showGroupView(group);
@@ -2187,15 +2163,19 @@ $('#editProfileBtn').addEventListener('click',function(e){
 // Followers / Following modals
 function showFollowListModal(title,list,isFollowingList){
     var html='<div class="modal-header"><h3>'+title+'</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
-    if(!list.length){html+='<p style="text-align:center;color:var(--gray);">No one yet.</p>';}
+    var filtered=list.filter(function(p){return p&&p.id;});
+    if(!filtered.length){html+='<p style="text-align:center;color:var(--gray);">No one yet.</p>';}
     else{
         html+='<div class="follow-list">';
-        list.forEach(function(p){
+        filtered.forEach(function(p){
+            var name=p.display_name||p.name||p.username||'User';
+            var bio=p.bio||'';
+            var avatar=p.avatar_url||DEFAULT_AVATAR;
             var followed=state.followedUsers[p.id];
-            var theyFollowMe=myFollowers.indexOf(p.id)!==-1;
-            var rel=followed&&theyFollowMe?'Mutual':theyFollowMe?'Follows You':'Not Following You';
-            html+='<div class="follow-list-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p><span style="font-size:11px;color:var(--gray);font-style:italic;">'+rel+'</span></div>';
-            html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' fl-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
+            var isSelf=currentUser&&p.id===currentUser.id;
+            html+='<div class="follow-list-item"><img src="'+avatar+'" alt="'+name+'"><div class="follow-list-info"><h4>'+name+'</h4><p>'+bio+'</p></div>';
+            if(!isSelf) html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' fl-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button>';
+            html+='</div>';
         });
         html+='</div>';
     }
@@ -2203,13 +2183,13 @@ function showFollowListModal(title,list,isFollowingList){
     showModal(html);
     $$('.fl-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(+btn.dataset.uid,btn);});});
 }
-$('#followingStat').addEventListener('click',function(){
-    var list=people.filter(function(p){return state.followedUsers[p.id];});
-    showFollowListModal('Following',list,true);
+$('#followingStat').addEventListener('click',async function(){
+    if(!currentUser)return;
+    try{var list=await sbGetFollowing(currentUser.id);showFollowListModal('Following',list.map(function(f){return f.followed||f;}),true);}catch(e){console.error(e);}
 });
-$('#followersStat').addEventListener('click',function(){
-    var list=myFollowers.map(function(id){return people.find(function(p){return p.id===id;});});
-    showFollowListModal('Followers',list,false);
+$('#followersStat').addEventListener('click',async function(){
+    if(!currentUser)return;
+    try{var list=await sbGetFollowers(currentUser.id);showFollowListModal('Followers',list.map(function(f){return f.follower||f;}),false);}catch(e){console.error(e);}
 });
 
 // Avatar photo upload with selection modal
@@ -2568,10 +2548,10 @@ function bindPostEvents(){
 
     // Click username/avatar to view profile
     _$$('.post-username, .post-avatar').forEach(function(el){
-        el.addEventListener('click',function(){
-            var pid=parseInt(el.getAttribute('data-person-id'));
-            var person=people.find(function(p){return p.id===pid;});
-            if(person) showProfileModal(person);
+        el.addEventListener('click',async function(){
+            var uid=el.getAttribute('data-person-id');
+            if(!uid) return;
+            try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
         });
     });
 
@@ -2989,9 +2969,15 @@ function renderProfiles(tab,query){
     else renderDiscover(container,query||'');
 }
 function bindProfileEvents(c){
-    $$(c+' .profile-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(parseInt(btn.dataset.uid),btn);});});
-    $$(c+' .profile-view-btn').forEach(function(btn){btn.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(btn.dataset.uid);});if(p)showProfileView(p);});});
-    $$(c+' .profile-card-item h4').forEach(function(el){el.addEventListener('click',function(){var p=people.find(function(x){return x.id===parseInt(el.dataset.personId);});if(p)showProfileModal(p);});});
+    $$(c+' .profile-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(btn.dataset.uid,btn);});});
+    $$(c+' .profile-view-btn').forEach(function(btn){btn.addEventListener('click',async function(){
+        var uid=btn.dataset.uid;if(!uid)return;
+        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+    });});
+    $$(c+' .profile-card-avatar, '+c+' .profile-card-name').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){
+        var uid=el.dataset.uid;if(!uid)return;
+        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+    });});
 }
 $$('#profilesTabs .search-tab').forEach(function(tab){
     tab.addEventListener('click',function(){
@@ -3764,28 +3750,29 @@ function unblockUser(uid){
     renderFeed(activeFeedTab);
     showToast('User unblocked');
 }
-function showBlockedUsersModal(){
+async function showBlockedUsersModal(){
     var uids=Object.keys(blockedUsers);
     var h='<div class="modal-header"><h3><i class="fas fa-ban" style="color:#e74c3c;margin-right:8px;"></i>Blocked Users ('+uids.length+')</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     h+='<div class="modal-body" style="max-height:60vh;overflow-y:auto;">';
     if(!uids.length){
         h+='<p style="text-align:center;color:var(--gray);padding:20px;">No blocked users.</p>';
     } else {
-        uids.forEach(function(uid){
-            var p=people.find(function(x){return x.id===parseInt(uid);});
-            if(!p) return;
+        for(var i=0;i<uids.length;i++){
+            var uid=uids[i];
+            var name='User';var bio='';var avatar=DEFAULT_AVATAR;
+            try{var p=await sbGetProfile(uid);if(p){name=p.display_name||p.username||'User';bio=p.bio||'';avatar=p.avatar_url||DEFAULT_AVATAR;}}catch(e){}
             h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">';
-            h+='<img src="images/default-avatar.svg" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
-            h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+p.name+'</div><p style="font-size:12px;color:var(--gray);">'+p.bio+'</p></div>';
+            h+='<img src="'+avatar+'" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;">';
+            h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+name+'</div><p style="font-size:12px;color:var(--gray);">'+bio+'</p></div>';
             h+='<button class="btn btn-outline unblock-btn" data-uid="'+uid+'" style="padding:6px 14px;font-size:12px;flex-shrink:0;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-unlock"></i> Unblock</button>';
             h+='</div>';
-        });
+        }
     }
     h+='</div>';
     showModal(h);
     $$('.unblock-btn').forEach(function(btn){
         btn.addEventListener('click',function(){
-            unblockUser(parseInt(btn.dataset.uid));
+            unblockUser(btn.dataset.uid);
             showBlockedUsersModal();
         });
     });

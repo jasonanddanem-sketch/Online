@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username        TEXT UNIQUE NOT NULL,
     display_name    TEXT,
+    status          TEXT DEFAULT '',
     bio             TEXT DEFAULT '',
     avatar_url      TEXT,
     cover_photo_url TEXT,
@@ -435,5 +436,8 @@ DROP POLICY IF EXISTS messages_insert ON public.messages;
 CREATE POLICY messages_insert ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 DROP POLICY IF EXISTS messages_update ON public.messages;
 CREATE POLICY messages_update ON public.messages FOR UPDATE USING (auth.uid() = receiver_id);
+
+-- 9. MIGRATIONS for existing databases
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '';
 
 -- DONE! All tables, policies, triggers, and storage are set up.

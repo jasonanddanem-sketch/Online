@@ -169,7 +169,7 @@ function populateUserUI() {
     var profName = document.querySelector('.profile-name');
     if (profName) profName.textContent = name;
     var profTitle = document.querySelector('.profile-title');
-    if (profTitle) profTitle.textContent = currentUser.bio || '';
+    if (profTitle) profTitle.textContent = currentUser.status || '';
     var profAbout = document.querySelector('.profile-about');
     if (profAbout) profAbout.textContent = currentUser.bio || '';
     // Post create bar avatar
@@ -833,7 +833,7 @@ async function renderSearchResults(q,tab){
         $$('#searchResults .post-username, #searchResults .post-avatar').forEach(function(el){
             el.addEventListener('click',async function(){
                 var uid=el.dataset.personId;
-                if(uid){try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}}
+                if(uid){try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}}
             });
         });
     }
@@ -1245,12 +1245,11 @@ async function renderInlineComments(postId){
         try{
             var sbComments=await sbGetComments(postId,'newest');
             (sbComments||[]).forEach(function(c){
-                if(!c.parent_comment_id){
-                    var authorName=(c.author?c.author.display_name||c.author.username:'User');
-                    var authorAvatar=(c.author?c.author.avatar_url:null);
-                    var likeCount=c.like_count||0;
-                    all.push({name:authorName,img:authorAvatar,text:c.content,likes:likeCount,cid:c.id});
-                }
+                var authorName=(c.author?c.author.display_name||c.author.username:'User');
+                var authorAvatar=(c.author?c.author.avatar_url:null);
+                var likeCount=c.like_count||0;
+                var isReply=!!c.parent_comment_id;
+                all.push({name:authorName,img:authorAvatar,text:c.content,likes:likeCount,cid:c.id,isReply:isReply});
             });
         }catch(e){}
     } else {
@@ -1265,7 +1264,9 @@ async function renderInlineComments(postId){
         var liked=likedComments[c.cid];var lc=c.likes+(liked?1:0);
         var disliked=dislikedComments[c.cid];var dc=disliked?1:0;
         var avatarSrc=c.img||DEFAULT_AVATAR;
-        html+='<div class="inline-comment"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
+        var indent=c.isReply?'margin-left:28px;':'';
+        var replyIcon=c.isReply?'<i class="fas fa-reply" style="font-size:9px;color:#999;margin-right:4px;transform:scaleX(-1);"></i>':'';
+        html+='<div class="inline-comment" style="'+indent+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble">'+replyIcon+'<strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
     });
     if(all.length>5) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
     el.style.padding='0 20px 14px';el.innerHTML=html;
@@ -1358,7 +1359,7 @@ function showMyProfileModal(){
     showModal(html);
     document.getElementById('modalViewMyProfileBtn').addEventListener('click',function(){
         closeModal();
-        showProfileView({id:currentUser?currentUser.id:0,name:currentUser?(currentUser.display_name||currentUser.username):'You',bio:currentUser?currentUser.bio:'',img:12,avatar_url:currentUser?currentUser.avatar_url:null,isMe:true});
+        showProfileView({id:currentUser?currentUser.id:0,name:currentUser?(currentUser.display_name||currentUser.username):'You',status:currentUser?currentUser.status||'':'',bio:currentUser?currentUser.bio||'':'',img:12,avatar_url:currentUser?currentUser.avatar_url:null,isMe:true});
     });
 }
 
@@ -1403,7 +1404,8 @@ async function showProfileView(person){
     var pvAvatarSrc=person.avatar_url||DEFAULT_AVATAR;
     cardHtml+='<div class="profile-avatar-wrap"><img src="'+pvAvatarSrc+'" alt="'+person.name+'" class="profile-avatar"></div>';
     cardHtml+='<h3 class="profile-name">'+person.name+'</h3>';
-    cardHtml+='<p class="profile-title">'+(person.bio||'')+'</p>';
+    if(person.status) cardHtml+='<p class="profile-title">'+person.status+'</p>';
+    if(person.bio) cardHtml+='<p class="profile-about">'+person.bio+'</p>';
     var pvPriv=isMe?state.privateFollowers:!!person.priv;
     cardHtml+='<div class="profile-stats">';
     cardHtml+='<div class="stat stat-clickable pv-stat-following" style="'+(pvPriv?'opacity:.5;pointer-events:none;cursor:default;':'')+'"><span class="stat-count">'+following+'</span><span class="stat-label">Following'+(pvPriv?' <i class="fas fa-lock" style="font-size:10px;"></i>':'')+'</span></div>';
@@ -2319,12 +2321,12 @@ $('#editProfileBtn').addEventListener('click',function(e){
     e.preventDefault();
     // Read current values from Supabase profile (authoritative) or DOM fallback
     var name=currentUser?currentUser.display_name||currentUser.username:'';
+    var statusText=currentUser?currentUser.status||'':'';
     var bio=currentUser?currentUser.bio||'':'';
-    var titleEl=$('.profile-title');
-    var title=titleEl?titleEl.textContent:'';
     var html='<div class="modal-header"><h3>Edit Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body"><form class="edit-profile-form" id="editProfileForm">';
     html+='<label>Name</label><input type="text" id="editName" value="'+name+'">';
+    html+='<label>Status</label><input type="text" id="editStatus" value="'+statusText+'" placeholder="What\'s on your mind?" maxlength="80">';
     html+='<label>Bio</label><textarea id="editAbout" placeholder="Tell us about yourself...">'+bio+'</textarea>';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:4px;"><div><label style="margin-bottom:0;"><i class="fas fa-lock" style="margin-right:6px;color:var(--gray);"></i>Private Followers</label><p style="font-size:12px;color:var(--gray);margin-top:2px;">Hide your followers and following lists</p></div><label class="toggle-switch"><input type="checkbox" id="editPrivate" '+(state.privateFollowers?'checked':'')+'><span class="toggle-slider"></span></label></div>';
     html+='<button type="submit" class="btn btn-primary btn-block" style="margin-top:12px;">Save</button></form></div>';
@@ -2332,6 +2334,7 @@ $('#editProfileBtn').addEventListener('click',function(e){
     $('#editProfileForm').addEventListener('submit', async function(ev){
         ev.preventDefault();
         var n=$('#editName').value.trim()||name;
+        var s=$('#editStatus').value.trim();
         var a=$('#editAbout').value.trim();
         state.privateFollowers=$('#editPrivate').checked;
 
@@ -2340,15 +2343,17 @@ $('#editProfileBtn').addEventListener('click',function(e){
             try {
                 await sbUpdateProfile(currentUser.id, {
                     display_name: n,
+                    status: s,
                     bio: a
                 });
                 currentUser.display_name = n;
+                currentUser.status = s;
                 currentUser.bio = a;
             } catch(e) { console.error('Profile update:', e); showToast('Failed to save profile'); return; }
         }
 
         $$('.profile-name').forEach(function(el){el.textContent=n;});
-        var pt=$('.profile-title'); if(pt) pt.textContent=a;
+        var pt=$('.profile-title'); if(pt) pt.textContent=s;
         var pa=$('.profile-about'); if(pa) pa.textContent=a;
         var nu=$('.nav-username'); if(nu) nu.textContent=n;
         updateStatClickable();
@@ -2786,7 +2791,7 @@ function bindPostEvents(){
         el.addEventListener('click',async function(){
             var uid=el.getAttribute('data-person-id');
             if(!uid) return;
-            try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+            try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
         });
     });
 
@@ -2998,7 +3003,7 @@ $('#openPostModal').addEventListener('click',function(){
         dislikeBtn.addEventListener('click',function(){var countEl=dislikeBtn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var pid=dislikeBtn.getAttribute('data-post-id');if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];dislikeBtn.classList.remove('disliked');dislikeBtn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{state.dislikedPosts[pid]=true;dislikeBtn.classList.add('disliked');dislikeBtn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}});
         newPost.querySelector('.comment-btn').addEventListener('click',function(){var postId=newPost.querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,newPost.querySelector('.comment-btn span'));});
         newPost.querySelector('.share-btn').addEventListener('click',function(){handleShare(newPost.querySelector('.share-btn'));});
-        newPost.querySelectorAll('.post-avatar, .post-username').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){var uid=el.getAttribute('data-person-id');if(!uid)return;try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}});});
+        newPost.querySelectorAll('.post-avatar, .post-username').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){var uid=el.getAttribute('data-person-id');if(!uid)return;try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}});});
         var moreBtn=newPost.querySelector('.pm-more');
         if(moreBtn){moreBtn.addEventListener('click',function(){showAllMedia(moreBtn.dataset.pgid,4);});}
     });
@@ -3040,7 +3045,7 @@ async function renderSuggestions(){
             el.addEventListener('click',async function(){
                 var item=el.closest('.suggestion-item');
                 var uid=item.querySelector('.suggestion-follow-btn').dataset.uid;
-                try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+                try{var p=await sbGetProfile(uid);if(p) showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
             });
         });
     }catch(e){console.error('renderSuggestions:',e);}
@@ -3281,11 +3286,11 @@ function bindProfileEvents(c){
     $$(c+' .profile-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(btn.dataset.uid,btn);});});
     $$(c+' .profile-view-btn').forEach(function(btn){btn.addEventListener('click',async function(){
         var uid=btn.dataset.uid;if(!uid)return;
-        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
     });});
     $$(c+' .profile-card-avatar, '+c+' .profile-card-name').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',async function(){
         var uid=el.dataset.uid;if(!uid)return;
-        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(uid);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
     });});
 }
 $$('#profilesTabs .search-tab').forEach(function(tab){
@@ -3890,7 +3895,7 @@ async function openChat(contact){
     // Click avatar to view profile
     var avatarEl=$('#msgChat').querySelector('.msg-chat-header img');
     if(avatarEl) avatarEl.addEventListener('click',async function(){
-        try{var p=await sbGetProfile(contact.partnerId);if(p)showProfileView({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
+        try{var p=await sbGetProfile(contact.partnerId);if(p)showProfileView({id:p.id,name:p.display_name||p.username,status:p.status||'',bio:p.bio||'',avatar_url:p.avatar_url});}catch(e){}
     });
 }
 

@@ -278,6 +278,7 @@ async function initApp() {
     } catch(e){ console.warn('Realtime notifications error:', e); }
     // Load conversations and subscribe to realtime messages
     loadConversations();
+    renderMsgFollowing();
     initMessageSubscription();
     // Restore page from URL hash on refresh
     var hashPage=(location.hash||'').replace('#','');
@@ -805,7 +806,7 @@ function navigateTo(page,skipPush){
         renderNotifications();
         if(currentUser) sbMarkNotificationsRead(currentUser.id).catch(function(){});
     }
-    if(page==='messages') loadConversations();
+    if(page==='messages'){loadConversations();renderMsgFollowing();}
     if(page==='profiles') renderProfiles(currentProfileTab);
     if(page==='groups') renderGroups();
     if(page==='shop') renderShop();
@@ -4398,6 +4399,37 @@ function startConversation(userId, userName, userAvatar){
 }
 
 $('#msgSearch').addEventListener('input',function(){renderMsgContacts(this.value);});
+
+// Following sidebar for messages
+async function renderMsgFollowing(){
+    var list=$('#msgFollowingList');
+    if(!list||!currentUser) return;
+    try{
+        var following=await sbGetFollowing(currentUser.id);
+        if(!following||!following.length){
+            list.innerHTML='<div style="padding:16px;text-align:center;color:var(--gray);font-size:12px;">Not following anyone yet.</div>';
+            return;
+        }
+        var html='';
+        following.forEach(function(f){
+            var p=f.followed||f;
+            var name=p.display_name||p.username||'User';
+            var avatar=p.avatar_url||DEFAULT_AVATAR;
+            html+='<div class="msg-following-item" data-uid="'+p.id+'" data-name="'+name.replace(/"/g,'&quot;')+'" data-avatar="'+(p.avatar_url||'')+'">';
+            html+='<img src="'+avatar+'" alt="'+name+'">';
+            html+='<span>'+name+'</span></div>';
+        });
+        list.innerHTML=html;
+        list.querySelectorAll('.msg-following-item').forEach(function(el){
+            el.addEventListener('click',function(){
+                startConversation(el.dataset.uid,el.dataset.name,el.dataset.avatar||null);
+            });
+        });
+    }catch(e){
+        console.error('renderMsgFollowing:',e);
+        list.innerHTML='<div style="padding:16px;text-align:center;color:var(--gray);font-size:12px;">Could not load.</div>';
+    }
+}
 
 // Subscribe to realtime messages
 function initMessageSubscription(){

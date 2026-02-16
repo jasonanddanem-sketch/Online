@@ -405,6 +405,7 @@ function saveState(){
         premiumBgUrl:_bk?_bk.bgImage:premiumBgImage,
         premiumBgOverlay:_bk?_bk.bgOverlay:premiumBgOverlay,
         premiumBgDarkness:_bk?_bk.bgDarkness:premiumBgDarkness,
+        premiumCardTransparency:_bk?_bk.cardTrans:premiumCardTransparency,
         settings:settings
     };
     try{localStorage.setItem(key,JSON.stringify(save));}catch(e){console.warn('localStorage save failed (quota?):', e.message);}
@@ -430,6 +431,7 @@ function syncSkinDataToSupabase(){
             premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
             premiumBgOverlay:(_bk?_bk.bgOverlay:premiumBgOverlay)!=null?(_bk?_bk.bgOverlay:premiumBgOverlay):0,
             premiumBgDarkness:(_bk?_bk.bgDarkness:premiumBgDarkness)!=null?(_bk?_bk.bgDarkness:premiumBgDarkness):0,
+            premiumCardTransparency:(_bk?_bk.cardTrans:premiumCardTransparency)!=null?(_bk?_bk.cardTrans:premiumCardTransparency):0.1,
             ownedSkins:state.ownedSkins||{},
             ownedPremiumSkins:state.ownedPremiumSkins||{},
             ownedFonts:state.ownedFonts||{},
@@ -462,6 +464,7 @@ async function loadSkinDataFromSupabase(){
         if(sd.premiumBgOverlay!==undefined) premiumBgOverlay=sd.premiumBgOverlay;
         else if(sd.premiumBgSaturation!==undefined) premiumBgOverlay=0; // migrate old saturation data
         if(sd.premiumBgDarkness!==undefined) premiumBgDarkness=sd.premiumBgDarkness;
+        if(sd.premiumCardTransparency!==undefined) premiumCardTransparency=sd.premiumCardTransparency;
         if(sd.ownedSkins) Object.assign(state.ownedSkins,sd.ownedSkins);
         if(sd.ownedPremiumSkins) Object.assign(state.ownedPremiumSkins,sd.ownedPremiumSkins);
         if(sd.ownedFonts) Object.assign(state.ownedFonts,sd.ownedFonts);
@@ -507,6 +510,7 @@ function loadState(){
         if(save.premiumBgOverlay!==undefined) premiumBgOverlay=save.premiumBgOverlay;
         else if(save.premiumBgSaturation!==undefined) premiumBgOverlay=0; // migrate old data
         if(save.premiumBgDarkness!==undefined) premiumBgDarkness=save.premiumBgDarkness;
+        if(save.premiumCardTransparency!==undefined) premiumCardTransparency=save.premiumCardTransparency;
         if(save.settings){
             settings.darkMode=!!save.settings.darkMode;
             settings.notifSound=save.settings.notifSound!==false;
@@ -790,7 +794,7 @@ var _navCurrent='home';var _navPrev='home';var _navFromPopstate=false;
 function navigateTo(page,skipPush){
     // Restore user's skin/font/template when leaving profile view
     if(_pvSaved&&page!=='profile-view'){
-        premiumBgImage=_pvSaved.bgImage;premiumBgOverlay=_pvSaved.bgOverlay;premiumBgDarkness=_pvSaved.bgDarkness||0;
+        premiumBgImage=_pvSaved.bgImage;premiumBgOverlay=_pvSaved.bgOverlay;premiumBgDarkness=_pvSaved.bgDarkness||0;premiumCardTransparency=_pvSaved.cardTrans!=null?_pvSaved.cardTrans:0.1;
         state.activePremiumSkin=_pvSaved.premiumSkin||null;
         applySkin(_pvSaved.skin||null,true);
         if(_pvSaved.premiumSkin)applyPremiumSkin(_pvSaved.premiumSkin,true);
@@ -799,7 +803,7 @@ function navigateTo(page,skipPush){
     }
     // Restore user's skin when leaving group view
     if(_gvSaved){
-        premiumBgImage=_gvSaved.bgImage;premiumBgOverlay=_gvSaved.bgOverlay;premiumBgDarkness=_gvSaved.bgDarkness||0;
+        premiumBgImage=_gvSaved.bgImage;premiumBgOverlay=_gvSaved.bgOverlay;premiumBgDarkness=_gvSaved.bgDarkness||0;premiumCardTransparency=_gvSaved.cardTrans!=null?_gvSaved.cardTrans:0.1;
         if(_gvSaved.premiumSkin) applyPremiumSkin(_gvSaved.premiumSkin,true);
         else{applySkin(_gvSaved.skin||null,true);updatePremiumBg();}
         _gvSaved=null;
@@ -1635,7 +1639,7 @@ function profileToPerson(p){
         skin:sd.activeSkin||null,
         font:sd.activeFont||null,
         template:sd.activeTemplate||null,
-        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,overlay:sd.premiumBgOverlay!=null?sd.premiumBgOverlay:0,darkness:sd.premiumBgDarkness!=null?sd.premiumBgDarkness:0}:null
+        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,overlay:sd.premiumBgOverlay!=null?sd.premiumBgOverlay:0,darkness:sd.premiumBgDarkness!=null?sd.premiumBgDarkness:0,cardTrans:sd.premiumCardTransparency!=null?sd.premiumCardTransparency:0.1}:null
     };
 }
 // ======================== PROFILE VIEW PAGE ========================
@@ -1654,12 +1658,12 @@ async function showProfileView(person){
     else { try{ var fc=await sbGetFollowCounts(person.id); following=fc.following; followers=fc.followers; }catch(e){} }
 
     // Apply viewed person's skin/font/template (silent, don't change state)
-    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness};
+    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness,cardTrans:premiumCardTransparency};
     if(!isMe){
         if(person.premiumSkin){
             applyPremiumSkin(person.premiumSkin,true);
-            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgOverlay=person.premiumBg.overlay!=null?person.premiumBg.overlay:0;premiumBgDarkness=person.premiumBg.darkness!=null?person.premiumBg.darkness:0;}
-            else{premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;}
+            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgOverlay=person.premiumBg.overlay!=null?person.premiumBg.overlay:0;premiumBgDarkness=person.premiumBg.darkness!=null?person.premiumBg.darkness:0;premiumCardTransparency=person.premiumBg.cardTrans!=null?person.premiumBg.cardTrans:0.1;}
+            else{premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;}
             // Temporarily set activePremiumSkin so updatePremiumBg shows the bg
             state.activePremiumSkin=person.premiumSkin;
             updatePremiumBg();
@@ -3995,7 +3999,7 @@ function applyGroupSkin(groupId){
     var grp=groups.find(function(g){return g.id===groupId;});
     var hasCover=grp&&grp.coverPhoto;
     // Save personal skin state once when entering group view
-    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness};
+    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness,cardTrans:premiumCardTransparency};
     // Hide premium bg in group view
     var _bgLayer=document.getElementById('premiumBgLayer');if(_bgLayer)_bgLayer.classList.remove('active');
     // Clear group-specific classes
@@ -4147,6 +4151,7 @@ function applyNavStyle(nsId,silent){
 var premiumBgImage=null;
 var premiumBgOverlay=0;
 var premiumBgDarkness=0;
+var premiumCardTransparency=0.1;
 
 function updatePremiumBg(){
     var layer=document.getElementById('premiumBgLayer');
@@ -4158,11 +4163,14 @@ function updatePremiumBg(){
         if(overlay){var blurPx=Math.round(premiumBgOverlay*25);overlay.style.backdropFilter='blur('+blurPx+'px)';overlay.style.webkitBackdropFilter='blur('+blurPx+'px)';}
         var darknessEl=document.getElementById('premiumBgDarkness');
         if(darknessEl) darknessEl.style.opacity=premiumBgDarkness;
+        // Set card background opacity via CSS variable
+        document.documentElement.style.setProperty('--card-opacity',Math.round((1-premiumCardTransparency)*100)+'%');
         layer.classList.add('active');
         document.body.classList.add('has-premium-bg');
     } else {
         layer.style.backgroundImage='';
         layer.style.filter='';
+        document.documentElement.style.removeProperty('--card-opacity');
         layer.classList.remove('active');
         document.body.classList.remove('has-premium-bg');
     }
@@ -4253,6 +4261,10 @@ function renderMySkins(){
             bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-droplet"></i>Frosted Glass: <span id="overlayValLabel">'+Math.round(premiumBgOverlay*100)+'%</span></label>';
             bgHtml+='<input type="range" id="premiumBgOverlaySlider" min="0" max="80" value="'+Math.round(premiumBgOverlay*100)+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
             bgHtml+='</div>';
+            bgHtml+='<div style="margin-top:10px;">';
+            bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-eye"></i>Card Transparency: <span id="cardTransValLabel">'+Math.round(premiumCardTransparency*100)+'%</span></label>';
+            bgHtml+='<input type="range" id="premiumCardTransSlider" min="0" max="80" value="'+Math.round(premiumCardTransparency*100)+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
+            bgHtml+='</div>';
         }
         bgHtml+='</div>';
         html+=bgHtml;
@@ -4281,7 +4293,7 @@ function renderMySkins(){
     }
     var bgRemoveBtn=document.getElementById('premiumBgRemove');
     if(bgRemoveBtn){
-        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;updatePremiumBg();renderMySkins();saveState();});
+        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;updatePremiumBg();renderMySkins();saveState();});
     }
     var darknessSlider=document.getElementById('premiumBgDarknessSlider');
     if(darknessSlider){
@@ -4300,6 +4312,15 @@ function renderMySkins(){
             updatePremiumBg();
         });
         overlaySlider.addEventListener('change',function(){saveState();});
+    }
+    var cardTransSlider=document.getElementById('premiumCardTransSlider');
+    if(cardTransSlider){
+        cardTransSlider.addEventListener('input',function(){
+            premiumCardTransparency=parseInt(cardTransSlider.value)/100;
+            document.getElementById('cardTransValLabel').textContent=Math.round(premiumCardTransparency*100)+'%';
+            updatePremiumBg();
+        });
+        cardTransSlider.addEventListener('change',function(){saveState();});
     }
     function mySkinsRerender(){var row=$('#mySkinsGrid .shop-scroll-row');var sl=row?row.scrollLeft:0;renderMySkins();var row2=$('#mySkinsGrid .shop-scroll-row');if(row2)row2.scrollLeft=sl;saveState();}
     $$('#mySkinsGrid .apply-skin-btn').forEach(function(btn){btn.addEventListener('click',function(){applySkin(btn.dataset.sid==='default'?null:btn.dataset.sid);mySkinsRerender();});});

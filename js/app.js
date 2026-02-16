@@ -756,8 +756,8 @@ function timeAgo(i){
 // ======================== NAVIGATION ========================
 var _pvSaved=null;
 var _gvSaved=null;
-var _navCurrent='home';var _navPrev='home';
-function navigateTo(page){
+var _navCurrent='home';var _navPrev='home';var _navFromPopstate=false;
+function navigateTo(page,skipPush){
     // Restore user's skin/font/template when leaving profile view
     if(_pvSaved&&page!=='profile-view'){
         premiumBgImage=_pvSaved.bgImage;premiumBgSaturation=_pvSaved.bgSat;
@@ -797,7 +797,19 @@ function navigateTo(page){
     if(page==='photos') renderPhotoAlbum();
     if(page==='saved') renderSavedPage();
     _navPrev=_navCurrent;_navCurrent=page;
+    if(!skipPush) history.pushState({page:page},'','#'+page);
 }
+// Browser back/forward support
+history.replaceState({page:'home'},'','#home');
+window.addEventListener('popstate',function(e){
+    var page=(e.state&&e.state.page)?e.state.page:'home';
+    _navFromPopstate=true;
+    // Profile view and group view can't be restored from history alone (need data),
+    // so navigate to a safe fallback
+    if(page==='profile-view'||page==='group-view') page='home';
+    navigateTo(page,true);
+    _navFromPopstate=false;
+});
 
 document.addEventListener('click',function(e){
     var link=e.target.closest('[data-page]');
@@ -1543,6 +1555,7 @@ async function showProfileView(person){
     document.getElementById('page-profile-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
     _navPrev=_navCurrent;_navCurrent='profile-view';
+    if(!_navFromPopstate) history.pushState({page:'profile-view'},'','#profile-view');
     window.scrollTo(0,0);
 
     var isMe=person.isMe||false;
@@ -2006,6 +2019,7 @@ async function showGroupView(group){
     document.getElementById('page-group-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
     _navPrev=_navCurrent;_navCurrent='group-view';
+    if(!_navFromPopstate) history.pushState({page:'group-view'},'','#group-view');
     window.scrollTo(0,0);
 
     var joined=state.joinedGroups[group.id];

@@ -277,6 +277,11 @@ async function initApp() {
     // Load conversations and subscribe to realtime messages
     loadConversations();
     initMessageSubscription();
+    // Restore page from URL hash on refresh
+    var hashPage=(location.hash||'').replace('#','');
+    if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'){
+        navigateTo(hashPage,true);
+    }
     _initAppRunning = false;
 }
 
@@ -800,7 +805,9 @@ function navigateTo(page,skipPush){
     if(!skipPush) history.pushState({page:page},'','#'+page);
 }
 // Browser back/forward support
-history.replaceState({page:'home'},'','#home');
+var _initHash=(location.hash||'#home').replace('#','');
+if(_initHash==='profile-view'||_initHash==='group-view') _initHash='home';
+history.replaceState({page:_initHash},'','#'+_initHash);
 window.addEventListener('popstate',function(e){
     var page=(e.state&&e.state.page)?e.state.page:'home';
     _navFromPopstate=true;

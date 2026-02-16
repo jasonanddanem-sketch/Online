@@ -216,14 +216,22 @@ async function initApp() {
         var myLikes = await sbGetUserLikes(currentUser.id, 'post');
         myLikes.forEach(function(l){ state.likedPosts[l.target_id] = true; });
     } catch(e){ console.warn('Could not load user likes:', e); }
-    // Load previous avatar uploads from Supabase storage
+    // Load photos from Supabase storage and posts
     try {
         var prevAvatars = await sbListUserAvatars(currentUser.id);
         state.photos.profile = prevAvatars.map(function(a){ return { src: a.src, date: a.date }; });
     } catch(e){ console.warn('Could not load avatar history:', e); }
+    try {
+        var prevCovers = await sbListUserCovers(currentUser.id);
+        state.photos.cover = prevCovers.map(function(c){ return { src: c.src, date: c.date }; });
+    } catch(e){ console.warn('Could not load cover history:', e); }
+    try {
+        var myPosts = await sbGetUserPosts(currentUser.id, 50);
+        state.photos.post = (myPosts||[]).filter(function(p){ return p.image_url; }).map(function(p){ return { src: p.image_url, date: new Date(p.created_at).getTime() }; });
+    } catch(e){ console.warn('Could not load post photos:', e); }
     await loadFollowCounts();
     await loadGroups();
-    generatePosts();
+    await generatePosts();
     renderSuggestions();
     // Load notifications from Supabase
     try {
@@ -2456,6 +2464,7 @@ async function generatePosts(){
 }
 function getFollowingIds(){
     var ids={};
+    if(currentUser) ids[currentUser.id]=true; // include own posts
     Object.keys(state.followedUsers).forEach(function(k){ids[k]=true;});
     groups.forEach(function(g){if(state.joinedGroups[g.id]&&g.memberIds){g.memberIds.forEach(function(id){ids[id]=true;});}});
     return ids;

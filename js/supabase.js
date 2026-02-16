@@ -450,7 +450,20 @@ async function sbListUserAvatars(userId) {
     .list(userId, { sortBy: { column: 'created_at', order: 'desc' } });
   if (error) throw error;
   return (data || [])
-    .filter(f => f.name.startsWith('avatar-'))
+    .filter(f => f.name.startsWith('avatar'))
+    .map(f => {
+      const { data: urlData } = sb.storage.from('avatars').getPublicUrl(userId + '/' + f.name);
+      return { src: urlData.publicUrl + '?t=' + Date.now(), date: new Date(f.created_at).getTime(), name: f.name };
+    });
+}
+
+async function sbListUserCovers(userId) {
+  const { data, error } = await sb.storage
+    .from('avatars')
+    .list(userId, { sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) throw error;
+  return (data || [])
+    .filter(f => f.name.startsWith('cover'))
     .map(f => {
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(userId + '/' + f.name);
       return { src: urlData.publicUrl + '?t=' + Date.now(), date: new Date(f.created_at).getTime(), name: f.name };

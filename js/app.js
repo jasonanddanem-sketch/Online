@@ -4162,10 +4162,21 @@ function syncNavPadding(){
     // Float & island have special floating cover layouts — skip
     var skip=['nav-float','nav-island','nav-slim'];
     for(var i=0;i<skip.length;i++){if(document.body.classList.contains(skip[i]))return;}
-    // Bottom / side nav styles — cover should be flush to viewport top
+    var isMobile=window.innerWidth<=768;
+    // Bottom / side nav styles — no top padding on desktop
+    // On mobile, metro/rail/mirror/horizon convert to top bars and need padding
     var noTop=['nav-dock','nav-pill','nav-horizon','nav-metro','nav-rail','nav-mirror'];
-    for(var i=0;i<noTop.length;i++){if(document.body.classList.contains(noTop[i])){home.style.setProperty('padding-top','0px','important');return;}}
-    // Top navbar — set padding to exact navbar height
+    var staysBottom=['nav-dock','nav-pill'];
+    for(var i=0;i<noTop.length;i++){
+        if(document.body.classList.contains(noTop[i])){
+            if(!isMobile){home.style.setProperty('padding-top','0px','important');return;}
+            for(var j=0;j<staysBottom.length;j++){
+                if(noTop[i]===staysBottom[j]){home.style.setProperty('padding-top','0px','important');return;}
+            }
+            break; // converted to top bar on mobile — fall through to measure
+        }
+    }
+    // Top navbar (or mobile-converted top bar) — set padding to exact navbar height
     var h=nav.offsetHeight;
     if(h>0) home.style.setProperty('padding-top',h+'px','important');
 }

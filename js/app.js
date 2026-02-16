@@ -532,6 +532,7 @@ function reapplyCustomizations(){
     if(state.activeNavStyle) applyNavStyle(state.activeNavStyle,true);
     if(premiumBgImage&&state.activePremiumSkin) updatePremiumBg();
     if(settings.darkMode){document.body.style.background='#1a1a2e';document.body.style.color='#eee';}
+    requestAnimationFrame(syncNavPadding);
 }
 // Auto-save state on page leave and periodically
 window.addEventListener('beforeunload',function(){saveState();});
@@ -4145,6 +4146,21 @@ function applyNavStyle(nsId,silent){
     navStyles.forEach(function(n){document.body.classList.remove('nav-'+n.id);});
     if(nsId){document.body.classList.add('nav-'+nsId);state.activeNavStyle=nsId;if(!silent)addNotification('skin','You applied the "'+navStyles.find(function(n){return n.id===nsId;}).name+'" nav style!');}
     else{state.activeNavStyle=null;}
+    requestAnimationFrame(syncNavPadding);
+}
+function syncNavPadding(){
+    var nav=document.querySelector('.navbar');
+    var home=document.getElementById('page-home');
+    if(!nav||!home)return;
+    // Float & island have special floating cover layouts — skip
+    var skip=['nav-float','nav-island','nav-slim'];
+    for(var i=0;i<skip.length;i++){if(document.body.classList.contains(skip[i]))return;}
+    // Bottom / side nav styles — cover should be flush to viewport top
+    var noTop=['nav-dock','nav-pill','nav-horizon','nav-metro','nav-rail','nav-mirror'];
+    for(var i=0;i<noTop.length;i++){if(document.body.classList.contains(noTop[i])){home.style.setProperty('padding-top','0px','important');return;}}
+    // Top navbar — set padding to exact navbar height
+    var h=nav.offsetHeight;
+    if(h>0) home.style.setProperty('padding-top',h+'px','important');
 }
 
 // Premium background (runtime only, no persistence)

@@ -1033,6 +1033,9 @@ async function toggleFollow(userId,btn){
                 btn.classList.add('btn-green');
                 btn.innerHTML=btn.classList.contains('follow-btn-small')?'<i class="fas fa-plus"></i>':'<i class="fas fa-plus"></i> Follow';
             }
+            // Notify the person being unfollowed
+            var myName=currentUser.display_name||currentUser.username||'Someone';
+            sbCreateNotification(userId,'follow',myName+' unfollowed you','',{follower_id:currentUser.id}).catch(function(){});
         } else {
             await sbFollow(currentUser.id, userId);
             state.followedUsers[userId]=true;

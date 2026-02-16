@@ -1379,9 +1379,10 @@ body.nav-shelf .nav-link span{display:inline!important;font-size:12px;}
 body.nav-shelf .nav-link.active{border-bottom-color:rgba(255,255,255,.9);background:rgba(255,255,255,.08);}
 body.nav-shelf .notif-badge{top:4px;right:4px;}
 body.nav-shelf .page{padding-top:106px!important;}
-body.nav-shelf #page-home .timeline-cover{margin-top:46px;}
-body.nav-shelf .pv-cover-banner{margin-top:46px;}
-body.nav-shelf .gv-cover-banner{margin-top:46px;}
+body.nav-shelf #page-home{padding-top:106px!important;}
+body.nav-shelf #page-home .timeline-cover{margin-top:0;}
+body.nav-shelf .pv-cover-banner{margin-top:0;}
+body.nav-shelf .gv-cover-banner{margin-top:0;}
 body.nav-shelf .messages-layout{height:calc(100vh - 126px);}
 
 /* ---------- Nav Style: Slim ---------- */
@@ -1505,7 +1506,7 @@ body.nav-ribbon .nav-avatar{width:26px;height:26px;}
 body.nav-ribbon .nav-username{display:none;}
 body.nav-ribbon .page{padding-top:50px!important;}
 body.nav-ribbon #page-home{padding-top:50px!important;}
-body.nav-ribbon .timeline-cover{margin-top:40px;}
+body.nav-ribbon .timeline-cover{margin-top:0;}
 body.nav-ribbon .messages-layout{height:calc(100vh - 50px);}
 
 /* ========== NAV STYLE: GLASS ========== */

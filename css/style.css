@@ -240,10 +240,19 @@ img{display:block;}
 .follow-list-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .follow-list-item:last-child{border-bottom:none;}
 .follow-list-item img{width:44px;height:44px;border-radius:50%;object-fit:cover;}
-.follow-list-info{flex:1;}
+.follow-list-info{flex:1;min-width:0;}
 .follow-list-info h4{font-size:14px;font-weight:600;color:var(--dark);margin:0;}
 .follow-list-info p{font-size:12px;color:var(--gray);margin:2px 0 0;}
 .follow-list-item .btn{padding:6px 14px;font-size:12px;}
+.follow-list-item.fl-clickable:hover{background:var(--border);border-radius:10px;}
+.fl-badge{font-size:11px;display:inline-block;margin-top:3px;}
+.fl-mutual{color:var(--primary);}
+.fl-follows-you{color:var(--gray);}
+.fl-you-follow{color:var(--primary);}
+.status-emoji-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.status-emoji-btn{width:36px;height:36px;border-radius:8px;font-size:20px;background:var(--border);border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,border-color .15s,background .15s;}
+.status-emoji-btn:hover{transform:scale(1.15);border-color:var(--primary);}
+.status-emoji-btn.active{border-color:var(--primary);background:var(--card);box-shadow:0 0 0 2px var(--primary);}
 .profile-links{display:flex;align-items:center;justify-content:center;gap:12px;}
 .view-profile-link{font-size:13px;color:var(--primary);font-weight:500;transition:color .2s;}
 .view-profile-link:hover{color:var(--primary-hover);}
@@ -712,8 +721,11 @@ body.skin-midnight .pv-profile-card .profile-title,body.skin-midnight .stat-labe
 body.skin-midnight .edit-profile-form label{color:#ddd;}
 body.skin-midnight .edit-profile-form input,body.skin-midnight .edit-profile-form textarea{background:#1a1a2e;border-color:#3a3a5a;color:#ddd;}
 body.skin-midnight .follow-list-item{border-color:#3a3a5a;}
+body.skin-midnight .follow-list-item.fl-clickable:hover{background:#3a3a5a;}
 body.skin-midnight .follow-list-info h4{color:#eee;}
 body.skin-midnight .follow-list-info p{color:#bbb;}
+body.skin-midnight .status-emoji-btn{background:#3a3a5a;}
+body.skin-midnight .status-emoji-btn.active{background:#2a2a4a;}
 body.skin-midnight ::-webkit-scrollbar-track{background:#1a1a2e;}
 body.skin-midnight ::-webkit-scrollbar-thumb{background:#3a3a5a;}
 body.skin-midnight.tpl-cinema .pv-col-photos .card-heading{background:#e94560;}
@@ -854,8 +866,11 @@ body.skin-slate .pv-profile-card .profile-title,body.skin-slate .stat-label{colo
 body.skin-slate .edit-profile-form label{color:#ddd;}
 body.skin-slate .edit-profile-form input,body.skin-slate .edit-profile-form textarea{background:#263238;border-color:#455a64;color:#ddd;}
 body.skin-slate .follow-list-item{border-color:#455a64;}
+body.skin-slate .follow-list-item.fl-clickable:hover{background:#455a64;}
 body.skin-slate .follow-list-info h4{color:#eceff1;}
 body.skin-slate .follow-list-info p{color:#90a4ae;}
+body.skin-slate .status-emoji-btn{background:#455a64;}
+body.skin-slate .status-emoji-btn.active{background:#37474f;}
 body.skin-slate ::-webkit-scrollbar-track{background:#263238;}
 body.skin-slate ::-webkit-scrollbar-thumb{background:#455a64;}
 body.skin-slate.tpl-cinema .pv-col-photos .card-heading{background:#78909c;}
@@ -2229,8 +2244,12 @@ body[class*="premium-"] .pv-profile-card .profile-title{color:var(--ps-muted);}
 body[class*="premium-"] .edit-profile-form label{color:var(--ps-text);}
 body[class*="premium-"] .edit-profile-form input,body[class*="premium-"] .edit-profile-form textarea{background:var(--ps-input);border-color:var(--ps-border);color:var(--ps-text);}
 body[class*="premium-"] .follow-list-item{border-color:var(--ps-border);}
+body[class*="premium-"] .follow-list-item.fl-clickable:hover{background:var(--ps-hover);}
 body[class*="premium-"] .follow-list-info h4{color:var(--ps-text);}
 body[class*="premium-"] .follow-list-info p{color:var(--ps-muted);}
+body[class*="premium-"] .status-emoji-btn{background:var(--ps-input);border-color:transparent;}
+body[class*="premium-"] .status-emoji-btn:hover{border-color:var(--primary);}
+body[class*="premium-"] .status-emoji-btn.active{border-color:var(--primary);background:var(--ps-card);}
 body[class*="premium-"] .search-tab:hover{background:var(--ps-hover);color:var(--ps-text);}
 body[class*="premium-"] .search-tab .tab-count{background:var(--ps-tag);color:var(--ps-muted);}
 body[class*="premium-"] .profile-card{background:var(--ps-card);}

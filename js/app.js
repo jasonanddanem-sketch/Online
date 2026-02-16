@@ -2445,11 +2445,22 @@ $('#editProfileBtn').addEventListener('click',function(e){
     var html='<div class="modal-header"><h3>Edit Profile</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
     html+='<div class="modal-body"><form class="edit-profile-form" id="editProfileForm">';
     html+='<label>Name</label><input type="text" id="editName" value="'+name+'">';
-    html+='<label>Status</label><input type="text" id="editStatus" value="'+statusText+'" placeholder="What\'s on your mind?" maxlength="80">';
+    var statusEmojis=['😊','😎','🤩','😴','😤','🥳','🤔','😂','❤️','🔥','💀','👻','🎮','📚','💻','🎵','✨','🌙'];
+    html+='<label>Status</label><div class="status-emoji-picker" id="statusEmojiPicker">';
+    statusEmojis.forEach(function(em){html+='<button type="button" class="status-emoji-btn'+(statusText===em?' active':'')+'" data-emoji="'+em+'">'+em+'</button>';});
+    html+='<button type="button" class="status-emoji-btn'+(statusText===''?' active':'')+'" data-emoji="" title="Clear">✖</button>';
+    html+='</div><input type="hidden" id="editStatus" value="'+statusText+'">';
     html+='<label>Bio</label><textarea id="editAbout" placeholder="Tell us about yourself...">'+bio+'</textarea>';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:4px;"><div><label style="margin-bottom:0;"><i class="fas fa-lock" style="margin-right:6px;color:var(--gray);"></i>Private Followers</label><p style="font-size:12px;color:var(--gray);margin-top:2px;">Hide your followers and following lists</p></div><label class="toggle-switch"><input type="checkbox" id="editPrivate" '+(state.privateFollowers?'checked':'')+'><span class="toggle-slider"></span></label></div>';
     html+='<button type="submit" class="btn btn-primary btn-block" style="margin-top:12px;">Save</button></form></div>';
     showModal(html);
+    $$('.status-emoji-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+            $$('.status-emoji-btn').forEach(function(b){b.classList.remove('active');});
+            btn.classList.add('active');
+            document.getElementById('editStatus').value=btn.dataset.emoji;
+        });
+    });
     $('#editProfileForm').addEventListener('submit', async function(ev){
         ev.preventDefault();
         var n=$('#editName').value.trim()||name;
@@ -2482,7 +2493,15 @@ $('#editProfileBtn').addEventListener('click',function(e){
 });
 
 // Followers / Following modals
-function showFollowListModal(title,list,isFollowingList){
+async function showFollowListModal(title,list,isFollowingList){
+    // Build a set of who follows the current user (for relationship badges)
+    var followsMe={};
+    if(currentUser){
+        try{
+            var myFollowers=await sbGetFollowers(currentUser.id);
+            myFollowers.forEach(function(f){if(f&&f.id)followsMe[f.id]=true;});
+        }catch(e){console.warn('Could not load my followers for badges:',e);}
+    }
     var html='<div class="modal-header"><h3>'+title+'</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
     var filtered=list.filter(function(p){return p&&p.id;});
     if(!filtered.length){html+='<p style="text-align:center;color:var(--gray);">No one yet.</p>';}
@@ -2490,11 +2509,20 @@ function showFollowListModal(title,list,isFollowingList){
         html+='<div class="follow-list">';
         filtered.forEach(function(p){
             var name=p.display_name||p.name||p.username||'User';
-            var bio=p.bio||'';
             var avatar=p.avatar_url||DEFAULT_AVATAR;
-            var followed=state.followedUsers[p.id];
+            var followed=!!state.followedUsers[p.id];
+            var followsYou=!!followsMe[p.id];
             var isSelf=currentUser&&p.id===currentUser.id;
-            html+='<div class="follow-list-item"><img src="'+avatar+'" alt="'+name+'"><div class="follow-list-info"><h4>'+name+'</h4><p>'+bio+'</p></div>';
+            // Relationship badge
+            var badge='';
+            if(!isSelf){
+                if(followed&&followsYou) badge='<span class="fl-badge fl-mutual" title="Mutual">🤝 Mutual</span>';
+                else if(followsYou&&!followed) badge='<span class="fl-badge fl-follows-you" title="Follows you">👀 Follows you</span>';
+                else if(followed&&!followsYou) badge='<span class="fl-badge fl-you-follow" title="You follow">💜 You follow</span>';
+            }
+            html+='<div class="follow-list-item fl-clickable" data-uid="'+p.id+'">';
+            html+='<img src="'+avatar+'" alt="'+name+'" class="fl-avatar">';
+            html+='<div class="follow-list-info"><h4 class="fl-name">'+name+'</h4>'+badge+'</div>';
             if(!isSelf) html+='<button class="btn follow-btn-small '+(followed?'btn-disabled':'btn-green')+' fl-follow-btn" data-uid="'+p.id+'">'+(followed?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button>';
             html+='</div>';
         });
@@ -2502,7 +2530,21 @@ function showFollowListModal(title,list,isFollowingList){
     }
     html+='</div>';
     showModal(html);
-    $$('.fl-follow-btn').forEach(function(btn){btn.addEventListener('click',function(){toggleFollow(+btn.dataset.uid,btn);});});
+    // Click avatar or name to open profile
+    $$('.fl-clickable').forEach(function(item){
+        var avatar=item.querySelector('.fl-avatar');
+        var nameEl=item.querySelector('.fl-name');
+        function openProfile(e){
+            e.stopPropagation();
+            var uid=item.getAttribute('data-uid');
+            if(!uid)return;
+            closeModal();
+            sbGetProfile(uid).then(function(p){if(p)showProfileView(profileToPerson(p));}).catch(function(e){console.error(e);});
+        }
+        if(avatar){avatar.style.cursor='pointer';avatar.addEventListener('click',openProfile);}
+        if(nameEl){nameEl.style.cursor='pointer';nameEl.addEventListener('click',openProfile);}
+    });
+    $$('.fl-follow-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();toggleFollow(btn.dataset.uid,btn);});});
 }
 $('#followingStat').addEventListener('click',async function(){
     if(!currentUser)return;

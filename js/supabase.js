@@ -11,7 +11,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ---- 2. AUTH ----------------------------------------------------------------
 
-async function sbSignUp(email, password, username) {
+async function sbSignUp(email, password, username, birthday = null) {
   const { data, error } = await sb.auth.signUp({
     email,
     password,
@@ -23,15 +23,17 @@ async function sbSignUp(email, password, username) {
   // Uses upsert so it won't conflict if the DB trigger already created it.
   // Only works when a session is returned (email confirmation disabled).
   if (data.user && data.session) {
+    const row = {
+      id: data.user.id,
+      username: username,
+      display_name: username,
+      bio: '',
+      avatar_url: null,
+      cover_photo_url: null
+    };
+    if (birthday) row.birthday = birthday;
     const { error: profileErr } = await sb.from('profiles')
-      .upsert({
-        id: data.user.id,
-        username: username,
-        display_name: username,
-        bio: '',
-        avatar_url: null,
-        cover_photo_url: null
-      }, { onConflict: 'id' });
+      .upsert(row, { onConflict: 'id' });
     if (profileErr) console.error('Profile insert failed:', profileErr.message);
   }
   return data;

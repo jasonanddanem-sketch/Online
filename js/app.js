@@ -66,12 +66,18 @@ signupForm.addEventListener('submit', async function (e) {
     var username = document.getElementById('signupUsername').value.trim();
     var email = document.getElementById('signupEmail').value.trim();
     var pw = document.getElementById('signupPassword').value;
+    var birthday = document.getElementById('signupBirthday').value;
+    var termsChecked = document.getElementById('signupTerms').checked;
     if (!username || !email || !pw) { signupError.textContent = 'All fields are required.'; signupError.classList.add('show'); return; }
     if (pw.length < 6) { signupError.textContent = 'Password must be at least 6 characters.'; signupError.classList.add('show'); return; }
+    if (!birthday) { signupError.textContent = 'Please enter your date of birth.'; signupError.classList.add('show'); return; }
+    var ageDiff = Date.now() - new Date(birthday).getTime();
+    if (ageDiff < 13 * 365.25 * 24 * 60 * 60 * 1000) { signupError.textContent = 'You must be at least 13 years old to use BlipVibe.'; signupError.classList.add('show'); return; }
+    if (!termsChecked) { signupError.textContent = 'You must agree to the Terms of Use.'; signupError.classList.add('show'); return; }
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
     try {
-        var result = await sbSignUp(email, pw, username);
+        var result = await sbSignUp(email, pw, username, birthday);
         // If email confirmation is disabled, Supabase returns a session directly.
         // If enabled, session is null — user must confirm email first.
         if (result.session) {

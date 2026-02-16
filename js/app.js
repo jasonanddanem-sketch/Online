@@ -220,6 +220,7 @@ async function initApp() {
     populateUserUI();
     showApp();
     reapplyCustomizations(); // Re-apply skins, fonts, nav styles, dark mode
+    detectUserLocation(); // Start async geolocation detection
     if(currentUser.cover_photo_url) { state.coverPhoto = currentUser.cover_photo_url; applyCoverPhoto(); }
     // Load user's existing likes from Supabase so UI reflects correct state
     try {
@@ -359,7 +360,8 @@ var state = {
     groupCommentCoinPosts: {},
     groupReplyCoinPosts: {}
 };
-var settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top'};
+var settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top',showLocation:true};
+var userLocation=null; // Detected state/region from geolocation
 
 // Persist state to localStorage (keyed per user)
 function saveState(){
@@ -486,6 +488,7 @@ function loadState(){
             settings.privateProfile=!!save.settings.privateProfile;
             settings.autoplay=save.settings.autoplay!==false;
             settings.commentOrder=save.settings.commentOrder||'top';
+            settings.showLocation=save.settings.showLocation!==false;
         }
     }catch(e){console.warn('loadState:',e);}
 }
@@ -544,8 +547,20 @@ var badgeTypes = [
     {text:'Popular',icon:'fa-star',cls:'badge-orange'},{text:'Active',icon:'fa-bolt',cls:'badge-green'},
     {text:'New',icon:'fa-sparkles',cls:'badge-blue'}
 ];
-var locations = ['New York','LA','Chicago','London','Tokyo','Paris','Berlin','Toronto','Sydney','Miami',
-    'Seattle','Austin','Denver','Portland','Boston','SF','Dublin','Amsterdam','Seoul','Mumbai'];
+// Detect user's state/region via browser geolocation
+function detectUserLocation(){
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos){
+        var lat=pos.coords.latitude,lon=pos.coords.longitude;
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&zoom=5')
+            .then(function(r){return r.json();})
+            .then(function(data){
+                var addr=data.address||{};
+                userLocation=addr.state||addr.region||addr.country||null;
+            })
+            .catch(function(){});
+    },function(){},{ enableHighAccuracy:false, timeout:10000, maximumAge:300000 });
+}
 
 // Load groups from Supabase
 async function loadGroups() {
@@ -1123,7 +1138,8 @@ function handleShare(btn){
         // Save to Supabase
         if(isUUID&&currentUser){
             try{
-                await sbCreatePost(currentUser.id,shareContent,null,null,origPostId);
+                var shareLoc=settings.showLocation?userLocation:null;
+                await sbCreatePost(currentUser.id,shareContent,null,null,origPostId,shareLoc);
                 if(state.postCoinCount<10){state.coins+=5;state.postCoinCount++;updateCoins();}
                 var countEl=btn.querySelector('span');if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
                 closeModal();
@@ -2683,7 +2699,7 @@ function showCropModal(src){
 }
 
 // Settings & dropdown handlers
-function settingsToggle(key){return '<label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;"><span style="font-size:14px;">'+{darkMode:'Dark Mode',notifSound:'Notification Sounds',privateProfile:'Private Profile',autoplay:'Autoplay Videos'}[key]+'</span><span class="stoggle" data-key="'+key+'" style="width:42px;height:24px;border-radius:12px;background:'+(settings[key]?'var(--green)':'#ccc')+';position:relative;display:inline-block;transition:background .2s;"><span style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;'+(settings[key]?'left:20px':'left:2px')+';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></span></label>';}
+function settingsToggle(key){return '<label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;"><span style="font-size:14px;">'+{darkMode:'Dark Mode',notifSound:'Notification Sounds',privateProfile:'Private Profile',autoplay:'Autoplay Videos',showLocation:'Show Location on Posts'}[key]+'</span><span class="stoggle" data-key="'+key+'" style="width:42px;height:24px;border-radius:12px;background:'+(settings[key]?'var(--green)':'#ccc')+';position:relative;display:inline-block;transition:background .2s;"><span style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;'+(settings[key]?'left:20px':'left:2px')+';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span></span></label>';}
 document.addEventListener('click',function(e){
     var a=e.target.closest('.user-dropdown a');
     if(a){
@@ -2692,7 +2708,7 @@ document.addEventListener('click',function(e){
             e.preventDefault();
             $('#userDropdownMenu').classList.remove('show');
             var h='<div class="modal-header"><h3>Settings</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
-            h+=settingsToggle('darkMode')+settingsToggle('notifSound')+settingsToggle('privateProfile')+settingsToggle('autoplay');
+            h+=settingsToggle('darkMode')+settingsToggle('notifSound')+settingsToggle('privateProfile')+settingsToggle('autoplay')+settingsToggle('showLocation');
             h+='<label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Comment Order</span><select id="commentOrderSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;color:var(--dark);cursor:pointer;"><option value="top"'+(settings.commentOrder==='top'?' selected':'')+'>Top</option><option value="newest"'+(settings.commentOrder==='newest'?' selected':'')+'>Newest</option><option value="oldest"'+(settings.commentOrder==='oldest'?' selected':'')+'>Oldest</option></select></label>';
             var hiddenCount=Object.keys(hiddenPosts).length;
             h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Hidden Posts</span><button class="btn btn-outline" id="settingsViewHidden" style="padding:4px 14px;font-size:12px;">View ('+hiddenCount+')</button></div>';
@@ -2726,14 +2742,8 @@ var activeFeedTab='following';
 async function generatePosts(){
     feedPosts=[];
     try {
-        var posts;
-        if(activeFeedTab==='following' && currentUser){
-            posts = await sbGetFollowingFeed(currentUser.id, 50);
-        }
-        // If following tab returned nothing, also try all posts
-        if(!posts||!posts.length){
-            posts = await sbGetFeed(50);
-        }
+        // Always load all public posts; tab filtering happens in renderFeed
+        var posts = await sbGetFeed(50);
         // Fetch shared post data in batch
         var sharedIds=[];
         posts.forEach(function(p){if(p.shared_post_id)sharedIds.push(p.shared_post_id);});
@@ -2756,8 +2766,8 @@ async function generatePosts(){
                 },
                 text: p.content || '',
                 tags: [],
-                badge: badgeTypes[i % badgeTypes.length],
-                loc: locations[i % locations.length],
+                badge: null,
+                loc: p.location || null,
                 likes: p.like_count || 0,
                 comments: [],
                 commentCount: (p.comments && p.comments[0]) ? p.comments[0].count : 0,
@@ -2788,17 +2798,18 @@ function getFollowingIds(){
     var ids={};
     if(currentUser) ids[currentUser.id]=true; // include own posts
     Object.keys(state.followedUsers).forEach(function(k){ids[k]=true;});
-    groups.forEach(function(g){if(state.joinedGroups[g.id]&&g.memberIds){g.memberIds.forEach(function(id){ids[id]=true;});}});
     return ids;
 }
 function renderFeed(tab){
     activeFeedTab=tab;
     var posts;
     if(tab==='following'){
+        // Following tab: only posts from people you follow + your own
         var ids=getFollowingIds();
         posts=feedPosts.filter(function(p){return ids[p.person.id]&&!hiddenPosts[p.idx]&&!blockedUsers[p.person.id];});
     } else {
-        posts=feedPosts.filter(function(p){return !hiddenPosts[p.idx]&&!blockedUsers[p.person.id];}).sort(function(a,b){return b.likes-a.likes;});
+        // Discover tab: all public posts (sorted newest first)
+        posts=feedPosts.filter(function(p){return !hiddenPosts[p.idx]&&!blockedUsers[p.person.id];});
     }
     var container=$('#feedContainer');
     if(!posts.length){
@@ -2817,7 +2828,11 @@ function renderFeed(tab){
         html+='<div class="post-header">';
         html+='<img src="'+avatarSrc+'" alt="'+person.name+'" class="post-avatar" data-person-id="'+person.id+'">';
         html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+person.id+'">'+person.name+'</h4><span class="post-time">'+timeStr+'</span></div>';
-        html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span><span class="badge badge-blue"><i class="fas fa-map-marker-alt"></i> '+loc+'</span></div></div>';
+        var badgesHtml='';
+        if(badge) badgesHtml+='<span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span>';
+        if(loc) badgesHtml+='<span class="badge badge-blue"><i class="fas fa-map-marker-alt"></i> '+loc+'</span>';
+        if(badgesHtml) html+='<div class="post-badges">'+badgesHtml+'</div>';
+        html+='</div>';
         html+='<button class="post-menu-btn" data-menu="'+menuId+'"><i class="fas fa-ellipsis-h"></i></button>';
         html+='<div class="post-dropdown" id="'+menuId+'"><a href="#" data-action="save" data-pid="'+i+'"><i class="fas fa-bookmark"></i> Save Post</a><a href="#" data-action="report" data-pid="'+i+'"><i class="fas fa-flag"></i> Report</a><a href="#" data-action="hide" data-pid="'+i+'"><i class="fas fa-eye-slash"></i> Hide</a></div>';
         html+='</div>';
@@ -3148,7 +3163,8 @@ $('#openPostModal').addEventListener('click',function(){
         var sbPost = null;
         if(currentUser && (fullContent || imageUrl)) {
             try {
-                sbPost = await sbCreatePost(currentUser.id, fullContent || '', imageUrl);
+                var postLoc=settings.showLocation?userLocation:null;
+                sbPost = await sbCreatePost(currentUser.id, fullContent || '', imageUrl, null, null, postLoc);
             } catch(e) {
                 console.error('Create post:', e);
                 showToast('Post failed to save: ' + (e.message || e.details || 'Unknown error'));
@@ -3188,7 +3204,8 @@ $('#openPostModal').addEventListener('click',function(){
         var myUid=currentUser?currentUser.id:'';
         var postHtml='<div class="card feed-post"><div class="post-header"><img src="'+getMyAvatar()+'" alt="You" class="post-avatar" data-person-id="'+myUid+'">';
         postHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username" data-person-id="'+myUid+'">'+myName+'</h4><span class="post-time">just now</span></div>';
-        postHtml+='<div class="post-badges"><span class="badge badge-green"><i class="fas fa-user"></i> You</span></div></div></div>';
+        var myLocBadge=settings.showLocation&&userLocation?'<span class="badge badge-blue"><i class="fas fa-map-marker-alt"></i> '+userLocation+'</span>':'';
+        postHtml+='<div class="post-badges">'+myLocBadge+'</div></div></div>';
         var tagsHtml='';
         if(postTags.length>0){tagsHtml='<div class="post-tags">';postTags.forEach(function(t){tagsHtml+='<span class="skill-tag">#'+t+'</span>';});tagsHtml+='</div>';}
         postHtml+='<div class="post-description">'+(text?'<p>'+text.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>':'')+mediaHtml+linkHtml+'</div>'+tagsHtml;

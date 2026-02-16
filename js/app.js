@@ -206,22 +206,32 @@ async function initApp() {
     populateUserUI();
     showApp();
     if(currentUser.cover_photo_url) { state.coverPhoto = currentUser.cover_photo_url; applyCoverPhoto(); }
+    // Load user's existing likes from Supabase so UI reflects correct state
+    try {
+        var myLikes = await sbGetUserLikes(currentUser.id, 'post');
+        myLikes.forEach(function(l){ state.likedPosts[l.target_id] = true; });
+    } catch(e){ console.warn('Could not load user likes:', e); }
     await loadFollowCounts();
     await loadGroups();
     generatePosts();
-    renderSuggestions(); // will now fetch from Supabase
-
-    // Quick DB health check — log any missing tables
-    (async function(){
-        var tables=['posts','comments','likes','follows','groups','group_members','notifications'];
-        for(var i=0;i<tables.length;i++){
-            try{
-                var r=await sb.from(tables[i]).select('*',{count:'exact',head:true});
-                if(r.error) console.warn('DB table "'+tables[i]+'" error:',r.error.message);
-                else console.log('DB table "'+tables[i]+'": OK ('+r.count+' rows)');
-            }catch(e){console.warn('DB table "'+tables[i]+'" missing or inaccessible:',e);}
-        }
-    })();
+    renderSuggestions();
+    // Load notifications from Supabase
+    try {
+        var notifs = await sbGetNotifications(currentUser.id);
+        state.notifications = (notifs||[]).map(function(n){
+            return { type: n.type||'system', text: n.content||n.message||'', time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
+        });
+        updateNotifBadge();
+        renderNotifications();
+    } catch(e){ console.warn('Could not load notifications:', e); }
+    // Subscribe to realtime notifications
+    try {
+        sbSubscribeNotifications(currentUser.id, function(newNotif){
+            state.notifications.unshift({ type: newNotif.type||'system', text: newNotif.content||newNotif.message||'', time: 'just now', read: false, id: newNotif.id });
+            updateNotifBadge();
+            renderNotifications();
+        });
+    } catch(e){ console.warn('Realtime notifications error:', e); }
 }
 
 // Listen for auth state changes
@@ -340,7 +350,6 @@ function findPostFolder(pid){var s=String(pid);for(var i=0;i<savedFolders.length
 // ======================== DATA ========================
 // All user/group/message data is loaded from Supabase. No fake data.
 var groups = []; // Loaded from Supabase
-var msgContacts = []; // Messages not yet implemented
 
 var badgeTypes = [
     {text:'Trending',icon:'fa-fire',cls:'badge-red'},{text:'Creator',icon:'fa-camera',cls:'badge-purple'},
@@ -357,19 +366,6 @@ async function loadGroups() {
     } catch(e) { console.error('loadGroups:', e); groups = []; }
 }
 
-// Stubs for removed fake data (prevents crashes in code that still references these)
-var people = [];
-var friendsOf = {};
-var personFollowers = {};
-var personFollowing = {};
-var postLikers = {};
-var postComments = {};
-var commentTexts = [];
-var postTexts = [];
-var tagSets = [];
-function getLikers(){ return []; }
-function getComments(){ return []; }
-function getFriendsOfFollowed(){ return []; }
 function getMyGroupRole(group){ return currentUser && group.owner && group.owner.id === currentUser.id ? 'Admin' : (state.joinedGroups[group.id] ? 'Member' : null); }
 function getPersonGroupRole(){ return 'Member'; }
 function roleRank(role){ return role==='Admin'?4:role==='Co-Admin'?3:role==='Moderator'?2:1; }
@@ -570,6 +566,7 @@ function navigateTo(page){
         state.notifications.forEach(function(n){n.read=true;});
         updateNotifBadge();
         renderNotifications();
+        if(currentUser) sbMarkNotificationsRead(currentUser.id).catch(function(){});
     }
     if(page==='groups') renderGroups();
     if(page==='shop') renderShop();
@@ -937,7 +934,7 @@ function handleShare(btn){
 function buildCommentHtml(cid,name,img,text,likes,isReply){
     var liked=likedComments[cid];var lc=likes+(liked?1:0);
     var disliked=dislikedComments[cid];var dc=disliked?1:0;
-    var avatarSrc=DEFAULT_AVATAR;
+    var avatarSrc=img||DEFAULT_AVATAR;
     var sz=isReply?'28':'32';
     var h='<div class="comment-item'+(isReply?' comment-reply':'')+'" data-cid="'+cid+'">';
     h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;">';
@@ -951,44 +948,52 @@ function buildCommentHtml(cid,name,img,text,likes,isReply){
     return h;
 }
 
-function getRepliesForComment(parentCid){return commentReplies[parentCid]||[];}
-function getRootParent(cid){
-    // Walk up to find the original top-level parent
-    var replies=Object.keys(commentReplies);
-    for(var i=0;i<replies.length;i++){
-        var arr=commentReplies[replies[i]];
-        for(var j=0;j<arr.length;j++){if(arr[j].cid===cid)return getRootParent(replies[i]);}
-    }
-    return cid;
-}
 
-function renderCommentThread(cid,name,img,text,likes,showAllReplies){
-    var h=buildCommentHtml(cid,name,img,text,likes,false);
-    var replies=getRepliesForComment(cid);
-    var visibleReplies=showAllReplies?replies:replies.slice(0,2);
-    visibleReplies.forEach(function(r){h+=buildCommentHtml(r.cid,r.name,r.img,r.text,0,true);});
-    if(!showAllReplies&&replies.length>2) h+='<a href="#" class="view-more-replies" data-parent="'+cid+'" style="font-size:12px;color:var(--primary);margin-left:42px;display:block;margin-bottom:8px;">View more replies ('+replies.length+')</a>';
-    return h;
-}
-
-function showComments(postId,countEl,sortMode){
+async function showComments(postId,countEl,sortMode){
     sortMode=sortMode||settings.commentOrder||'top';
-    var gen=[];
-    var user=state.comments[postId]||[];
     var allComments=[];
-    gen.forEach(function(c,i){allComments.push({cid:postId+'-g-'+i,name:c.person.name,img:c.person.img,text:c.text,likes:c.likes});});
-    var _myName=currentUser?(currentUser.display_name||currentUser.username):'You';
-    user.forEach(function(t,i){allComments.push({cid:postId+'-u-'+i,name:_myName,img:null,text:t,likes:0});});
-    if(sortMode==='top'){allComments.sort(function(a,b){return b.likes-a.likes;});}
-    else if(sortMode==='newest'){allComments.reverse();}
+    var isUUID=/^[0-9a-f]{8}-/.test(postId);
+    // Load comments from Supabase for real posts
+    if(isUUID){
+        try{
+            var sbComments=await sbGetComments(postId,sortMode);
+            (sbComments||[]).forEach(function(c){
+                var authorName=(c.author?c.author.display_name||c.author.username:'User');
+                var authorAvatar=(c.author?c.author.avatar_url:null);
+                var likeCount=(c.likes&&c.likes[0])?c.likes[0].count:0;
+                allComments.push({cid:c.id,name:authorName,img:authorAvatar,text:c.content,likes:likeCount,parentId:c.parent_comment_id,authorId:c.author_id});
+            });
+        }catch(e){console.error('Load comments error:',e);}
+    }
+    // Also include local-only comments (for non-UUID posts or as fallback)
+    if(!isUUID){
+        var user=state.comments[postId]||[];
+        var _myName=currentUser?(currentUser.display_name||currentUser.username):'You';
+        user.forEach(function(t,i){allComments.push({cid:postId+'-u-'+i,name:_myName,img:null,text:t,likes:0,parentId:null});});
+        if(sortMode==='top'){allComments.sort(function(a,b){return b.likes-a.likes;});}
+        else if(sortMode==='newest'){allComments.reverse();}
+    }
+    // Separate top-level and replies
+    var topLevel=allComments.filter(function(c){return !c.parentId;});
+    var repliesByParent={};
+    allComments.filter(function(c){return c.parentId;}).forEach(function(c){
+        if(!repliesByParent[c.parentId])repliesByParent[c.parentId]=[];
+        repliesByParent[c.parentId].push(c);
+    });
     var tabsHtml='<div class="search-tabs" style="margin-bottom:12px;">';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='top'?' active':'')+'" data-sort="top">Top Comments</button>';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='newest'?' active':'')+'" data-sort="newest">Newest</button>';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='oldest'?' active':'')+'" data-sort="oldest">Oldest</button>';
     tabsHtml+='</div>';
     var html='<div class="modal-header"><h3>Comments</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">'+tabsHtml+'<div id="commentsList">';
-    if(!allComments.length) html+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
-    allComments.forEach(function(c){html+=renderCommentThread(c.cid,c.name,c.img,c.text,c.likes,false);});
+    if(!topLevel.length) html+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
+    topLevel.forEach(function(c){
+        html+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false);
+        var replies=repliesByParent[c.cid]||[];
+        var visibleReplies=replies.slice(0,2);
+        visibleReplies.forEach(function(r){html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true);});
+        if(replies.length>2) html+='<a href="#" class="view-more-replies" data-parent="'+c.cid+'" style="font-size:12px;color:var(--primary);margin-left:42px;display:block;margin-bottom:8px;">View more replies ('+replies.length+')</a>';
+    });
     html+='</div><div style="display:flex;gap:10px;margin-top:12px;"><input type="text" class="post-input" id="commentInput" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary" id="postCommentBtn">Post</button></div><div id="replyIndicator" style="display:none;font-size:12px;color:var(--primary);margin-top:4px;">Replying to <span id="replyToName"></span> <button id="cancelReply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div></div>';
     showModal(html);
     bindCommentLikes();
@@ -1003,7 +1008,7 @@ function showComments(postId,countEl,sortMode){
             if(btn._bound)return;btn._bound=true;
             btn.addEventListener('click',function(){
                 var cid=btn.dataset.cid;
-                replyTarget=getRootParent(cid);
+                replyTarget=cid;
                 var item=btn.closest('.comment-item');
                 var name=item?item.querySelector('strong').textContent:'';
                 document.getElementById('replyIndicator').style.display='block';
@@ -1018,9 +1023,9 @@ function showComments(postId,countEl,sortMode){
         link.addEventListener('click',function(e){
             e.preventDefault();
             var parentCid=link.dataset.parent;
-            var replies=getRepliesForComment(parentCid);
+            var replies=repliesByParent[parentCid]||[];
             var extraHtml='';
-            replies.slice(2).forEach(function(r){extraHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,0,true);});
+            replies.slice(2).forEach(function(r){extraHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true);});
             link.insertAdjacentHTML('beforebegin',extraHtml);
             link.remove();
             bindCommentLikes();
@@ -1035,35 +1040,24 @@ function showComments(postId,countEl,sortMode){
     });
     document.getElementById('postCommentBtn').addEventListener('click', async function(){
         var input=document.getElementById('commentInput');var text=input.value.trim();if(!text)return;
-        var isUUID = /^[0-9a-f]{8}-/.test(postId);
-        var myName = currentUser ? (currentUser.display_name || currentUser.username) : 'You';
+
+        if(isUUID && currentUser) {
+            try {
+                var parentCid = replyTarget && /^[0-9a-f]{8}-/.test(replyTarget) ? replyTarget : null;
+                await sbCreateComment(postId, currentUser.id, text, parentCid);
+            } catch(e) { console.error('Comment error:', e); showToast('Comment failed: '+(e.message||'Unknown error')); return; }
+        } else {
+            if(!state.comments[postId])state.comments[postId]=[];
+            state.comments[postId].push(text);
+        }
 
         if(replyTarget){
-            if(!commentReplies[replyTarget])commentReplies[replyTarget]=[];
-            var rid=replyTarget+'-r-'+commentReplies[replyTarget].length;
-            // If UUID post, also save reply to Supabase
-            if(isUUID && currentUser) {
-                try {
-                    var parentCid = /^[0-9a-f]{8}-/.test(replyTarget) ? replyTarget : null;
-                    await sbCreateComment(postId, currentUser.id, text, parentCid);
-                } catch(e) { console.error('Reply error:', e); }
-            }
-            commentReplies[replyTarget].push({cid:rid,name:myName,img:null,text:text});
             if(!state.replyCoinPosts[postId]){state.replyCoinPosts[postId]=true;state.coins+=2;updateCoins();}
-            var _grm=postId.match(/^gvp?-(\d+)-/);if(_grm){var _gid=parseInt(_grm[1]);if(canEarnGroupReplyCoin(_gid,postId)){addGroupCoins(_gid,2);trackGroupReplyCoin(_gid,postId);}}
             replyTarget=null;
             document.getElementById('replyIndicator').style.display='none';
             input.placeholder='Write a comment...';
         }else{
-            // Save comment to Supabase for UUID posts
-            if(isUUID && currentUser) {
-                try { await sbCreateComment(postId, currentUser.id, text); }
-                catch(e) { console.error('Comment error:', e); }
-            }
-            if(!state.comments[postId])state.comments[postId]=[];
-            state.comments[postId].push(text);
             if(!state.commentCoinPosts[postId]){state.commentCoinPosts[postId]=true;state.coins+=2;updateCoins();}
-            var _gcm=postId.match(/^gvp?-(\d+)-/);if(_gcm){var _gid2=parseInt(_gcm[1]);if(canEarnGroupCommentCoin(_gid2,postId)){addGroupCoins(_gid2,2);trackGroupCommentCoin(_gid2,postId);}}
         }
         input.value='';if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
         renderInlineComments(postId);
@@ -1103,39 +1097,51 @@ function bindCommentLikes(){
     });
 }
 
-function renderInlineComments(postId){
+async function renderInlineComments(postId){
     var el=document.querySelector('.post-comments[data-post-id="'+postId+'"]');
     if(!el)return;
-    var gen=[];
-    var user=state.comments[postId]||[];
-    var all=gen.map(function(c,i){return{name:c.person.name,img:c.person.img,text:c.text,likes:c.likes,cid:postId+'-g-'+i};});
-    var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';
-    user.forEach(function(t,i){all.push({name:_myN,img:null,text:t,likes:0,cid:postId+'-u-'+i});});
+    var all=[];
+    var isUUID=/^[0-9a-f]{8}-/.test(postId);
+    if(isUUID){
+        try{
+            var sbComments=await sbGetComments(postId,'newest');
+            (sbComments||[]).forEach(function(c){
+                if(!c.parent_comment_id){
+                    var authorName=(c.author?c.author.display_name||c.author.username:'User');
+                    var authorAvatar=(c.author?c.author.avatar_url:null);
+                    var likeCount=(c.likes&&c.likes[0])?c.likes[0].count:0;
+                    all.push({name:authorName,img:authorAvatar,text:c.content,likes:likeCount,cid:c.id});
+                }
+            });
+        }catch(e){}
+    } else {
+        var user=state.comments[postId]||[];
+        var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';
+        user.forEach(function(t,i){all.push({name:_myN,img:null,text:t,likes:0,cid:postId+'-u-'+i});});
+    }
     if(!all.length){el.innerHTML='';el.style.padding='';return;}
     var shown=all.slice(0,3);
     var html='';
     shown.forEach(function(c){
         var liked=likedComments[c.cid];var lc=c.likes+(liked?1:0);
         var disliked=dislikedComments[c.cid];var dc=disliked?1:0;
-        var avatarSrc=DEFAULT_AVATAR;
-        html+='<div class="inline-comment"><img src="'+avatarSrc+'" class="inline-comment-avatar"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
-        var replies=getRepliesForComment(c.cid);
-        if(replies.length) html+='<a href="#" class="show-more-replies-inline" data-postid="'+postId+'" style="font-size:11px;color:var(--primary);display:block;margin-left:34px;margin-bottom:6px;">View replies ('+replies.length+')</a>';
+        var avatarSrc=c.img||DEFAULT_AVATAR;
+        html+='<div class="inline-comment"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
     });
     if(all.length>3) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
     el.style.padding='0 20px 14px';el.innerHTML=html;
     el.querySelectorAll('.inline-comment-like').forEach(function(btn){
         btn.onclick=function(e){
             e.stopPropagation();var cid=btn.dataset.cid;var liked=likedComments[cid];
-            var gen=[];var base=0;
-            gen.forEach(function(c,i){if(postId+'-g-'+i===cid)base=c.likes;});
+            var base=parseInt(btn.querySelector('span')?btn.querySelector('span').textContent:btn.lastChild.textContent)||0;
             var disBtn=btn.parentNode.querySelector('.inline-comment-dislike');
-            if(liked){delete likedComments[cid];btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-up';btn.lastChild.textContent=base;}
+            if(liked){delete likedComments[cid];btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-up';btn.lastChild.textContent=Math.max(0,base-1);}
             else{
                 if(dislikedComments[cid]&&disBtn){delete dislikedComments[cid];disBtn.style.color='#999';disBtn.querySelector('i').className='far fa-thumbs-down';disBtn.lastChild.textContent=0;}
                 likedComments[cid]=true;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-up';btn.lastChild.textContent=base+1;
-                var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
-                if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                if(!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                // Like comment in Supabase
+                if(/^[0-9a-f]{8}-/.test(cid)&&currentUser){sbToggleLike(currentUser.id,'comment',cid).catch(function(){});}
             }
         };
     });
@@ -1145,10 +1151,9 @@ function renderInlineComments(postId){
             var likeBtn=btn.parentNode.querySelector('.inline-comment-like');
             if(disliked){delete dislikedComments[cid];btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-down';btn.lastChild.textContent=0;}
             else{
-                if(likedComments[cid]&&likeBtn){delete likedComments[cid];var gen2=[];var base2=0;gen2.forEach(function(c,i){if(postId+'-g-'+i===cid)base2=c.likes;});likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';likeBtn.lastChild.textContent=base2;}
+                if(likedComments[cid]&&likeBtn){delete likedComments[cid];likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';var lv=parseInt(likeBtn.lastChild.textContent)||0;likeBtn.lastChild.textContent=Math.max(0,lv-1);}
                 dislikedComments[cid]=true;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-down';btn.lastChild.textContent=1;
-                var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
-                if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                if(!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
             }
         };
     });
@@ -1156,7 +1161,6 @@ function renderInlineComments(postId){
         btn.onclick=function(e){
             e.stopPropagation();
             showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));
-            // Trigger reply to this comment after modal opens
             setTimeout(function(){
                 var rb=document.querySelector('.comment-reply-btn[data-cid="'+btn.dataset.cid+'"]');
                 if(rb)rb.click();
@@ -1165,9 +1169,6 @@ function renderInlineComments(postId){
     });
     var link=el.querySelector('.show-more-comments');
     if(link)link.addEventListener('click',function(e){e.preventDefault();showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));});
-    el.querySelectorAll('.show-more-replies-inline').forEach(function(link){
-        link.addEventListener('click',function(e){e.preventDefault();showComments(postId,el.closest('.feed-post').querySelector('.comment-btn span'));});
-    });
 }
 
 async function showProfileModal(person){
@@ -2478,21 +2479,31 @@ function renderFeed(tab){
         tags.forEach(function(t){html+='<span class="skill-tag">'+t+'</span>';});
         html+='</div>';
         if(p.images){var imgs=p.images;html+='<div class="post-media-grid pm-count-'+imgs.length+'">';imgs.forEach(function(src){html+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});html+='</div>';}
-        var likers=[];// likers loaded on demand
         html+='<div class="post-actions"><div class="action-left">';
-        html+='<button class="action-btn like-btn" data-post-id="'+i+'"><i class="'+(state.likedPosts[i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
+        html+='<button class="action-btn like-btn'+(state.likedPosts[i]?' liked':'')+'" data-post-id="'+i+'"><i class="'+(state.likedPosts[i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
         html+='<button class="action-btn dislike-btn" data-post-id="'+i+'"><i class="'+(state.dislikedPosts[i]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
         html+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+commentCount+'</span></button>';
         html+='<button class="action-btn share-btn"><i class="fas fa-share-from-square"></i><span>'+shares+'</span></button>';
-        html+='</div><div class="action-right"><div class="liked-avatars" data-post-id="'+i+'">';
-        for(var a=0;a<Math.min(3,likers.length);a++){html+='<img src="images/default-avatar.svg" alt="'+likers[a].name+'">';}
-        html+='</div></div></div>';
+        html+='</div><div class="action-right"><div class="liked-avatars" data-post-id="'+i+'"></div></div></div>';
         html+='<div class="post-comments" data-post-id="'+i+'"></div>';
         html+='</div>';
     });
     container.innerHTML=html;
     bindPostEvents();
     posts.forEach(function(p){renderInlineComments(p.idx);});
+    // Load liker avatars asynchronously for Supabase posts
+    posts.forEach(function(p){
+        if(/^[0-9a-f]{8}-/.test(p.idx)){
+            sbGetLikers('post',p.idx,3).then(function(likers){
+                var avatarEl=container.querySelector('.liked-avatars[data-post-id="'+p.idx+'"]');
+                if(avatarEl&&likers&&likers.length){
+                    var h='';
+                    likers.forEach(function(l){h+='<img src="'+(l.avatar_url||DEFAULT_AVATAR)+'" alt="'+(l.display_name||l.username||'User')+'" style="object-fit:cover;">';});
+                    avatarEl.innerHTML=h;
+                }
+            }).catch(function(){});
+        }
+    });
     // Update tab active state
     $$('#feedTabs .search-tab').forEach(function(t){t.classList.toggle('active',t.dataset.feedtab===tab);});
 }
@@ -2642,18 +2653,22 @@ function bindPostEvents(){
     bindLikeCountClicks('#feedContainer');
 }
 
-function showLikersModal(postId){
-    var likers=postLikers[postId];
-    if(!likers||likers.length===0) return;
-    var publicLikers=likers.filter(function(p){return !p.priv;});
-    var privateCt=likers.length-publicLikers.length;
-    var h='<div class="modal-header"><h3><i class="fas fa-thumbs-up" style="color:var(--primary);margin-right:8px;"></i>Liked by</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><ul class="follow-list" style="max-height:400px;overflow-y:auto;">';
-    publicLikers.forEach(function(p){
-        h+='<li class="follow-list-item"><img src="images/default-avatar.svg" alt="'+p.name+'"><div class="follow-list-info"><h4>'+p.name+'</h4><p>'+p.bio+'</p></div></li>';
-    });
-    if(privateCt>0){
-        h+='<li class="follow-list-item" style="opacity:.5;"><div style="width:44px;height:44px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-lock" style="color:#999;"></i></div><div class="follow-list-info"><h4>'+privateCt+' private user'+(privateCt>1?'s':'')+'</h4><p>Followers set to private</p></div></li>';
+async function showLikersModal(postId){
+    var isUUID=/^[0-9a-f]{8}-/.test(postId);
+    var likers=[];
+    if(isUUID){
+        try{likers=await sbGetLikers('post',postId,50);}catch(e){console.error('Load likers:',e);}
     }
+    if(!likers||likers.length===0){
+        showModal('<div class="modal-header"><h3><i class="fas fa-thumbs-up" style="color:var(--primary);margin-right:8px;"></i>Liked by</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="color:#777;text-align:center;">No likes yet.</p></div>');
+        return;
+    }
+    var h='<div class="modal-header"><h3><i class="fas fa-thumbs-up" style="color:var(--primary);margin-right:8px;"></i>Liked by</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><ul class="follow-list" style="max-height:400px;overflow-y:auto;">';
+    likers.forEach(function(p){
+        var name=p.display_name||p.username||'User';
+        var avatar=p.avatar_url||DEFAULT_AVATAR;
+        h+='<li class="follow-list-item"><img src="'+avatar+'" alt="'+name+'" style="object-fit:cover;"><div class="follow-list-info"><h4>'+name+'</h4></div></li>';
+    });
     h+='</ul></div>';
     showModal(h);
 }

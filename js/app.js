@@ -404,6 +404,7 @@ function saveState(){
         groupActiveSkin:state.groupActiveSkin,groupActivePremiumSkin:state.groupActivePremiumSkin,
         premiumBgUrl:_bk?_bk.bgImage:premiumBgImage,
         premiumBgOverlay:_bk?_bk.bgOverlay:premiumBgOverlay,
+        premiumBgDarkness:_bk?_bk.bgDarkness:premiumBgDarkness,
         settings:settings
     };
     try{localStorage.setItem(key,JSON.stringify(save));}catch(e){console.warn('localStorage save failed (quota?):', e.message);}
@@ -428,6 +429,7 @@ function syncSkinDataToSupabase(){
             activeCoinSkin:state.activeCoinSkin||null,
             premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
             premiumBgOverlay:(_bk?_bk.bgOverlay:premiumBgOverlay)!=null?(_bk?_bk.bgOverlay:premiumBgOverlay):0,
+            premiumBgDarkness:(_bk?_bk.bgDarkness:premiumBgDarkness)!=null?(_bk?_bk.bgDarkness:premiumBgDarkness):0,
             ownedSkins:state.ownedSkins||{},
             ownedPremiumSkins:state.ownedPremiumSkins||{},
             ownedFonts:state.ownedFonts||{},
@@ -459,6 +461,7 @@ async function loadSkinDataFromSupabase(){
         if(sd.premiumBgUrl) premiumBgImage=sd.premiumBgUrl;
         if(sd.premiumBgOverlay!==undefined) premiumBgOverlay=sd.premiumBgOverlay;
         else if(sd.premiumBgSaturation!==undefined) premiumBgOverlay=0; // migrate old saturation data
+        if(sd.premiumBgDarkness!==undefined) premiumBgDarkness=sd.premiumBgDarkness;
         if(sd.ownedSkins) Object.assign(state.ownedSkins,sd.ownedSkins);
         if(sd.ownedPremiumSkins) Object.assign(state.ownedPremiumSkins,sd.ownedPremiumSkins);
         if(sd.ownedFonts) Object.assign(state.ownedFonts,sd.ownedFonts);
@@ -503,6 +506,7 @@ function loadState(){
         if(save.premiumBgUrl) premiumBgImage=save.premiumBgUrl;
         if(save.premiumBgOverlay!==undefined) premiumBgOverlay=save.premiumBgOverlay;
         else if(save.premiumBgSaturation!==undefined) premiumBgOverlay=0; // migrate old data
+        if(save.premiumBgDarkness!==undefined) premiumBgDarkness=save.premiumBgDarkness;
         if(save.settings){
             settings.darkMode=!!save.settings.darkMode;
             settings.notifSound=save.settings.notifSound!==false;
@@ -786,7 +790,7 @@ var _navCurrent='home';var _navPrev='home';var _navFromPopstate=false;
 function navigateTo(page,skipPush){
     // Restore user's skin/font/template when leaving profile view
     if(_pvSaved&&page!=='profile-view'){
-        premiumBgImage=_pvSaved.bgImage;premiumBgOverlay=_pvSaved.bgOverlay;
+        premiumBgImage=_pvSaved.bgImage;premiumBgOverlay=_pvSaved.bgOverlay;premiumBgDarkness=_pvSaved.bgDarkness||0;
         state.activePremiumSkin=_pvSaved.premiumSkin||null;
         applySkin(_pvSaved.skin||null,true);
         if(_pvSaved.premiumSkin)applyPremiumSkin(_pvSaved.premiumSkin,true);
@@ -795,7 +799,7 @@ function navigateTo(page,skipPush){
     }
     // Restore user's skin when leaving group view
     if(_gvSaved){
-        premiumBgImage=_gvSaved.bgImage;premiumBgOverlay=_gvSaved.bgOverlay;
+        premiumBgImage=_gvSaved.bgImage;premiumBgOverlay=_gvSaved.bgOverlay;premiumBgDarkness=_gvSaved.bgDarkness||0;
         if(_gvSaved.premiumSkin) applyPremiumSkin(_gvSaved.premiumSkin,true);
         else{applySkin(_gvSaved.skin||null,true);updatePremiumBg();}
         _gvSaved=null;
@@ -1631,7 +1635,7 @@ function profileToPerson(p){
         skin:sd.activeSkin||null,
         font:sd.activeFont||null,
         template:sd.activeTemplate||null,
-        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,overlay:sd.premiumBgOverlay!=null?sd.premiumBgOverlay:0}:null
+        premiumBg:sd.premiumBgUrl?{src:sd.premiumBgUrl,overlay:sd.premiumBgOverlay!=null?sd.premiumBgOverlay:0,darkness:sd.premiumBgDarkness!=null?sd.premiumBgDarkness:0}:null
     };
 }
 // ======================== PROFILE VIEW PAGE ========================
@@ -1650,12 +1654,12 @@ async function showProfileView(person){
     else { try{ var fc=await sbGetFollowCounts(person.id); following=fc.following; followers=fc.followers; }catch(e){} }
 
     // Apply viewed person's skin/font/template (silent, don't change state)
-    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay};
+    _pvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,font:state.activeFont,tpl:state.activeTemplate,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness};
     if(!isMe){
         if(person.premiumSkin){
             applyPremiumSkin(person.premiumSkin,true);
-            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgOverlay=person.premiumBg.overlay!=null?person.premiumBg.overlay:0;}
-            else{premiumBgImage=null;premiumBgOverlay=0;}
+            if(person.premiumBg){premiumBgImage=person.premiumBg.src;premiumBgOverlay=person.premiumBg.overlay!=null?person.premiumBg.overlay:0;premiumBgDarkness=person.premiumBg.darkness!=null?person.premiumBg.darkness:0;}
+            else{premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;}
             // Temporarily set activePremiumSkin so updatePremiumBg shows the bg
             state.activePremiumSkin=person.premiumSkin;
             updatePremiumBg();
@@ -3991,7 +3995,7 @@ function applyGroupSkin(groupId){
     var grp=groups.find(function(g){return g.id===groupId;});
     var hasCover=grp&&grp.coverPhoto;
     // Save personal skin state once when entering group view
-    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay};
+    if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness};
     // Hide premium bg in group view
     var _bgLayer=document.getElementById('premiumBgLayer');if(_bgLayer)_bgLayer.classList.remove('active');
     // Clear group-specific classes
@@ -4142,6 +4146,7 @@ function applyNavStyle(nsId,silent){
 // Premium background (runtime only, no persistence)
 var premiumBgImage=null;
 var premiumBgOverlay=0;
+var premiumBgDarkness=0;
 
 function updatePremiumBg(){
     var layer=document.getElementById('premiumBgLayer');
@@ -4150,8 +4155,9 @@ function updatePremiumBg(){
         layer.style.backgroundImage='url('+premiumBgImage+')';
         layer.style.filter='';
         var overlay=document.getElementById('premiumBgOverlay');
-        // premiumBgOverlay is 0-0.8 range; convert to 0-20px blur
         if(overlay){var blurPx=Math.round(premiumBgOverlay*25);overlay.style.backdropFilter='blur('+blurPx+'px)';overlay.style.webkitBackdropFilter='blur('+blurPx+'px)';}
+        var darknessEl=document.getElementById('premiumBgDarkness');
+        if(darknessEl) darknessEl.style.opacity=premiumBgDarkness;
         layer.classList.add('active');
         document.body.classList.add('has-premium-bg');
     } else {
@@ -4240,6 +4246,10 @@ function renderMySkins(){
         bgHtml+='</div>';
         if(premiumBgImage){
             bgHtml+='<div style="margin-top:12px;">';
+            bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-moon"></i>Darkness: <span id="darknessValLabel">'+Math.round(premiumBgDarkness*100)+'%</span></label>';
+            bgHtml+='<input type="range" id="premiumBgDarknessSlider" min="0" max="80" value="'+Math.round(premiumBgDarkness*100)+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
+            bgHtml+='</div>';
+            bgHtml+='<div style="margin-top:10px;">';
             bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-droplet"></i>Frosted Glass: <span id="overlayValLabel">'+Math.round(premiumBgOverlay*100)+'%</span></label>';
             bgHtml+='<input type="range" id="premiumBgOverlaySlider" min="0" max="80" value="'+Math.round(premiumBgOverlay*100)+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
             bgHtml+='</div>';
@@ -4271,7 +4281,16 @@ function renderMySkins(){
     }
     var bgRemoveBtn=document.getElementById('premiumBgRemove');
     if(bgRemoveBtn){
-        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgOverlay=0;updatePremiumBg();renderMySkins();saveState();});
+        bgRemoveBtn.addEventListener('click',function(){premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;updatePremiumBg();renderMySkins();saveState();});
+    }
+    var darknessSlider=document.getElementById('premiumBgDarknessSlider');
+    if(darknessSlider){
+        darknessSlider.addEventListener('input',function(){
+            premiumBgDarkness=parseInt(darknessSlider.value)/100;
+            document.getElementById('darknessValLabel').textContent=Math.round(premiumBgDarkness*100)+'%';
+            updatePremiumBg();
+        });
+        darknessSlider.addEventListener('change',function(){saveState();});
     }
     var overlaySlider=document.getElementById('premiumBgOverlaySlider');
     if(overlaySlider){

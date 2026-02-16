@@ -216,6 +216,11 @@ async function initApp() {
         var myLikes = await sbGetUserLikes(currentUser.id, 'post');
         myLikes.forEach(function(l){ state.likedPosts[l.target_id] = true; });
     } catch(e){ console.warn('Could not load user likes:', e); }
+    // Load previous avatar uploads from Supabase storage
+    try {
+        var prevAvatars = await sbListUserAvatars(currentUser.id);
+        state.photos.profile = prevAvatars.map(function(a){ return { src: a.src, date: a.date }; });
+    } catch(e){ console.warn('Could not load avatar history:', e); }
     await loadFollowCounts();
     await loadGroups();
     generatePosts();
@@ -2270,6 +2275,7 @@ $('#avatarEditBtn').addEventListener('click',function(e){
         thumb.addEventListener('click',function(){
             var src=photos[parseInt(thumb.dataset.idx)].src;
             syncAllAvatars(src);
+            if(currentUser) sbUpdateProfile(currentUser.id, { avatar_url: src }).catch(function(e){ console.error('Avatar select error:', e); });
             closeModal();
         });
     });

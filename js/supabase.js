@@ -434,14 +434,27 @@ async function sbUploadFile(bucket, path, file) {
 
 async function sbUploadAvatar(userId, file) {
   const ext = file.name.split('.').pop();
-  const path = `${userId}/avatar.${ext}`;
+  const path = `${userId}/avatar-${Date.now()}.${ext}`;
   return sbUploadFile('avatars', path, file);
 }
 
 async function sbUploadCover(userId, file) {
   const ext = file.name.split('.').pop();
-  const path = `${userId}/cover.${ext}`;
+  const path = `${userId}/cover-${Date.now()}.${ext}`;
   return sbUploadFile('avatars', path, file);
+}
+
+async function sbListUserAvatars(userId) {
+  const { data, error } = await sb.storage
+    .from('avatars')
+    .list(userId, { sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) throw error;
+  return (data || [])
+    .filter(f => f.name.startsWith('avatar-'))
+    .map(f => {
+      const { data: urlData } = sb.storage.from('avatars').getPublicUrl(userId + '/' + f.name);
+      return { src: urlData.publicUrl + '?t=' + Date.now(), date: new Date(f.created_at).getTime(), name: f.name };
+    });
 }
 
 async function sbUploadPostImage(userId, file) {

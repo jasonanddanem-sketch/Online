@@ -354,6 +354,39 @@ async function sbUnfollow(followerId, followedId) {
   if (error) throw error;
 }
 
+async function sbGetFriendsOfFriends(userId, limit = 30) {
+  // Get who I follow
+  const { data: myFollows } = await sb.from('follows')
+    .select('followed_id')
+    .eq('follower_id', userId);
+  const myFollowedIds = (myFollows || []).map(f => f.followed_id);
+  if (!myFollowedIds.length) return [];
+
+  // Get who my follows follow
+  const { data: fofFollows } = await sb.from('follows')
+    .select('followed_id')
+    .in('follower_id', myFollowedIds)
+    .not('followed_id', 'eq', userId);
+  const fofIds = [...new Set((fofFollows || []).map(f => f.followed_id))];
+
+  // Get who follows me
+  const { data: myFollowers } = await sb.from('follows')
+    .select('follower_id')
+    .eq('followed_id', userId);
+  const myFollowerIds = (myFollowers || []).map(f => f.follower_id);
+
+  // Exclude self, people I already follow, and my followers
+  const excludeIds = new Set([userId, ...myFollowedIds, ...myFollowerIds]);
+  const suggestIds = fofIds.filter(id => !excludeIds.has(id)).slice(0, limit);
+  if (!suggestIds.length) return [];
+
+  const { data, error } = await sb.from('profiles')
+    .select('id, username, display_name, avatar_url, bio')
+    .in('id', suggestIds);
+  if (error) throw error;
+  return data || [];
+}
+
 async function sbIsFollowing(followerId, followedId) {
   const { data } = await sb.from('follows')
     .select('id')

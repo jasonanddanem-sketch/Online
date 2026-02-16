@@ -3189,18 +3189,23 @@ function profileCardHtml(p){
     var isSelf=currentUser&&p.id===currentUser.id;
     return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4><p class="profile-card-bio">'+bio.substring(0,60)+'</p>'+(isSelf?'':'<button class="btn '+(isFollowed?'btn-outline':'btn-primary')+' profile-follow-btn" data-uid="'+p.id+'">'+(isFollowed?'Following':'Follow')+'</button>')+'</div>';
 }
-async function renderMyNetwork(container){
+async function renderMyNetwork(container,query){
     if(!currentUser){container.innerHTML='';return;}
     var html='';
     try{
         var following=await sbGetFollowing(currentUser.id);
         var followers=await sbGetFollowers(currentUser.id);
-        // Filter out self from both lists
         following=following.filter(function(p){return p&&p.id!==currentUser.id;});
         followers=followers.filter(function(p){return p&&p.id!==currentUser.id;});
+        // Filter by search query if provided
+        if(query){
+            var q=query.toLowerCase();
+            following=following.filter(function(p){return (p.display_name||p.username||'').toLowerCase().indexOf(q)!==-1;});
+            followers=followers.filter(function(p){return (p.display_name||p.username||'').toLowerCase().indexOf(q)!==-1;});
+        }
         if(following.length){html+='<h3 style="margin:16px 0 8px;">Following</h3><div class="search-results-grid">';following.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
         if(followers.length){html+='<h3 style="margin:16px 0 8px;">Followers</h3><div class="search-results-grid">';followers.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
-        if(!following.length&&!followers.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Your network is empty. Follow some people!</p></div>';
+        if(!following.length&&!followers.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>'+(query?'No results for "'+query+'"':'Your network is empty. Follow some people!')+'</p></div>';
     }catch(e){html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Could not load network.</p></div>';}
     container.innerHTML=html;
     bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
@@ -3208,25 +3213,42 @@ async function renderMyNetwork(container){
 async function renderDiscover(container,query){
     var html='';
     try{
-        var profiles=query?await sbSearchProfiles(query,20):await sbGetAllProfiles(50);
-        // Filter out self, people you follow, and people who follow you
-        var networkIds={};
-        if(currentUser){
-            networkIds[currentUser.id]=true;
-            Object.keys(state.followedUsers).forEach(function(k){networkIds[k]=true;});
-            try{var myFollowers=await sbGetFollowers(currentUser.id);myFollowers.forEach(function(f){if(f&&f.id)networkIds[f.id]=true;});}catch(e){}
+        var profiles;
+        if(query){
+            // Search: search ALL profiles on BlipVibe
+            profiles=await sbSearchProfiles(query,30);
+            if(currentUser) profiles=profiles.filter(function(p){return p.id!==currentUser.id;});
+        } else {
+            // No search: show friends-of-friends first, then fill with other users
+            profiles=[];
+            if(currentUser){
+                try{profiles=await sbGetFriendsOfFriends(currentUser.id,20);}catch(e){console.warn('FoF:',e);}
+            }
+            // If not enough friends-of-friends, add other profiles
+            if(profiles.length<10){
+                var all=await sbGetAllProfiles(50);
+                var networkIds={};
+                if(currentUser){
+                    networkIds[currentUser.id]=true;
+                    Object.keys(state.followedUsers).forEach(function(k){networkIds[k]=true;});
+                    try{var myFollowers=await sbGetFollowers(currentUser.id);myFollowers.forEach(function(f){if(f&&f.id)networkIds[f.id]=true;});}catch(e){}
+                }
+                var existing={}; profiles.forEach(function(p){existing[p.id]=true;});
+                var extras=all.filter(function(p){return !networkIds[p.id]&&!existing[p.id];});
+                profiles=profiles.concat(extras);
+            }
         }
-        profiles=profiles.filter(function(p){return !networkIds[p.id];});
-        if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>No users found.</p></div>';
+        if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>'+(query?'No results for "'+query+'"':'No suggestions yet')+'</p></div>';
         else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
-    }catch(e){html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}
+    }catch(e){console.error('renderDiscover:',e);html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}
     container.innerHTML=html;
     bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
 }
 function renderProfiles(tab,query){
     var container=$('#profilesSections');
     if(!container) return;
-    if(tab==='network') renderMyNetwork(container);
+    var t=tab||currentProfileTab||'network';
+    if(t==='network') renderMyNetwork(container,query||'');
     else renderDiscover(container,query||'');
 }
 function bindProfileEvents(c){
@@ -3246,10 +3268,13 @@ $$('#profilesTabs .search-tab').forEach(function(tab){
         tab.classList.add('active');
         currentProfileTab=tab.dataset.ptab;
         $('#profileSearch').value='';
-        renderProfiles();
+        renderProfiles(currentProfileTab);
     });
 });
-$('#profileSearch').addEventListener('input',function(){renderProfiles(this.value);});
+$('#profileSearch').addEventListener('input',function(){
+    var q=this.value.trim();
+    renderProfiles(currentProfileTab,q);
+});
 
 // ======================== SKIN SHOP ========================
 function shopCard(preview,body){return '<div class="skin-card"><div class="skin-preview" style="background:'+preview+';">'+body+'</div>';}

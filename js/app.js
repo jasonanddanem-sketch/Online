@@ -192,9 +192,12 @@ function syncAllAvatars(newSrc) {
 }
 
 // ---- Init app after auth ----
+var _initAppRunning = false;
 async function initApp() {
+    if (_initAppRunning) return;
+    _initAppRunning = true;
     var authUser = await sbGetUser();
-    if (!authUser) { showLogin(); return; }
+    if (!authUser) { _initAppRunning = false; showLogin(); return; }
     currentAuthUser = authUser;
     try {
         currentUser = await sbGetProfile(authUser.id);
@@ -268,6 +271,7 @@ async function initApp() {
     // Load conversations and subscribe to realtime messages
     loadConversations();
     initMessageSubscription();
+    _initAppRunning = false;
 }
 
 // Listen for auth state changes

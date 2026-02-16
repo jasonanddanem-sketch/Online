@@ -53,6 +53,33 @@ async function sbGetUser() {
   return user;
 }
 
+// Ensure a profile row exists for the given auth user.
+// Called after email confirmation when the signup didn't create one.
+async function sbEnsureProfile(authUser) {
+  // Try to fetch existing profile first
+  const { data: existing } = await sb.from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .maybeSingle();
+  if (existing) return existing;
+
+  // No profile yet — create one using metadata from signup
+  const username = authUser.user_metadata?.username || authUser.email.split('@')[0];
+  const { data, error } = await sb.from('profiles')
+    .upsert({
+      id: authUser.id,
+      username: username,
+      display_name: username,
+      bio: '',
+      avatar_url: null,
+      cover_photo_url: null
+    }, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 function sbOnAuthChange(callback) {
   sb.auth.onAuthStateChange((_event, session) => {
     callback(session);

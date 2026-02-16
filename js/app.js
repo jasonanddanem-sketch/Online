@@ -187,8 +187,13 @@ async function initApp() {
     try {
         currentUser = await sbGetProfile(authUser.id);
     } catch (e) {
-        // Profile doesn't exist yet — shouldn't happen if signup worked
-        showLogin(); return;
+        // Profile doesn't exist yet (e.g. email confirmation flow) — create it now
+        try {
+            currentUser = await sbEnsureProfile(authUser);
+        } catch (e2) {
+            console.error('Failed to create profile:', e2);
+            showLogin(); return;
+        }
     }
     populateUserUI();
     showApp();

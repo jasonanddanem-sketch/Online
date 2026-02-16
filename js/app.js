@@ -1539,7 +1539,7 @@ function showMyProfileModal(){
     showModal(html);
     document.getElementById('modalViewMyProfileBtn').addEventListener('click',function(){
         closeModal();
-        showProfileView({id:currentUser?currentUser.id:0,name:currentUser?(currentUser.display_name||currentUser.username):'You',status:currentUser?currentUser.status||'':'',bio:currentUser?currentUser.bio||'':'',img:12,avatar_url:currentUser?currentUser.avatar_url:null,isMe:true});
+        showProfileView({id:currentUser?currentUser.id:0,name:currentUser?(currentUser.display_name||currentUser.username):'You',status:currentUser?currentUser.status||'':'',bio:currentUser?currentUser.bio||'':'',img:12,avatar_url:currentUser?currentUser.avatar_url:null,cover_photo_url:state.coverPhoto||null,isMe:true});
     });
 }
 
@@ -1552,6 +1552,7 @@ function profileToPerson(p){
         status:p.status||'',
         bio:p.bio||'',
         avatar_url:p.avatar_url,
+        cover_photo_url:p.cover_photo_url||null,
         premiumSkin:sd.activePremiumSkin||null,
         skin:sd.activeSkin||null,
         font:sd.activeFont||null,
@@ -1592,7 +1593,8 @@ async function showProfileView(person){
     }
 
     // Cover banner
-    $('#pvCoverBanner').style.backgroundImage='';
+    var coverUrl=person.cover_photo_url||(isMe?state.coverPhoto:null);
+    $('#pvCoverBanner').style.backgroundImage=coverUrl?'url('+coverUrl+')':'';
 
     // Profile card - matches home sidebar style
     var cardHtml='<div class="profile-cover" style="background:linear-gradient(135deg,var(--primary),var(--primary-hover));"></div>';

@@ -4072,18 +4072,18 @@ function renderMySkins(){
     html+='</div>';
     // Premium background controls (only on premium tab with active premium skin)
     if(currentMySkinsTab==='premium'&&state.activePremiumSkin){
-        var bgHtml='<div class="premium-bg-controls" style="margin-top:16px;padding:16px;background:var(--card);border-radius:12px;box-shadow:var(--shadow);">';
-        bgHtml+='<h4 style="margin-bottom:10px;font-size:14px;"><i class="fas fa-image" style="margin-right:6px;color:var(--primary);"></i>Background Image</h4>';
+        var bgHtml='<div class="premium-bg-controls card" style="margin-top:16px;padding:16px;border-radius:12px;">';
+        bgHtml+='<h4 class="card-heading" style="margin-bottom:10px;font-size:14px;"><i class="fas fa-image" style="margin-right:6px;color:var(--primary);"></i>Background Image</h4>';
         bgHtml+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">';
         bgHtml+='<label class="btn btn-primary" style="cursor:pointer;font-size:13px;"><i class="fas fa-upload" style="margin-right:6px;"></i>Upload<input type="file" id="premiumBgUpload" accept="image/*" style="display:none;"></label>';
         if(premiumBgImage){
-            bgHtml+='<button class="btn" id="premiumBgRemove" style="font-size:13px;background:var(--border);color:var(--dark);"><i class="fas fa-trash" style="margin-right:6px;"></i>Remove</button>';
-            bgHtml+='<img src="'+premiumBgImage+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid var(--border);">';
+            bgHtml+='<button class="btn btn-outline" id="premiumBgRemove" style="font-size:13px;"><i class="fas fa-trash" style="margin-right:6px;"></i>Remove</button>';
+            bgHtml+='<img src="'+premiumBgImage+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid currentColor;opacity:.7;">';
         }
         bgHtml+='</div>';
         if(premiumBgImage){
             bgHtml+='<div style="margin-top:12px;">';
-            bgHtml+='<label style="font-size:12px;color:var(--gray);display:flex;align-items:center;gap:8px;"><i class="fas fa-sliders"></i>Saturation: <span id="satValLabel">'+premiumBgSaturation+'%</span></label>';
+            bgHtml+='<label style="font-size:12px;opacity:.7;display:flex;align-items:center;gap:8px;"><i class="fas fa-sliders"></i>Saturation: <span id="satValLabel">'+premiumBgSaturation+'%</span></label>';
             bgHtml+='<input type="range" id="premiumBgSatSlider" min="0" max="200" value="'+premiumBgSaturation+'" style="width:100%;margin-top:6px;accent-color:var(--primary);">';
             bgHtml+='</div>';
         }

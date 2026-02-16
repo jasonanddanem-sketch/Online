@@ -231,6 +231,7 @@ async function initApp() {
         var myPosts = await sbGetUserPosts(currentUser.id, 50);
         state.photos.post = (myPosts||[]).filter(function(p){ return p.image_url; }).map(function(p){ return { src: p.image_url, date: new Date(p.created_at).getTime() }; });
     } catch(e){ console.warn('Could not load post photos:', e); }
+    renderPhotosCard();
     await loadFollowCounts();
     await loadGroups();
     // Load joined groups from group_members table
@@ -2936,7 +2937,6 @@ $('#openPostModal').addEventListener('click',function(){
         var tagsHtml='';
         if(postTags.length>0){tagsHtml='<div class="post-tags">';postTags.forEach(function(t){tagsHtml+='<span class="skill-tag">#'+t+'</span>';});tagsHtml+='</div>';}
         postHtml+='<div class="post-description">'+(text?'<p>'+text.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>':'')+mediaHtml+linkHtml+'</div>'+tagsHtml;
-        var myPostId='my-'+Date.now();
         postHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+myPostId+'"><i class="far fa-thumbs-up"></i><span class="like-count">0</span></button>';
         postHtml+='<button class="action-btn dislike-btn" data-post-id="'+myPostId+'"><i class="far fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
         postHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>0</span></button>';
@@ -2946,7 +2946,7 @@ $('#openPostModal').addEventListener('click',function(){
         closeModal();
         var newPost=container.firstElementChild;
         var likeBtn=newPost.querySelector('.like-btn');
-        likeBtn.addEventListener('click',function(){var countEl=likeBtn.querySelector('.like-count');var count=parseInt(countEl.textContent);var pid=likeBtn.getAttribute('data-post-id');if(state.likedPosts[pid]){delete state.likedPosts[pid];likeBtn.classList.remove('liked');likeBtn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;state.coins--;updateCoins();}else{state.likedPosts[pid]=true;likeBtn.classList.add('liked');likeBtn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;state.coins++;updateCoins();}});
+        likeBtn.addEventListener('click',async function(){var countEl=likeBtn.querySelector('.like-count');var count=parseInt(countEl.textContent);var pid=likeBtn.getAttribute('data-post-id');var isUUID=/^[0-9a-f]{8}-/.test(pid);if(state.likedPosts[pid]){delete state.likedPosts[pid];likeBtn.classList.remove('liked');likeBtn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;state.coins--;updateCoins();if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}};}else{state.likedPosts[pid]=true;likeBtn.classList.add('liked');likeBtn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;state.coins++;updateCoins();if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}}}});
         var dislikeBtn=newPost.querySelector('.dislike-btn');
         dislikeBtn.addEventListener('click',function(){var countEl=dislikeBtn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var pid=dislikeBtn.getAttribute('data-post-id');if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];dislikeBtn.classList.remove('disliked');dislikeBtn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{state.dislikedPosts[pid]=true;dislikeBtn.classList.add('disliked');dislikeBtn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}});
         newPost.querySelector('.comment-btn').addEventListener('click',function(){var postId=newPost.querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,newPost.querySelector('.comment-btn span'));});

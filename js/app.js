@@ -1175,11 +1175,12 @@ function handleShare(btn){
     });
 }
 
-function buildCommentHtml(cid,name,img,text,likes,isReply){
+function buildCommentHtml(cid,name,img,text,likes,isReply,authorId){
     var liked=likedComments[cid];var lc=likes+(liked?1:0);
     var disliked=dislikedComments[cid];var dc=disliked?1:0;
     var avatarSrc=img||DEFAULT_AVATAR;
     var sz=isReply?'28':'32';
+    var isOwn=currentUser&&authorId&&authorId===currentUser.id;
     var h='<div class="comment-item'+(isReply?' comment-reply':'')+'" data-cid="'+cid+'">';
     h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;">';
     h+='<div style="flex:1;"><strong style="font-size:13px;">'+name+'</strong>';
@@ -1188,6 +1189,7 @@ function buildCommentHtml(cid,name,img,text,likes,isReply){
     h+='<button class="comment-like-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
     h+='<button class="comment-dislike-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
     h+='<button class="comment-reply-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>';
+    if(isOwn) h+='<button class="comment-delete-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button>';
     h+='</div></div></div>';
     return h;
 }
@@ -1243,15 +1245,16 @@ async function showComments(postId,countEl,sortMode){
     var html='<div class="modal-header"><h3>Comments</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">'+tabsHtml+'<div id="commentsList">';
     if(!topLevel.length) html+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
     topLevel.forEach(function(c){
-        html+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false);
+        html+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false,c.authorId);
         var replies=repliesByParent[c.cid]||[];
         var visibleReplies=replies.slice(0,2);
-        visibleReplies.forEach(function(r){html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true);});
+        visibleReplies.forEach(function(r){html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId);});
         if(replies.length>2) html+='<a href="#" class="view-more-replies" data-parent="'+c.cid+'" style="font-size:12px;color:var(--primary);margin-left:42px;display:block;margin-bottom:8px;">View more replies ('+replies.length+')</a>';
     });
     html+='</div><div style="display:flex;gap:10px;margin-top:12px;"><input type="text" class="post-input" id="commentInput" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary" id="postCommentBtn">Post</button></div><div id="replyIndicator" style="display:none;font-size:12px;color:var(--primary);margin-top:4px;">Replying to <span id="replyToName"></span> <button id="cancelReply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div></div>';
     showModal(html);
     bindCommentLikes();
+    bindCommentDeletes(postId,countEl);
     var replyTarget=null;
     // Tab click handlers
     $$('.comment-sort-tab').forEach(function(tab){
@@ -1280,10 +1283,11 @@ async function showComments(postId,countEl,sortMode){
             var parentCid=link.dataset.parent;
             var replies=repliesByParent[parentCid]||[];
             var extraHtml='';
-            replies.slice(2).forEach(function(r){extraHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true);});
+            replies.slice(2).forEach(function(r){extraHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId);});
             link.insertAdjacentHTML('beforebegin',extraHtml);
             link.remove();
             bindCommentLikes();
+            bindCommentDeletes(postId,countEl);
             bindReplyBtns();
         });
     });
@@ -1351,6 +1355,26 @@ function bindCommentLikes(){
         };
     });
 }
+function bindCommentDeletes(postId,countEl){
+    $$('.comment-delete-btn').forEach(function(btn){
+        if(btn._delBound)return;btn._delBound=true;
+        btn.addEventListener('click',async function(){
+            var cid=btn.dataset.cid;
+            if(!confirm('Delete this comment?'))return;
+            try{
+                await sbDeleteComment(cid);
+                var item=btn.closest('.comment-item');
+                if(item) item.remove();
+                showToast('Comment deleted');
+                // Refresh inline comments for the post
+                if(postId) renderInlineComments(postId);
+            }catch(e){
+                console.error('Delete comment error:',e);
+                showToast('Failed to delete: '+(e.message||'Unknown error'));
+            }
+        });
+    });
+}
 
 async function renderInlineComments(postId){
     var el=document.querySelector('.post-comments[data-post-id="'+postId+'"]');
@@ -1364,7 +1388,7 @@ async function renderInlineComments(postId){
                 var authorName=(c.author?c.author.display_name||c.author.username:'User');
                 var authorAvatar=(c.author?c.author.avatar_url:null);
                 var isReply=!!c.parent_comment_id;
-                all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply});
+                all.push({name:authorName,img:authorAvatar,text:c.content,likes:0,cid:c.id,isReply:isReply,authorId:c.author_id});
             });
         }catch(e){
             console.error('Inline comments error for post '+postId+':',e);
@@ -1385,7 +1409,9 @@ async function renderInlineComments(postId){
         var avatarSrc=c.img||DEFAULT_AVATAR;
         var indent=c.isReply?'margin-left:28px;':'';
         var replyIcon=c.isReply?'<i class="fas fa-reply" style="font-size:9px;color:#999;margin-right:4px;transform:scaleX(-1);"></i>':'';
-        html+='<div class="inline-comment" style="'+indent+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble">'+replyIcon+'<strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button></div></div></div>';
+        var isOwnComment=currentUser&&c.authorId&&c.authorId===currentUser.id;
+        var deleteBtn=isOwnComment?'<button class="inline-comment-delete" data-cid="'+c.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
+        html+='<div class="inline-comment" style="'+indent+'" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble">'+replyIcon+'<strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:8px;margin-top:2px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+deleteBtn+'</div></div></div>';
     });
     if(all.length>5) html+='<a href="#" class="show-more-comments" style="font-size:12px;color:var(--primary);display:block;margin-top:4px;">See all comments ('+all.length+')</a>';
     el.style.padding='0 20px 14px';el.innerHTML=html;
@@ -1424,6 +1450,19 @@ async function renderInlineComments(postId){
                 var rb=document.querySelector('.comment-reply-btn[data-cid="'+btn.dataset.cid+'"]');
                 if(rb)rb.click();
             },100);
+        };
+    });
+    el.querySelectorAll('.inline-comment-delete').forEach(function(btn){
+        btn.onclick=async function(e){
+            e.stopPropagation();
+            var cid=btn.dataset.cid;
+            try{
+                await sbDeleteComment(cid);
+                var item=btn.closest('.inline-comment');
+                if(item) item.remove();
+                showToast('Comment deleted');
+                renderInlineComments(postId);
+            }catch(err){showToast('Failed to delete comment');}
         };
     });
     var link=el.querySelector('.show-more-comments');
@@ -2834,7 +2873,10 @@ function renderFeed(tab){
         if(badgesHtml) html+='<div class="post-badges">'+badgesHtml+'</div>';
         html+='</div>';
         html+='<button class="post-menu-btn" data-menu="'+menuId+'"><i class="fas fa-ellipsis-h"></i></button>';
-        html+='<div class="post-dropdown" id="'+menuId+'"><a href="#" data-action="save" data-pid="'+i+'"><i class="fas fa-bookmark"></i> Save Post</a><a href="#" data-action="report" data-pid="'+i+'"><i class="fas fa-flag"></i> Report</a><a href="#" data-action="hide" data-pid="'+i+'"><i class="fas fa-eye-slash"></i> Hide</a></div>';
+        var isOwnPost=currentUser&&person.id===currentUser.id;
+        html+='<div class="post-dropdown" id="'+menuId+'"><a href="#" data-action="save" data-pid="'+i+'"><i class="fas fa-bookmark"></i> Save Post</a><a href="#" data-action="report" data-pid="'+i+'"><i class="fas fa-flag"></i> Report</a><a href="#" data-action="hide" data-pid="'+i+'"><i class="fas fa-eye-slash"></i> Hide</a>';
+        if(isOwnPost) html+='<a href="#" data-action="delete" data-pid="'+i+'" style="color:#e74c3c;"><i class="fas fa-trash"></i> Delete</a>';
+        html+='</div>';
         html+='</div>';
         html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';
         html+='<div class="post-tags">';
@@ -3001,6 +3043,7 @@ function bindPostEvents(){
             if(action==='save') showSaveModal(pid);
             else if(action==='report') showReportModal(pid);
             else if(action==='hide') hidePost(pid);
+            else if(action==='delete') confirmDeletePost(pid);
         });
     });
 
@@ -4372,6 +4415,21 @@ function showReportModal(pid){
 }
 
 // ======================== HIDE POST ========================
+function confirmDeletePost(pid){
+    showModal('<div class="modal-header"><h3>Delete Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="color:var(--gray);text-align:center;margin-bottom:16px;">Are you sure you want to delete this post? This cannot be undone.</p><div class="modal-actions"><button class="btn btn-outline modal-close">Cancel</button><button class="btn" id="confirmDeletePostBtn" style="background:#e74c3c;color:#fff;">Delete</button></div></div>');
+    document.getElementById('confirmDeletePostBtn').addEventListener('click',async function(){
+        closeModal();
+        try{
+            await sbDeletePost(pid);
+            feedPosts=feedPosts.filter(function(p){return p.idx!==pid;});
+            renderFeed(activeFeedTab);
+            showToast('Post deleted');
+        }catch(e){
+            console.error('Delete post error:',e);
+            showToast('Failed to delete post: '+(e.message||'Unknown error'));
+        }
+    });
+}
 function hidePost(pid){
     hiddenPosts[pid]=true;
     persistHidden();

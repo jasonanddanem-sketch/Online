@@ -163,6 +163,9 @@ function resetAllCustomizations(){
     state.ownedPremiumSkins={};state.activePremiumSkin=null;state.groupPosts={};
     state.privateFollowers=false;state.dislikedPosts={};
     state.photos={profile:[],cover:[],post:[],albums:[]};
+    // Reset social/preference data
+    blockedUsers={};likedComments={};dislikedComments={};commentCoinAwarded={};
+    savedFolders=[{id:'fav',name:'Favorites',posts:[]}];hiddenPosts={};reportedPosts=[];
     state.postCoinCount=0;state.commentCoinPosts={};state.replyCoinPosts={};
     state.groupCoins={};state.groupOwnedSkins={};state.groupOwnedPremiumSkins={};
     state.groupActiveSkin={};state.groupActivePremiumSkin={};
@@ -269,6 +272,11 @@ async function initApp() {
         var myLikes = await sbGetUserLikes(currentUser.id, 'post');
         myLikes.forEach(function(l){ state.likedPosts[l.target_id] = true; });
     } catch(e){ console.warn('Could not load user likes:', e); }
+    // Load comment likes from Supabase
+    try {
+        var commentLikeRows = await sbGetUserLikes(currentUser.id, 'comment');
+        commentLikeRows.forEach(function(l){ likedComments[l.target_id] = true; });
+    } catch(e){ console.warn('Could not load comment likes:', e); }
     // Load photos from Supabase storage and posts
     try {
         var prevAvatars = await sbListUserAvatars(currentUser.id);
@@ -478,46 +486,63 @@ function saveState(){
         premiumBgOverlay:_bk?_bk.bgOverlay:premiumBgOverlay,
         premiumBgDarkness:_bk?_bk.bgDarkness:premiumBgDarkness,
         premiumCardTransparency:_bk?_bk.cardTrans:premiumCardTransparency,
-        settings:settings
+        settings:settings,
+        blockedUsers:blockedUsers,
+        dislikedPosts:state.dislikedPosts,
+        dislikedComments:dislikedComments,
+        commentCoinAwarded:commentCoinAwarded,
+        savedFolders:savedFolders,
+        hiddenPosts:hiddenPosts,
+        reportedPosts:reportedPosts
     };
     try{localStorage.setItem(key,JSON.stringify(save));}catch(e){console.warn('localStorage save failed (quota?):', e.message);}
     // Sync skin data to Supabase for cross-browser and profile viewing
     syncSkinDataToSupabase();
 }
 var _skinSyncTimer=null;
-function syncSkinDataToSupabase(){
+function _buildSkinData(){
+    var _bk=_pvSaved||_gvSaved||null;
+    return {
+        activeSkin:(_bk?_bk.skin:state.activeSkin)||null,
+        activePremiumSkin:(_bk?_bk.premiumSkin:state.activePremiumSkin)||null,
+        activeFont:(_bk&&_bk.font!==undefined?_bk.font:state.activeFont)||null,
+        activeTemplate:(_bk&&_bk.tpl!==undefined?_bk.tpl:state.activeTemplate)||null,
+        activeNavStyle:state.activeNavStyle||null,
+        activeIconSet:state.activeIconSet||null,
+        activeLogo:state.activeLogo||null,
+        activeCoinSkin:state.activeCoinSkin||null,
+        premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
+        premiumBgOverlay:(_bk?_bk.bgOverlay:premiumBgOverlay)!=null?(_bk?_bk.bgOverlay:premiumBgOverlay):0,
+        premiumBgDarkness:(_bk?_bk.bgDarkness:premiumBgDarkness)!=null?(_bk?_bk.bgDarkness:premiumBgDarkness):0,
+        premiumCardTransparency:(_bk?_bk.cardTrans:premiumCardTransparency)!=null?(_bk?_bk.cardTrans:premiumCardTransparency):0.1,
+        ownedSkins:state.ownedSkins||{},
+        ownedPremiumSkins:state.ownedPremiumSkins||{},
+        ownedFonts:state.ownedFonts||{},
+        ownedTemplates:state.ownedTemplates||{},
+        ownedNavStyles:state.ownedNavStyles||{},
+        ownedIconSets:state.ownedIconSets||{},
+        ownedLogos:state.ownedLogos||{},
+        ownedCoinSkins:state.ownedCoinSkins||{},
+        settings:settings,
+        blockedUsers:blockedUsers||{},
+        dislikedPosts:state.dislikedPosts||{},
+        dislikedComments:dislikedComments||{},
+        commentCoinAwarded:commentCoinAwarded||{},
+        savedFolders:savedFolders||[],
+        hiddenPosts:hiddenPosts||{},
+        reportedPosts:reportedPosts||[]
+    };
+}
+function syncSkinDataToSupabase(immediate){
     if(!currentUser) return;
-    // Debounce — only sync after 2s of no changes (saveState runs every 10s too)
     clearTimeout(_skinSyncTimer);
-    _skinSyncTimer=setTimeout(function(){
-        var _bk=_pvSaved||_gvSaved||null;
-        var skinData={
-            activeSkin:(_bk?_bk.skin:state.activeSkin)||null,
-            activePremiumSkin:(_bk?_bk.premiumSkin:state.activePremiumSkin)||null,
-            activeFont:(_bk&&_bk.font!==undefined?_bk.font:state.activeFont)||null,
-            activeTemplate:(_bk&&_bk.tpl!==undefined?_bk.tpl:state.activeTemplate)||null,
-            activeNavStyle:state.activeNavStyle||null,
-            activeIconSet:state.activeIconSet||null,
-            activeLogo:state.activeLogo||null,
-            activeCoinSkin:state.activeCoinSkin||null,
-            premiumBgUrl:(_bk?_bk.bgImage:premiumBgImage)||null,
-            premiumBgOverlay:(_bk?_bk.bgOverlay:premiumBgOverlay)!=null?(_bk?_bk.bgOverlay:premiumBgOverlay):0,
-            premiumBgDarkness:(_bk?_bk.bgDarkness:premiumBgDarkness)!=null?(_bk?_bk.bgDarkness:premiumBgDarkness):0,
-            premiumCardTransparency:(_bk?_bk.cardTrans:premiumCardTransparency)!=null?(_bk?_bk.cardTrans:premiumCardTransparency):0.1,
-            ownedSkins:state.ownedSkins||{},
-            ownedPremiumSkins:state.ownedPremiumSkins||{},
-            ownedFonts:state.ownedFonts||{},
-            ownedTemplates:state.ownedTemplates||{},
-            ownedNavStyles:state.ownedNavStyles||{},
-            ownedIconSets:state.ownedIconSets||{},
-            ownedLogos:state.ownedLogos||{},
-            ownedCoinSkins:state.ownedCoinSkins||{},
-            settings:settings
-        };
-        sbUpdateProfile(currentUser.id,{skin_data:skinData}).catch(function(e){
+    function doSync(){
+        sbUpdateProfile(currentUser.id,{skin_data:_buildSkinData()}).catch(function(e){
             console.warn('Skin data sync error:',e);
         });
-    },2000);
+    }
+    if(immediate) doSync();
+    else _skinSyncTimer=setTimeout(doSync,2000);
 }
 async function loadSkinDataFromSupabase(){
     if(!currentUser) return;
@@ -555,6 +580,14 @@ async function loadSkinDataFromSupabase(){
             if(sd.settings.commentOrder) settings.commentOrder=sd.settings.commentOrder;
             if(sd.settings.showLocation!==undefined) settings.showLocation=sd.settings.showLocation;
         }
+        // Restore social/preference data (full replacement — not merge)
+        if(sd.blockedUsers&&typeof sd.blockedUsers==='object') blockedUsers=sd.blockedUsers;
+        if(sd.dislikedPosts&&typeof sd.dislikedPosts==='object') state.dislikedPosts=sd.dislikedPosts;
+        if(sd.dislikedComments&&typeof sd.dislikedComments==='object') dislikedComments=sd.dislikedComments;
+        if(sd.commentCoinAwarded&&typeof sd.commentCoinAwarded==='object') commentCoinAwarded=sd.commentCoinAwarded;
+        if(Array.isArray(sd.savedFolders)&&sd.savedFolders.length) savedFolders=sd.savedFolders;
+        if(sd.hiddenPosts&&typeof sd.hiddenPosts==='object') hiddenPosts=sd.hiddenPosts;
+        if(Array.isArray(sd.reportedPosts)) reportedPosts=sd.reportedPosts;
     }catch(e){console.warn('Load skin data from Supabase:',e);}
 }
 function loadState(){
@@ -601,6 +634,13 @@ function loadState(){
             settings.commentOrder=save.settings.commentOrder||'top';
             settings.showLocation=save.settings.showLocation!==false;
         }
+        if(save.blockedUsers) blockedUsers=save.blockedUsers;
+        if(save.dislikedPosts) state.dislikedPosts=save.dislikedPosts;
+        if(save.dislikedComments) dislikedComments=save.dislikedComments;
+        if(save.commentCoinAwarded) commentCoinAwarded=save.commentCoinAwarded;
+        if(save.savedFolders&&save.savedFolders.length) savedFolders=save.savedFolders;
+        if(save.hiddenPosts) hiddenPosts=save.hiddenPosts;
+        if(save.reportedPosts) reportedPosts=save.reportedPosts;
     }catch(e){console.warn('loadState:',e);}
 }
 function reapplyCustomizations(){
@@ -644,14 +684,14 @@ var savedFolders=[{id:'fav',name:'Favorites',posts:[]}];
 var hiddenPosts={};
 var _fofIds={}; // friends-of-friends IDs for discover tab
 var reportedPosts=[];
-function persistSaved(){}
-function persistHidden(){}
-function persistReports(){}
+function persistSaved(){saveState();}
+function persistHidden(){saveState();}
+function persistReports(){saveState();syncSkinDataToSupabase(true);}
 var blockedUsers={};
 var likedComments={};
 var dislikedComments={};
 var commentCoinAwarded={};
-function persistBlocked(){}
+function persistBlocked(){saveState();syncSkinDataToSupabase(true);}
 function findPostFolder(pid){var s=String(pid);for(var i=0;i<savedFolders.length;i++){if(savedFolders[i].posts.indexOf(s)!==-1)return savedFolders[i];}return null;}
 
 // ======================== DATA ========================
@@ -1544,12 +1584,15 @@ function bindCommentLikes(){
         btn.onclick=function(){
             var cid=btn.dataset.cid;var span=btn.querySelector('span');var ct=parseInt(span.textContent);
             var disBtn=btn.closest('.comment-actions-row')?btn.closest('.comment-actions-row').querySelector('.comment-dislike-btn'):btn.parentNode.querySelector('.comment-dislike-btn');
-            if(likedComments[cid]){delete likedComments[cid];ct--;btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-up';}
+            if(likedComments[cid]){delete likedComments[cid];ct--;btn.style.color='#999';btn.querySelector('i').className='far fa-thumbs-up';
+                if(/^[0-9a-f]{8}-/.test(cid)&&currentUser) sbToggleLike(currentUser.id,'comment',cid).catch(function(){});
+            }
             else{
                 if(dislikedComments[cid]&&disBtn){delete dislikedComments[cid];var ds=disBtn.querySelector('span');ds.textContent=parseInt(ds.textContent)-1;disBtn.style.color='#999';disBtn.querySelector('i').className='far fa-thumbs-down';}
                 likedComments[cid]=true;ct++;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-up';
                 var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
                 if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                if(/^[0-9a-f]{8}-/.test(cid)&&currentUser) sbToggleLike(currentUser.id,'comment',cid).catch(function(){});
             }
             span.textContent=ct;
         };

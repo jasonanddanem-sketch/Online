@@ -96,14 +96,14 @@ img{display:block;}
 .login-page{position:fixed;inset:0;background:linear-gradient(160deg,#2a8de0 0%,#3b8fe8 30%,#4a9bf0 60%,#3585d8 100%);z-index:9999;overflow:hidden;display:none;}
 .login-page.visible{display:block;}
 .login-page.hidden{display:none;}
-.login-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px;overflow:hidden;}
-.login-logo-area{text-align:center;margin-bottom:8px;flex-shrink:1;min-height:0;width:100%;}
-.login-logo-img{width:min(400px,85vw);max-height:30vh;height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));margin:0 auto;}
+.login-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px;}
+.login-logo-area{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(-280px);z-index:0;pointer-events:none;}
+.login-logo-img{width:400px;height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));}
 .login-stats{display:flex;gap:48px;justify-content:center;padding-top:12px;flex-shrink:0;}
 .login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
 .login-stat strong{font-size:42px;font-weight:900;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.2);letter-spacing:-1px;}
 .login-stat span{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;}
-.login-card{width:100%;max-width:420px;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:28px 28px;box-shadow:0 20px 60px rgba(0,0,0,.15);flex-shrink:1;overflow-y:auto;}
+.login-card{position:relative;z-index:1;width:100%;max-width:420px;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:28px 28px;box-shadow:0 20px 60px rgba(0,0,0,.15);}
 .login-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:24px;text-align:center;}
 .login-field{margin-bottom:16px;}
 .login-input-wrap{position:relative;overflow:hidden;border-radius:12px;}

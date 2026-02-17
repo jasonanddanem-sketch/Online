@@ -96,11 +96,11 @@ img{display:block;}
 .login-page.hidden{display:none;}
 .login-center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:40px 20px;}
 .login-logo-area{text-align:center;margin-bottom:16px;}
-.login-logo-img{width:220px;height:220px;object-fit:contain;filter:drop-shadow(0 6px 30px rgba(0,0,0,.25));}
-.login-stats{display:flex;gap:32px;justify-content:center;margin-bottom:24px;}
-.login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
-.login-stat strong{font-size:22px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.15);}
-.login-stat span{font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1px;}
+.login-logo-img{width:320px;height:320px;object-fit:contain;filter:drop-shadow(0 8px 40px rgba(0,0,0,.3));}
+.login-stats{display:flex;gap:10px;justify-content:center;margin-bottom:28px;}
+.login-stat{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 24px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:100px;}
+.login-stat strong{font-size:24px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.15);}
+.login-stat span{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;}
 .login-card{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:36px 32px;box-shadow:0 12px 40px rgba(0,0,0,.15);}
 .login-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:24px;text-align:center;}
 .login-field{margin-bottom:16px;}
@@ -2084,9 +2084,10 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     /* --- Login page --- */
     .login-center{padding:24px 16px!important;}
     .login-card{max-width:100%;padding:24px 20px!important;}
-    .login-logo-img{width:160px!important;height:160px!important;}
-    .login-stats{gap:24px!important;}
-    .login-stat strong{font-size:18px!important;}
+    .login-logo-img{width:240px!important;height:240px!important;}
+    .login-stats{gap:8px!important;}
+    .login-stat{padding:10px 16px!important;min-width:80px!important;}
+    .login-stat strong{font-size:20px!important;}
     .login-title{font-size:22px;}
 
     /* --- Touch targets (Apple HIG 44px minimum) --- */

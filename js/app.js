@@ -4093,12 +4093,33 @@ async function renderMyNetwork(container,query){
             } else { html+='<p class="connections-empty">No followers-only yet.</p>'; }
             html+='</div>';
             html+='</div>';
+            // Dot indicators for mobile swipe
+            html+='<div class="connections-dots">';
+            html+='<span class="connections-dot active" data-idx="0"></span>';
+            html+='<span class="connections-dot" data-idx="1"></span>';
+            html+='</div>';
         }
         html+='</div>';
         if(!mutual.length&&!followersOnly.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>'+(query?'No results for "'+query+'"':'Your network is empty. Follow some people!')+'</p></div>';
     }catch(e){html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Could not load network.</p></div>';}
     if(myVersion!==_networkRenderVersion) return;
     container.innerHTML=html;
+    // Wire up mobile swipe dot indicators
+    var colsEl=container.querySelector('.connections-columns');
+    var dotsEl=container.querySelector('.connections-dots');
+    if(colsEl&&dotsEl){
+        var dots=dotsEl.querySelectorAll('.connections-dot');
+        colsEl.addEventListener('scroll',function(){
+            var idx=Math.round(colsEl.scrollLeft/colsEl.offsetWidth);
+            dots.forEach(function(d,i){d.classList.toggle('active',i===idx);});
+        });
+        dots.forEach(function(d){
+            d.addEventListener('click',function(){
+                var idx=parseInt(d.getAttribute('data-idx'))||0;
+                colsEl.scrollTo({left:idx*colsEl.offsetWidth,behavior:'smooth'});
+            });
+        });
+    }
     var scope=container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections';
     bindProfileEvents(scope);
 }

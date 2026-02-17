@@ -106,7 +106,7 @@ img{display:block;}
 .login-card{position:relative;z-index:1;width:100%;max-width:420px;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:28px 28px;box-shadow:0 20px 60px rgba(0,0,0,.15);}
 .login-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:24px;text-align:center;}
 .login-field{margin-bottom:16px;}
-.login-input-wrap{position:relative;overflow:hidden;border-radius:12px;}
+.login-input-wrap{position:relative;overflow:visible;border-radius:12px;}
 .login-input-wrap i:first-child{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#aaa;font-size:14px;pointer-events:none;z-index:1;}
 .login-input-wrap input{width:100%;padding:13px 42px 13px 42px;border:1px solid #ddd;border-radius:10px;font-size:14px;transition:border-color .2s;background:#f8f9fa;color:#333;box-sizing:border-box;}
 .login-input-wrap input::placeholder{color:#aaa;}

@@ -1832,6 +1832,7 @@ async function showProfileView(person){
         feedHtml+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><i class="fas fa-pen" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>No posts yet.</p></div>';
     }
     $('#pvPostsFeed').innerHTML=feedHtml;
+    autoFetchLinkPreviews(document.getElementById('pvPostsFeed'));
 
     // Event: Back
     document.getElementById('pvBack').addEventListener('click',function(e){e.preventDefault();navigateTo('home');});
@@ -2305,6 +2306,7 @@ async function showGroupView(group){
             var feedEl=$('#gvPostsFeed');
             if(feedEl){feedEl.innerHTML=feedHtml;$('#gvPostCount').textContent=groupPosts.length;}
             bindGvPostEvents();
+            autoFetchLinkPreviews(feedEl);
             // Author click → profile
             $$('#gvPostsFeed .gv-post-author').forEach(function(el){
                 el.addEventListener('click',async function(){
@@ -3139,6 +3141,7 @@ function renderFeed(tab){
     });
     container.innerHTML=html;
     bindPostEvents();
+    autoFetchLinkPreviews(container);
     posts.forEach(function(p){renderInlineComments(p.idx);});
     // Load liker avatars asynchronously for Supabase posts
     posts.forEach(function(p){
@@ -3352,6 +3355,39 @@ function bindLikeCountClicks(containerSelector){
     });
 }
 
+// Auto-fetch link previews for URLs found in rendered post descriptions
+function autoFetchLinkPreviews(container){
+    if(!container) container=document;
+    container.querySelectorAll('.post-description').forEach(function(desc){
+        if(desc.getAttribute('data-link-checked')) return;
+        desc.setAttribute('data-link-checked','1');
+        var textEl=desc.querySelector('p');
+        if(!textEl) return;
+        var text=textEl.textContent||'';
+        var urlMatch=text.match(/(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i);
+        if(!urlMatch) return;
+        var url=urlMatch[1].replace(/[.,;:!?)]+$/,'');
+        // Don't fetch for image URLs already shown as post media
+        if(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url)) return;
+        fetch('https://api.microlink.io?url='+encodeURIComponent(url))
+            .then(function(r){return r.json();})
+            .then(function(data){
+                if(data.status==='success'&&data.data){
+                    var d=data.data;
+                    var h='<a href="'+url+'" target="_blank" class="link-preview">';
+                    if(d.image&&d.image.url) h+='<img src="'+d.image.url+'" class="link-preview-image">';
+                    h+='<div class="link-preview-info">';
+                    if(d.title) h+='<div class="link-preview-title">'+d.title+'</div>';
+                    h+='<div class="link-preview-url">'+url+'</div>';
+                    if(d.description) h+='<div class="link-preview-desc">'+d.description+'</div>';
+                    h+='</div></a>';
+                    desc.insertAdjacentHTML('beforeend',h);
+                }
+            })
+            .catch(function(){});
+    });
+}
+
 // ======================== POST CREATION ========================
 $('#openPostModal').addEventListener('click',function(){
     var html='<div class="create-post-modal"><div class="modal-header"><h3>Create a Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
@@ -3359,11 +3395,10 @@ $('#openPostModal').addEventListener('click',function(){
     html+='<textarea class="cpm-textarea" id="cpmText" placeholder="Write something..."></textarea>';
     html+='<div class="cpm-media-zone" id="cpmMediaZone"><div class="cpm-media-grid" id="cpmGrid"></div><div id="cpmDropZone"><i class="fas fa-photo-video"></i><br>Add Photos/Videos</div><input type="file" accept="image/*,video/*" multiple id="cpmFileInput" style="display:none;"></div>';
     html+='<div class="cpm-tags-section"><div class="cpm-tags-wrap" id="cpmTagsWrap"></div></div>';
-    html+='<div class="cpm-link-section"><div class="cpm-link-toggle" id="cpmLinkToggle"><i class="fas fa-link"></i> Add Link Preview</div><div class="cpm-link-fields" id="cpmLinkFields" style="display:none;"><input type="text" class="cpm-link-input" id="cpmLinkUrl" placeholder="URL (e.g. https://example.com)"><input type="text" class="cpm-link-input" id="cpmLinkTitle" placeholder="Title"><input type="text" class="cpm-link-input" id="cpmLinkDesc" placeholder="Description"><div class="cpm-link-img-upload" id="cpmLinkImgUpload"><i class="fas fa-image"></i> Add Preview Image</div><input type="file" accept="image/*" id="cpmLinkImgInput" style="display:none;"><img id="cpmLinkImgPreview" style="display:none;" class="cpm-link-img-preview"></div></div>';
+    html+='<div class="cpm-link-section" id="cpmLinkSection" style="display:none;"><div id="cpmLinkPreview"></div></div>';
     html+='<div class="cpm-footer"><button class="btn btn-primary" id="cpmPublish">Publish</button></div></div></div>';
     showModal(html);
     var mediaList=[];
-    var linkImgSrc='';
     var zone=document.getElementById('cpmMediaZone');
     var grid=document.getElementById('cpmGrid');
     var dropZone=document.getElementById('cpmDropZone');
@@ -3389,9 +3424,61 @@ $('#openPostModal').addEventListener('click',function(){
         });
         this.value='';
     });
-    document.getElementById('cpmLinkToggle').addEventListener('click',function(){var f=document.getElementById('cpmLinkFields');f.style.display=f.style.display==='none'?'flex':'none';});
-    document.getElementById('cpmLinkImgUpload').addEventListener('click',function(){document.getElementById('cpmLinkImgInput').click();});
-    document.getElementById('cpmLinkImgInput').addEventListener('change',function(){var file=this.files[0];if(!file)return;var r=new FileReader();r.onload=function(e){linkImgSrc=e.target.result;var prev=document.getElementById('cpmLinkImgPreview');prev.src=linkImgSrc;prev.style.display='block';};r.readAsDataURL(file);});
+    // Auto-detect URLs in textarea and fetch OG metadata
+    var _linkData={url:'',title:'',desc:'',image:''};
+    var _linkFetchTimer=null;
+    var _lastFetchedUrl='';
+    function detectAndFetchLink(){
+        var text=document.getElementById('cpmText').value;
+        var urlMatch=text.match(/(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i);
+        var section=document.getElementById('cpmLinkSection');
+        var preview=document.getElementById('cpmLinkPreview');
+        if(!urlMatch){
+            _linkData={url:'',title:'',desc:'',image:''};
+            section.style.display='none';
+            preview.innerHTML='';
+            _lastFetchedUrl='';
+            return;
+        }
+        var url=urlMatch[1].replace(/[.,;:!?)]+$/,'');
+        if(url===_lastFetchedUrl) return;
+        _lastFetchedUrl=url;
+        _linkData={url:url,title:'',desc:'',image:''};
+        section.style.display='';
+        preview.innerHTML='<div style="padding:12px;color:var(--gray);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Fetching link preview...</div>';
+        clearTimeout(_linkFetchTimer);
+        _linkFetchTimer=setTimeout(function(){
+            fetch('https://api.microlink.io?url='+encodeURIComponent(url))
+                .then(function(r){return r.json();})
+                .then(function(data){
+                    if(data.status==='success'&&data.data){
+                        var d=data.data;
+                        _linkData.title=d.title||'';
+                        _linkData.desc=d.description||'';
+                        _linkData.image=(d.image&&d.image.url)||'';
+                        var h='<a href="'+url+'" target="_blank" class="link-preview" style="margin:0;">';
+                        if(_linkData.image) h+='<img src="'+_linkData.image+'" class="link-preview-image">';
+                        h+='<div class="link-preview-info">';
+                        if(_linkData.title) h+='<div class="link-preview-title">'+_linkData.title+'</div>';
+                        h+='<div class="link-preview-url">'+url+'</div>';
+                        if(_linkData.desc) h+='<div class="link-preview-desc">'+_linkData.desc+'</div>';
+                        h+='</div></a><button id="cpmLinkRemove" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;"><i class="fas fa-times"></i></button>';
+                        preview.innerHTML='<div style="position:relative;">'+h+'</div>';
+                        document.getElementById('cpmLinkRemove').addEventListener('click',function(){
+                            _linkData={url:'',title:'',desc:'',image:''};
+                            _lastFetchedUrl='__removed__';
+                            section.style.display='none';
+                            preview.innerHTML='';
+                        });
+                    } else {
+                        preview.innerHTML='<a href="'+url+'" target="_blank" class="link-preview" style="margin:0;"><div class="link-preview-info"><div class="link-preview-url">'+url+'</div></div></a>';
+                    }
+                })
+                .catch(function(){
+                    preview.innerHTML='<a href="'+url+'" target="_blank" class="link-preview" style="margin:0;"><div class="link-preview-info"><div class="link-preview-url">'+url+'</div></div></a>';
+                });
+        },600);
+    }
     // Hashtag system — auto-extract #tags from textarea on space/enter
     var postTags=[];
     function renderPostTags(){
@@ -3418,12 +3505,15 @@ $('#openPostModal').addEventListener('click',function(){
             // Remove the #tag from the textarea text
             ta.value=text.replace('#'+match[1],'').replace(/\s{2,}/g,' ');
         }
+        detectAndFetchLink();
     });
+    document.getElementById('cpmText').addEventListener('paste',function(){setTimeout(detectAndFetchLink,100);});
     document.getElementById('cpmPublish').addEventListener('click', async function(){
         var text=document.getElementById('cpmText').value.trim();
-        var linkUrl=document.getElementById('cpmLinkUrl').value.trim();
-        var linkTitle=document.getElementById('cpmLinkTitle').value.trim();
-        var linkDesc=document.getElementById('cpmLinkDesc').value.trim();
+        var linkUrl=_linkData.url||'';
+        var linkTitle=_linkData.title||'';
+        var linkDesc=_linkData.desc||'';
+        var linkImgSrc=_linkData.image||'';
         if(!text&&!mediaList.length&&!linkUrl)return;
         var container=$('#feedContainer');
 

@@ -143,7 +143,9 @@ document.querySelector('.login-forgot').addEventListener('click', async function
 
 // Logout handler (wired later after DOM references are set)
 function handleLogout() {
-    saveState(); // persist current user's state before clearing
+    syncSkinDataToSupabase(true); // flush User A's data immediately
+    clearTimeout(_skinSyncTimer); // kill any pending debounce so it can't write to User B
+    _skinSyncTimer=null;
     sbSignOut().then(function () {
         currentUser = null;
         currentAuthUser = null;
@@ -153,6 +155,8 @@ function handleLogout() {
 }
 // Reset all in-memory state and visual customizations so nothing leaks between accounts
 function resetAllCustomizations(){
+    // Kill any pending Supabase sync timer to prevent writing to the wrong user
+    clearTimeout(_skinSyncTimer);_skinSyncTimer=null;
     // Reset state object to defaults
     state.coins=0;state.following=0;state.followers=0;state.followedUsers={};
     state.ownedSkins={};state.activeSkin=null;state.ownedFonts={};state.activeFont=null;

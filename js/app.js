@@ -39,12 +39,18 @@ loginForm.addEventListener('submit', async function (e) {
     loginError.classList.remove('show');
     var submitBtn = loginForm.querySelector('button[type="submit"]');
     if (submitBtn.disabled) return;
-    var email = loginEmail.value.trim();
+    var input = loginEmail.value.trim();
     var pw = loginPass.value;
-    if (!email || !pw) { loginError.textContent = 'Please enter both email and password.'; loginError.classList.add('show'); return; }
+    if (!input || !pw) { loginError.textContent = 'Please enter both username/email and password.'; loginError.classList.add('show'); return; }
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
     try {
+        var email = input;
+        if (!input.includes('@')) {
+            var looked = await sbGetEmailByUsername(input);
+            if (!looked) throw { message: 'Username not found.' };
+            email = looked;
+        }
         await sbSignIn(email, pw);
         loginForm.reset();
         // onAuthStateChange will call initApp()

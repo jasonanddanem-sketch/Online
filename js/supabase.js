@@ -27,6 +27,7 @@ async function sbSignUp(email, password, username, birthday = null) {
       id: data.user.id,
       username: username,
       display_name: username,
+      email: email,
       bio: '',
       avatar_url: null,
       cover_photo_url: null
@@ -37,6 +38,15 @@ async function sbSignUp(email, password, username, birthday = null) {
     if (profileErr) console.error('Profile insert failed:', profileErr.message);
   }
   return data;
+}
+
+async function sbGetEmailByUsername(username) {
+  const { data, error } = await sb.from('profiles')
+    .select('email')
+    .eq('username', username)
+    .maybeSingle();
+  if (error || !data || !data.email) return null;
+  return data.email;
 }
 
 async function sbSignIn(email, password) {

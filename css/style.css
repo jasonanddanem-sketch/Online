@@ -101,8 +101,8 @@ img{display:block;}
 .login-logo-img{width:400px;height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));}
 .login-stats{display:flex;gap:48px;justify-content:center;padding-top:12px;flex-shrink:0;}
 .login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
-.login-stat strong{font-size:42px;font-weight:900;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.2);letter-spacing:-1px;}
-.login-stat span{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;}
+.login-stat strong{font-size:42px;font-weight:900;background:linear-gradient(180deg,#1a3a6e,#6ab0f3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
+.login-stat span{font-size:11px;color:#1a3a6e;text-transform:uppercase;letter-spacing:2.5px;font-weight:700;text-shadow:0 1px 3px rgba(255,255,255,.3);}
 .login-card{position:relative;z-index:1;width:100%;max-width:420px;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:28px 28px;box-shadow:0 20px 60px rgba(0,0,0,.15);}
 .login-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:24px;text-align:center;}
 .login-field{margin-bottom:16px;}

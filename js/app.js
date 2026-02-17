@@ -1132,7 +1132,7 @@ async function toggleFollow(userId,btn){
             }
             // Notify the person being unfollowed
             var myName=currentUser.display_name||currentUser.username||'Someone';
-            sbCreateNotification(userId,'follow',myName+' unfollowed you','',{follower_id:currentUser.id}).catch(function(){});
+            sbCreateNotification(userId,'follow',myName+' unfollowed you','',{originalType:'follow',follower_id:currentUser.id}).catch(function(e){console.error('Unfollow notif error:',e);});
         } else {
             await sbFollow(currentUser.id, userId);
             state.followedUsers[userId]=true;
@@ -1146,7 +1146,7 @@ async function toggleFollow(userId,btn){
             sbGetProfile(userId).then(function(p){if(p)addNotification('follow','You are now following '+(p.display_name||p.username));}).catch(function(){});
             // Notify the person being followed
             var myName=currentUser.display_name||currentUser.username||'Someone';
-            sbCreateNotification(userId,'follow',myName+' started following you','',{follower_id:currentUser.id}).catch(function(){});
+            sbCreateNotification(userId,'follow',myName+' started following you','',{originalType:'follow',follower_id:currentUser.id}).catch(function(e){console.error('Follow notif error:',e);});
         }
         updateFollowCounts();
         renderSuggestions();
@@ -1287,7 +1287,7 @@ function handleShare(btn){
                 var origAuthorId=origAuthorEl?origAuthorEl.getAttribute('data-person-id'):null;
                 if(origAuthorId&&origAuthorId!==currentUser.id){
                     var myName=currentUser.display_name||currentUser.username||'Someone';
-                    sbCreateNotification(origAuthorId,'like',myName+' shared your post','',{post_id:origPostId}).catch(function(){});
+                    sbCreateNotification(origAuthorId,'like',myName+' shared your post','',{originalType:'like',post_id:origPostId}).catch(function(e){console.error('Share notif error:',e);});
                 }
                 closeModal();
                 showToast('Post shared!');
@@ -1493,7 +1493,7 @@ async function showComments(postId,countEl,sortMode,autoReplyToCid){
                 var fp=feedPosts.find(function(x){return x.idx===postId;});
                 if(fp&&fp.person&&fp.person.id&&fp.person.id!==currentUser.id){
                     var myName=currentUser.display_name||currentUser.username||'Someone';
-                    sbCreateNotification(fp.person.id,'comment',myName+' commented on your post',text,{post_id:postId}).catch(function(){});
+                    sbCreateNotification(fp.person.id,'comment',myName+' commented on your post',text,{originalType:'comment',post_id:postId}).catch(function(e){console.error('Comment notif error:',e);});
                 }
             } catch(e) { console.error('Comment error:', e); showToast('Comment failed: '+(e.message||'Unknown error')); return; }
         } else {
@@ -3270,7 +3270,7 @@ function bindPostEvents(){
                         var fp=feedPosts.find(function(x){return x.idx===postId;});
                         if(fp&&fp.person&&fp.person.id&&fp.person.id!==currentUser.id){
                             var myName=currentUser.display_name||currentUser.username||'Someone';
-                            sbCreateNotification(fp.person.id,'like',myName+' liked your post','',{post_id:postId}).catch(function(){});
+                            sbCreateNotification(fp.person.id,'like',myName+' liked your post','',{originalType:'like',post_id:postId}).catch(function(e){console.error('Like notif error:',e);});
                         }
                     } else {
                         delete state.likedPosts[postId];

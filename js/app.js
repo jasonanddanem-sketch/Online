@@ -3374,12 +3374,13 @@ function autoFetchLinkPreviews(container){
             .then(function(data){
                 if(data.status==='success'&&data.data){
                     var d=data.data;
+                    var domain=(d.publisher||'').toUpperCase()||url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0].toUpperCase();
                     var h='<a href="'+url+'" target="_blank" class="link-preview">';
                     if(d.image&&d.image.url) h+='<img src="'+d.image.url+'" class="link-preview-image">';
+                    else if(d.logo&&d.logo.url) h+='<img src="'+d.logo.url+'" class="link-preview-image">';
                     h+='<div class="link-preview-info">';
+                    h+='<div class="link-preview-url">'+domain+'</div>';
                     if(d.title) h+='<div class="link-preview-title">'+d.title+'</div>';
-                    h+='<div class="link-preview-url">'+url+'</div>';
-                    if(d.description) h+='<div class="link-preview-desc">'+d.description+'</div>';
                     h+='</div></a>';
                     desc.insertAdjacentHTML('beforeend',h);
                 }
@@ -3455,13 +3456,13 @@ $('#openPostModal').addEventListener('click',function(){
                         var d=data.data;
                         _linkData.title=d.title||'';
                         _linkData.desc=d.description||'';
-                        _linkData.image=(d.image&&d.image.url)||'';
+                        _linkData.image=(d.image&&d.image.url)||(d.logo&&d.logo.url)||'';
+                        _linkData.domain=(d.publisher||'').toUpperCase()||url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0].toUpperCase();
                         var h='<a href="'+url+'" target="_blank" class="link-preview" style="margin:0;">';
                         if(_linkData.image) h+='<img src="'+_linkData.image+'" class="link-preview-image">';
                         h+='<div class="link-preview-info">';
+                        h+='<div class="link-preview-url">'+_linkData.domain+'</div>';
                         if(_linkData.title) h+='<div class="link-preview-title">'+_linkData.title+'</div>';
-                        h+='<div class="link-preview-url">'+url+'</div>';
-                        if(_linkData.desc) h+='<div class="link-preview-desc">'+_linkData.desc+'</div>';
                         h+='</div></a><button id="cpmLinkRemove" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;"><i class="fas fa-times"></i></button>';
                         preview.innerHTML='<div style="position:relative;">'+h+'</div>';
                         document.getElementById('cpmLinkRemove').addEventListener('click',function(){
@@ -3535,9 +3536,9 @@ $('#openPostModal').addEventListener('click',function(){
             }
         }
 
-        // Create post in Supabase
+        // Create post in Supabase — don't duplicate URL if it's already in the text
         var fullContent = text;
-        if(linkUrl) fullContent += '\n\n' + linkUrl;
+        if(linkUrl && text.indexOf(linkUrl)===-1) fullContent += '\n\n' + linkUrl;
         var sbPost = null;
         if(currentUser && (fullContent || imageUrl || allImageUrls.length)) {
             try {
@@ -3569,12 +3570,12 @@ $('#openPostModal').addEventListener('click',function(){
         }
         var linkHtml='';
         if(linkUrl){
+            var linkDomain=(_linkData.domain)||linkUrl.replace(/^https?:\/\/(www\.)?/,'').split('/')[0].toUpperCase();
             linkHtml='<a href="'+linkUrl+'" target="_blank" class="link-preview">';
             if(linkImgSrc){linkHtml+='<img src="'+linkImgSrc+'" class="link-preview-image">';}
             linkHtml+='<div class="link-preview-info">';
+            linkHtml+='<div class="link-preview-url">'+linkDomain+'</div>';
             if(linkTitle){linkHtml+='<div class="link-preview-title">'+linkTitle+'</div>';}
-            linkHtml+='<div class="link-preview-url">'+linkUrl+'</div>';
-            if(linkDesc){linkHtml+='<div class="link-preview-desc">'+linkDesc+'</div>';}
             linkHtml+='</div></a>';
         }
         var myName = currentUser ? (currentUser.display_name || currentUser.username) : 'You';

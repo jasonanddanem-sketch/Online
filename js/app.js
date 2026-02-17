@@ -1405,7 +1405,7 @@ async function showComments(postId,countEl,sortMode,autoReplyToCid){
         postEmbed+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeStr+'</span></div></div>';
         postEmbed+='</div>';
         postEmbed+='<div class="post-description"><p>'+fp.text+'</p></div>';
-        if(fp.images){var imgs=fp.images;postEmbed+='<div class="post-media-grid pm-count-'+imgs.length+'" style="margin-bottom:8px;">';imgs.forEach(function(src){postEmbed+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});postEmbed+='</div>';}
+        if(fp.images) postEmbed+=buildMediaGrid(fp.images);
         if(fp.tags&&fp.tags.length){postEmbed+='<div class="post-tags" style="margin-bottom:8px;">';fp.tags.forEach(function(t){postEmbed+='<span class="skill-tag">'+t+'</span>';});postEmbed+='</div>';}
         postEmbed+='<div class="post-actions" style="padding-top:10px;"><div class="action-left">';
         postEmbed+='<span class="action-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i><span>'+fp.likes+'</span></span>';
@@ -1871,7 +1871,7 @@ async function showProfileView(person){
                 feedHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+authorName+'</h4><span class="post-time">'+postTime+'</span></div></div></div>';
                 feedHtml+='<div class="post-description"><p>'+post.content+'</p></div>';
                 var pvImgs=post.media_urls&&post.media_urls.length?post.media_urls:(post.image_url?[post.image_url]:[]);
-                if(pvImgs.length){feedHtml+='<div class="post-media-grid pm-count-'+pvImgs.length+'">';pvImgs.forEach(function(src){feedHtml+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});feedHtml+='</div>';}
+                feedHtml+=buildMediaGrid(pvImgs);
                 feedHtml+='<div class="post-actions"><div class="action-left">';
                 feedHtml+='<button class="action-btn like-btn" data-post-id="'+post.id+'"><i class="'+(state.likedPosts[post.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">0</span></button>';
                 feedHtml+='<button class="action-btn dislike-btn" data-post-id="'+post.id+'"><i class="'+(state.dislikedPosts[post.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
@@ -2351,7 +2351,7 @@ async function showGroupView(group){
                 if(p.content) feedHtml+='<p>'+p.content+'</p>';
                 feedHtml+='</div>';
                 var gvImgs=p.media_urls&&p.media_urls.length?p.media_urls:(p.image_url?[p.image_url]:[]);
-                if(gvImgs.length){feedHtml+='<div class="post-media-grid pm-count-'+gvImgs.length+'">';gvImgs.forEach(function(src){feedHtml+='<div class="pm-thumb"><img src="'+src+'"></div>';});feedHtml+='</div>';}
+                feedHtml+=buildMediaGrid(gvImgs);
                 feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+p.id+'"><i class="'+(state.likedPosts[p.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+(p.like_count||0)+'</span></button><button class="action-btn dislike-btn" data-post-id="'+p.id+'"><i class="'+(state.dislikedPosts[p.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+commentCount+'</span></button></div></div></div>';
             });
             if(!groupPosts.length){
@@ -3067,6 +3067,23 @@ document.addEventListener('click',function(e){
 // ======================== GENERATE FEED (100 POSTS) ========================
 var feedPosts=[];
 var activeFeedTab='following';
+function buildMediaGrid(imgs){
+    if(!imgs||!imgs.length) return '';
+    var pid='pg-'+Date.now()+'-'+Math.random().toString(36).substr(2,5);
+    var cnt=Math.min(imgs.length,5);
+    var h='<div class="post-media-grid pm-count-'+cnt+'" data-pgid="'+pid+'">';
+    var shown=imgs.slice(0,5);var extra=imgs.length-5;
+    shown.forEach(function(src,i){
+        if(i===4&&extra>0){
+            h+='<div class="pm-thumb pm-more" data-pgid="'+pid+'"><img src="'+src+'" alt="Post photo"><div class="pm-more-overlay">+'+extra+'</div></div>';
+        } else {
+            h+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';
+        }
+    });
+    h+='</div>';
+    window['_media_'+pid]=imgs.map(function(s){return {type:'image',src:s};});
+    return h;
+}
 async function generatePosts(){
     feedPosts=[];
     try {
@@ -3175,7 +3192,7 @@ function renderFeed(tab){
         html+='<div class="post-tags">';
         tags.forEach(function(t){html+='<span class="skill-tag">'+t+'</span>';});
         html+='</div>';
-        if(p.images){var imgs=p.images;html+='<div class="post-media-grid pm-count-'+imgs.length+'">';imgs.forEach(function(src){html+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});html+='</div>';}
+        html+=buildMediaGrid(p.images);
         if(p.sharedPost){
             var sp=p.sharedPost;var spAvatar=sp.avatar_url||DEFAULT_AVATAR;
             html+='<div class="share-preview" style="margin:0 20px 14px;">';
@@ -5293,7 +5310,7 @@ function renderSavedPostCard(p){
     html+='<button class="btn btn-outline saved-unsave-btn" data-pid="'+i+'" style="padding:4px 12px;font-size:12px;margin-left:auto;"><i class="fas fa-bookmark-slash"></i> Unsave</button>';
     html+='</div>';
     html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';
-    if(p.images){var imgs=p.images;html+='<div class="post-media-grid pm-count-'+imgs.length+'">';imgs.forEach(function(src){html+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});html+='</div>';}
+    html+=buildMediaGrid(p.images);
     html+='<div class="post-actions"><div class="action-left">';
     html+='<button class="action-btn like-btn" data-post-id="'+i+'"><i class="'+(state.likedPosts[i]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+likes+'</span></button>';
     html+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+genComments.length+'</span></button>';

@@ -186,9 +186,10 @@ function resetAllCustomizations(){
     applyIconSet(null,true); // resets icons
     applyCoinSkin(null,true); // resets coin icon
     updatePremiumBg(); // clears premium background
-    // Remove cover photo
-    var coverEl=document.querySelector('.cover-photo');
-    if(coverEl) coverEl.style.backgroundImage='';
+    // Remove cover photo from both home timeline and profile view
+    var tc=$('#timelineCover');if(tc) tc.style.backgroundImage='';
+    var pvb=$('#pvCoverBanner');if(pvb) pvb.style.backgroundImage='';
+    var coverBtn=$('#coverEditBtn');if(coverBtn) coverBtn.innerHTML='<i class="fas fa-camera"></i> Add Cover Photo';
     // Reset dark mode body styles
     document.body.style.background='';document.body.style.color='';
 }

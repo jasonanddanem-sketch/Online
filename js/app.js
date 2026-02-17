@@ -82,7 +82,7 @@ signupForm.addEventListener('submit', async function (e) {
         // If enabled, session is null — user must confirm email first.
         if (result.session) {
             // Session exists: auto-signed-in, onAuthStateChange will fire
-            signupForm.reset();
+            closeSignupModal();
         } else {
             // No session: email confirmation required
             signupError.textContent = 'Check your email to confirm your account, then sign in.';
@@ -103,19 +103,20 @@ signupForm.addEventListener('submit', async function (e) {
 // Toggle between login and signup forms
 document.querySelector('.login-create').addEventListener('click', function (e) {
     e.preventDefault();
-    loginForm.style.display = 'none';
-    document.querySelector('.login-footer').style.display = 'none';
-    document.querySelector('.login-title').textContent = 'Create Account';
-    signupForm.style.display = '';
-    document.getElementById('signupFooter').style.display = '';
+    document.getElementById('signupOverlay').classList.add('active');
+});
+function closeSignupModal() {
+    document.getElementById('signupOverlay').classList.remove('active');
+    signupForm.reset();
+    var err = document.getElementById('signupError'); if(err) err.style.display='none';
+}
+document.getElementById('signupClose').addEventListener('click', closeSignupModal);
+document.getElementById('signupOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeSignupModal();
 });
 document.querySelector('.login-back') && document.querySelector('.login-back').addEventListener('click', function (e) {
     e.preventDefault();
-    signupForm.style.display = 'none';
-    document.getElementById('signupFooter').style.display = 'none';
-    document.querySelector('.login-title').textContent = 'Log In';
-    loginForm.style.display = '';
-    document.querySelector('.login-footer').style.display = '';
+    closeSignupModal();
 });
 
 // Forgot password

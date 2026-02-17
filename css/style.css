@@ -137,8 +137,17 @@ img{display:block;}
 .login-error.show{display:flex;align-items:center;gap:8px;}
 .login-error::before{content:'\f06a';font-family:'Font Awesome 6 Free';font-weight:900;font-size:15px;flex-shrink:0;}
 .login-footer{text-align:center;color:#888;font-size:14px;margin-top:16px;}
-.login-create,.login-back{color:#3b8fe8;font-weight:600;}
+.login-create,.login-back{color:#3b8fe8;font-weight:600;cursor:pointer;}
 .login-create:hover,.login-back:hover{color:#2a6fc0;}
+/* Signup Modal Overlay */
+.signup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:10000;display:none;align-items:center;justify-content:center;}
+.signup-overlay.active{display:flex;}
+.signup-modal{position:relative;width:100%;max-width:440px;max-height:90vh;background:rgba(255,255,255,.97);border-radius:16px;padding:32px 28px;box-shadow:0 24px 60px rgba(0,0,0,.25);overflow-y:auto;animation:signupSlideIn .3s ease;}
+.signup-modal .login-title{color:#1a1a2e;}
+.signup-modal .login-footer{color:#888;}
+.signup-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:#999;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .2s,color .2s;z-index:1;}
+.signup-close:hover{background:rgba(0,0,0,.06);color:#333;}
+@keyframes signupSlideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 .app-shell{display:none;}
 .app-shell.active{display:block;}
 .dq-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}

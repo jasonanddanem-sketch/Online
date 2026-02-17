@@ -361,7 +361,7 @@ img{display:block;}
 .btn-disabled{background:#ccc!important;color:#999!important;cursor:not-allowed!important;}
 
 /* Feed Post */
-.feed-post{padding:20px;min-width:0;word-wrap:break-word;overflow-wrap:anywhere;}
+.feed-post{padding:20px;min-width:0;word-wrap:break-word;overflow-wrap:anywhere;overflow:visible;}
 .post-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;position:relative;}
 .post-avatar{width:46px;height:46px;border-radius:50%;flex-shrink:0;cursor:pointer;object-fit:cover;}
 .post-user-info{flex:1;min-width:0;}

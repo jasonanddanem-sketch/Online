@@ -734,7 +734,7 @@ var logos = [
     {id:'ghost',name:'Ghost',desc:'Spooky and playful.',price:1,text:'\uD83D\uDC7BBlipVibe'},
     {id:'neon',name:'Neon',desc:'Glowing club vibes.',price:1,text:'\uD83D\uDCA0BV\uD83D\uDCA0'},
     {id:'sword',name:'Sword',desc:'Battle-ready branding.',price:1,text:'\u2694\uFE0FBlipVibe\u2694\uFE0F'},
-    {id:'mainlogo',name:'BlipVibe Logo',desc:'The official BlipVibe mascot logo.',price:0,img:'images/blipvibe-logo.webp'}
+    {id:'mainlogo',name:'BlipVibe Logo',desc:'The official BlipVibe mascot logo.',price:0,img:'images/blipvibe-logo-hd.webp'}
 ];
 
 var defaultIcons={home:'fa-home',groups:'fa-users-rectangle',skins:'fa-palette',profiles:'fa-user-group',shop:'fa-store',messages:'fa-envelope',notifications:'fa-bell',like:'fa-thumbs-up',dislike:'fa-thumbs-down',comment:'fa-comment',share:'fa-share-from-square',search:'fa-search',edit:'fa-pen',bookmark:'fa-bookmark',heart:'fa-heart'};

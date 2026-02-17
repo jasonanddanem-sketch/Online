@@ -4094,15 +4094,8 @@ async function renderMyNetwork(container,query){
             html+='</div>';
             html+='</div>';
         }
-        if(followingOnly.length){
-            html+='<div class="connections-followers">';
-            html+='<h3 class="connections-heading"><i class="fas fa-user-plus"></i> Following <span class="connections-count">'+followingOnly.length+'</span></h3>';
-            html+='<div class="connections-followers-scroll"><div class="connections-followers-row">';
-            followingOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
-            html+='</div></div></div>';
-        }
         html+='</div>';
-        if(!mutual.length&&!followingOnly.length&&!followersOnly.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>'+(query?'No results for "'+query+'"':'Your network is empty. Follow some people!')+'</p></div>';
+        if(!mutual.length&&!followersOnly.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>'+(query?'No results for "'+query+'"':'Your network is empty. Follow some people!')+'</p></div>';
     }catch(e){html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Could not load network.</p></div>';}
     if(myVersion!==_networkRenderVersion) return;
     container.innerHTML=html;

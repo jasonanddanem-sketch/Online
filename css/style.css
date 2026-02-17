@@ -96,8 +96,8 @@ img{display:block;}
 .login-page{position:fixed;inset:0;background:linear-gradient(160deg,#2a8de0 0%,#3b8fe8 30%,#4a9bf0 60%,#3585d8 100%);z-index:9999;overflow:hidden;display:none;}
 .login-page.visible{display:block;}
 .login-page.hidden{display:none;}
-.login-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px;}
-.login-logo-area{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(-280px);z-index:0;pointer-events:none;}
+.login-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;padding:20px;}
+.login-logo-area{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);z-index:0;pointer-events:none;margin-bottom:-40px;}
 .login-logo-img{width:800px;height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));}
 .login-stats{display:flex;gap:48px;justify-content:center;padding-top:12px;flex-shrink:0;}
 .login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}

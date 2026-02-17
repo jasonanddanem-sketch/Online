@@ -3451,6 +3451,9 @@ function autoFetchLinkPreviewsMini(container,selector){
                     if(d.title) h+='<div class="link-preview-title">'+d.title+'</div>';
                     h+='</div></a>';
                     el.insertAdjacentHTML('beforeend',h);
+                    // Hide the raw URL in the text
+                    var escaped=url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+                    el.innerHTML=el.innerHTML.replace(new RegExp(escaped,'g'),'');
                 }
             })
             .catch(function(){});
@@ -3485,6 +3488,9 @@ function autoFetchLinkPreviews(container){
                     if(d.title) h+='<div class="link-preview-title">'+d.title+'</div>';
                     h+='</div></a>';
                     desc.insertAdjacentHTML('beforeend',h);
+                    // Hide the raw URL in the post text
+                    var escaped=url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+                    textEl.innerHTML=textEl.innerHTML.replace(new RegExp(escaped,'g'),'');
                 }
             })
             .catch(function(){});

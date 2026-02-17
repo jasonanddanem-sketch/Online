@@ -95,8 +95,12 @@ img{display:block;}
 .login-page.visible{display:block;}
 .login-page.hidden{display:none;}
 .login-center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:40px 20px;}
-.login-logo-area{text-align:center;margin-bottom:28px;}
-.login-logo-img{width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 4px 20px rgba(0,0,0,.2));}
+.login-logo-area{text-align:center;margin-bottom:16px;}
+.login-logo-img{width:220px;height:220px;object-fit:contain;filter:drop-shadow(0 6px 30px rgba(0,0,0,.25));}
+.login-stats{display:flex;gap:32px;justify-content:center;margin-bottom:24px;}
+.login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.login-stat strong{font-size:22px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.15);}
+.login-stat span{font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1px;}
 .login-card{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:36px 32px;box-shadow:0 12px 40px rgba(0,0,0,.15);}
 .login-title{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:24px;text-align:center;}
 .login-field{margin-bottom:16px;}
@@ -2080,7 +2084,9 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     /* --- Login page --- */
     .login-center{padding:24px 16px!important;}
     .login-card{max-width:100%;padding:24px 20px!important;}
-    .login-logo-img{width:100px!important;height:100px!important;}
+    .login-logo-img{width:160px!important;height:160px!important;}
+    .login-stats{gap:24px!important;}
+    .login-stat strong{font-size:18px!important;}
     .login-title{font-size:22px;}
 
     /* --- Touch targets (Apple HIG 44px minimum) --- */

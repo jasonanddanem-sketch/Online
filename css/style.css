@@ -98,7 +98,7 @@ img{display:block;}
 .login-page.hidden{display:none;}
 .login-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px;}
 .login-logo-area{text-align:center;margin-bottom:12px;flex-shrink:0;width:100%;}
-.login-logo-img{width:min(600px,85vw);height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));margin:0 auto;}
+.login-logo-img{width:min(400px,85vw);height:auto;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,.2));margin:0 auto;}
 .login-stats{display:flex;gap:48px;justify-content:center;padding-top:16px;flex-shrink:0;}
 .login-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
 .login-stat strong{font-size:42px;font-weight:900;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.2);letter-spacing:-1px;}

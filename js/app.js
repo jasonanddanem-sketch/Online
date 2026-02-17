@@ -371,6 +371,50 @@ async function initApp() {
             renderNotifications();
         });
     } catch(e){ console.warn('Realtime notifications error:', e); }
+    // Subscribe to realtime posts — new posts appear without refresh
+    try {
+        sbSubscribePosts(async function(newPost){
+            if(!newPost||newPost.group_id) return; // skip group posts
+            if(newPost.author_id===currentUser.id) return; // skip own posts (already in feed)
+            if(blockedUsers[newPost.author_id]) return;
+            try{
+                var author=await sbGetProfile(newPost.author_id);
+                if(!author) return;
+                var fp={
+                    idx:newPost.id,
+                    person:{id:author.id,name:author.display_name||author.username||'User',img:null,avatar_url:author.avatar_url},
+                    text:newPost.content||'',tags:[],badge:null,loc:newPost.location||null,
+                    likes:0,comments:[],commentCount:0,shares:0,
+                    images:newPost.media_urls&&newPost.media_urls.length?newPost.media_urls:(newPost.image_url?[newPost.image_url]:null),
+                    created_at:newPost.created_at
+                };
+                // Don't add duplicates
+                if(feedPosts.some(function(p){return p.idx===fp.idx;})) return;
+                feedPosts.unshift(fp);
+                renderFeed(activeFeedTab);
+            }catch(e){console.warn('Realtime post enrich error:',e);}
+        });
+    } catch(e){ console.warn('Realtime posts error:', e); }
+    // Subscribe to realtime follows — follow counts update without refresh
+    try {
+        sbSubscribeFollows(currentUser.id, function(eventType){
+            loadFollowCounts().then(function(){updateFollowCounts();});
+        });
+    } catch(e){ console.warn('Realtime follows error:', e); }
+    // Subscribe to realtime likes — like counts update without refresh
+    try {
+        sbSubscribeLikes(currentUser.id, function(eventType, row){
+            if(!row||row.target_type!=='post') return;
+            var post=feedPosts.find(function(p){return p.idx===row.target_id;});
+            if(post){
+                if(eventType==='INSERT') post.likes++;
+                else if(eventType==='DELETE') post.likes=Math.max(0,post.likes-1);
+                // Update the like count in the DOM without full re-render
+                var likeEl=document.querySelector('.like-btn[data-id="'+row.target_id+'"] .like-count');
+                if(likeEl) likeEl.textContent=post.likes;
+            }
+        });
+    } catch(e){ console.warn('Realtime likes error:', e); }
     // Load conversations and subscribe to realtime messages
     loadConversations();
     renderMsgFollowing();
@@ -4070,11 +4114,42 @@ async function renderDiscover(container,query){
     container.innerHTML=html;
     bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
 }
+var _nfbRenderVersion=0;
+async function renderNotFollowingBack(container,query){
+    if(!currentUser){container.innerHTML='';return;}
+    var myVersion=++_nfbRenderVersion;
+    var html='';
+    try{
+        var following=await sbGetFollowing(currentUser.id);
+        var followers=await sbGetFollowers(currentUser.id);
+        if(myVersion!==_nfbRenderVersion) return;
+        following=following.filter(function(p){return p&&p.id!==currentUser.id;});
+        var followerIds={};
+        followers.forEach(function(p){if(p)followerIds[p.id]=true;});
+        var notFollowingBack=following.filter(function(p){return !followerIds[p.id];});
+        if(query){
+            var q=query.toLowerCase();
+            notFollowingBack=notFollowingBack.filter(function(p){return (p.display_name||p.username||'').toLowerCase().indexOf(q)!==-1;});
+        }
+        if(notFollowingBack.length){
+            html='<p style="color:var(--gray);margin:12px 0 16px;font-size:14px;">'+notFollowingBack.length+' '+(notFollowingBack.length===1?'person':'people')+' you follow '+(notFollowingBack.length===1?'doesn\'t':'don\'t')+' follow you back.</p>';
+            html+='<div class="search-results-grid">';
+            notFollowingBack.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+            html+='</div>';
+        } else {
+            html='<div class="empty-state"><i class="fas fa-handshake"></i><p>'+(query?'No results for "'+query+'"':'Everyone you follow follows you back!')+'</p></div>';
+        }
+    }catch(e){html='<div class="empty-state"><i class="fas fa-user-xmark"></i><p>Could not load data.</p></div>';}
+    if(myVersion!==_nfbRenderVersion) return;
+    container.innerHTML=html;
+    bindProfileEvents(container.closest('.page')?'#'+container.closest('.page').id:'#profilesSections');
+}
 function renderProfiles(tab,query){
     var container=$('#profilesSections');
     if(!container) return;
     var t=tab||currentProfileTab||'network';
     if(t==='network') renderMyNetwork(container,query||'');
+    else if(t==='notfollowing') renderNotFollowingBack(container,query||'');
     else renderDiscover(container,query||'');
 }
 function bindProfileEvents(c){

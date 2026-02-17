@@ -671,6 +671,28 @@ function sbSubscribePosts(callback) {
     .subscribe();
 }
 
+function sbSubscribeFollows(userId, callback) {
+  return sb.channel('follows:' + userId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: 'followed_id=eq.' + userId }, payload => {
+      callback(payload.eventType, payload.new, payload.old);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: 'follower_id=eq.' + userId }, payload => {
+      callback(payload.eventType, payload.new, payload.old);
+    })
+    .subscribe();
+}
+
+function sbSubscribeLikes(userId, callback) {
+  return sb.channel('likes:' + userId)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'likes' }, payload => {
+      callback('INSERT', payload.new);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'likes' }, payload => {
+      callback('DELETE', payload.old);
+    })
+    .subscribe();
+}
+
 function sbSubscribeNotifications(userId, callback) {
   return sb.channel('notifications:' + userId)
     .on('postgres_changes', {

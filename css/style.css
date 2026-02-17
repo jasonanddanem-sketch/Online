@@ -546,8 +546,10 @@ body.skin-midnight .photos-empty,body.skin-midnight .photo-album-empty{color:#bb
 
 /* ========== SKIN SHOP CARDS ========== */
 #shopGrid,#mySkinsGrid{display:flex;flex-direction:column;}
-.shop-scroll-row{display:flex;gap:16px;overflow-x:auto;padding:8px 4px 16px;scroll-snap-type:x mandatory;cursor:grab;user-select:none;}
-.shop-scroll-row.dragging{cursor:grabbing;scroll-snap-type:none;scroll-behavior:auto;}
+.shop-scroll-row{display:flex;gap:16px;overflow-x:auto;padding:8px 4px 16px;scroll-snap-type:x mandatory;cursor:grab!important;user-select:none;}
+.shop-scroll-row *{cursor:grab!important;}
+.shop-scroll-row button,.shop-scroll-row a{cursor:pointer!important;}
+.shop-scroll-row.dragging,.shop-scroll-row.dragging *{cursor:grabbing!important;scroll-snap-type:none;scroll-behavior:auto;}
 .shop-scroll-row.dragging>*{pointer-events:none;}
 .shop-scroll-row::-webkit-scrollbar{height:6px;}
 .shop-scroll-row::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}

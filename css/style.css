@@ -416,13 +416,15 @@ img{display:block;}
 .like-count:hover{text-decoration:underline;}
 
 /* Inline Comments */
-.inline-comment{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+.inline-comment{display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;}
+.post-comments{margin-top:12px;}
+.post-comments:empty{margin-top:0;}
 .inline-comment-avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:2px;}
 .inline-comment-bubble{position:relative;background:var(--border);border-radius:0 12px 12px 12px;padding:6px 10px;display:inline-block;max-width:100%;overflow-wrap:break-word;word-break:break-word;}
 .inline-comment-bubble::before{content:'';position:absolute;top:0;left:-6px;border-width:0 6px 6px 0;border-style:solid;border-color:transparent var(--border) transparent transparent;}
 .inline-comment-reply-row{margin-left:34px;}
 /* Modal Comment Items */
-.comment-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+.comment-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;}
 .comment-reply{margin-left:42px;padding-left:10px;border-left:2px solid var(--border);}
 
 /* Post Media Grid - Facebook style */

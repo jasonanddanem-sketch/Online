@@ -148,9 +148,9 @@ function handleLogout() {
         showLogin();
     });
 }
-// Reset all in-memory state and visual customizations so nothing leaks between accounts
-function resetAllCustomizations(){
-    // Reset state object to defaults
+// Lightweight reset — only clears in-memory data, no DOM manipulation.
+// Safe to call early before DOM is fully ready.
+function resetStateData(){
     state.coins=0;state.following=0;state.followers=0;state.followedUsers={};
     state.ownedSkins={};state.activeSkin=null;state.ownedFonts={};state.activeFont=null;
     state.ownedLogos={};state.activeLogo=null;state.notifications=[];state.joinedGroups={};
@@ -165,8 +165,13 @@ function resetAllCustomizations(){
     state.groupActiveSkin={};state.groupActivePremiumSkin={};
     state.groupPostCoinCount={};state.groupCommentCoinPosts={};state.groupReplyCoinPosts={};
     settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top',showLocation:true};
-    // Reset premium background globals
     premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;
+}
+
+// Full reset — clears data AND strips visual customizations from DOM.
+// Used on logout when the DOM is fully loaded.
+function resetAllCustomizations(){
+    resetStateData();
     // --- Aggressively strip ALL customization classes from body ---
     var bodyClasses=Array.from(document.body.classList);
     bodyClasses.forEach(function(c){
@@ -321,8 +326,9 @@ var _initAppRunning = false;
 async function initApp() {
     if (_initAppRunning) return;
     _initAppRunning = true;
-    // Always reset state before loading a new user — prevents leaking between accounts
-    resetAllCustomizations();
+    // Reset in-memory state to defaults — prevents leaking between accounts.
+    // Only resets data, not DOM (DOM gets set by reapplyCustomizations later).
+    resetStateData();
     var authUser = await sbGetUser();
     if (!authUser) { _initAppRunning = false; showLogin(); return; }
     currentAuthUser = authUser;
@@ -334,12 +340,14 @@ async function initApp() {
             currentUser = await sbEnsureProfile(authUser);
         } catch (e2) {
             console.error('Failed to create profile:', e2);
+            _initAppRunning = false;
             showLogin(); return;
         }
     }
     // Check if user has accepted terms of use
     if(!currentUser.terms_accepted){
         _initAppRunning=false;
+        showApp(); // show app shell so modal overlay is visible
         showTermsModal();
         return;
     }

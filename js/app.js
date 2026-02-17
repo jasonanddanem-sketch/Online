@@ -1006,7 +1006,7 @@ function navigateTo(page,skipPush){
         renderNotifications();
         if(currentUser) sbMarkNotificationsRead(currentUser.id).catch(function(){});
     }
-    if(page==='messages'){loadConversations();renderMsgFollowing();}
+    if(page==='messages'){var ml=document.querySelector('.messages-layout');if(ml)ml.classList.remove('chat-open');loadConversations();renderMsgFollowing();}
     if(page==='profiles') renderProfiles(currentProfileTab);
     if(page==='groups') renderGroups();
     if(page==='shop') renderShop();
@@ -1499,6 +1499,8 @@ async function showComments(postId,countEl,sortMode,autoReplyToCid){
         if(sortMode==='top'){allComments.sort(function(a,b){return b.likes-a.likes;});}
         else if(sortMode==='newest'){allComments.reverse();}
     }
+    // Filter out comments from blocked users
+    allComments=allComments.filter(function(c){return !c.authorId||!blockedUsers[c.authorId];});
     // Separate top-level and replies (flatten nested replies under their top-level ancestor)
     var commentById={};
     allComments.forEach(function(c){commentById[c.cid]=c;});
@@ -1715,6 +1717,8 @@ async function renderInlineComments(postId){
         var _myN=currentUser?(currentUser.display_name||currentUser.username):'You';
         user.forEach(function(t,i){all.push({name:_myN,img:null,text:t,likes:0,cid:postId+'-u-'+i});});
     }
+    // Filter out comments from blocked users
+    all=all.filter(function(c){return !c.authorId||!blockedUsers[c.authorId];});
     if(!all.length){el.innerHTML='';el.style.padding='';return;}
     // Separate top-level and replies for threaded display (flatten nested under top-level ancestor)
     var commentById={};
@@ -1880,6 +1884,8 @@ function profileToPerson(p){
 }
 // ======================== PROFILE VIEW PAGE ========================
 async function showProfileView(person){
+    // Allow viewing own profile even if somehow in blockedUsers; block viewing others
+    if(person.id&&!person.isMe&&blockedUsers[person.id]){showToast('This user is blocked');return;}
     pvPhotoTab='photos';
     $$('.page').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-profile-view').classList.add('active');
@@ -3871,7 +3877,7 @@ async function renderSuggestions(){
     if(!list||!currentUser) return;
     try{
         var all=await sbGetAllProfiles(20);
-        var suggestions=all.filter(function(p){return p.id!==currentUser.id&&!state.followedUsers[p.id];}).slice(0,5);
+        var suggestions=all.filter(function(p){return p.id!==currentUser.id&&!state.followedUsers[p.id]&&!blockedUsers[p.id];}).slice(0,5);
         if(!suggestions.length){list.innerHTML='<p style="text-align:center;color:var(--gray);font-size:13px;">No suggestions yet</p>';return;}
         var html='';
         suggestions.forEach(function(p){
@@ -4068,8 +4074,8 @@ async function renderMyNetwork(container,query){
         var following=await sbGetFollowing(currentUser.id);
         var followers=await sbGetFollowers(currentUser.id);
         if(myVersion!==_networkRenderVersion) return; // stale call, skip
-        following=following.filter(function(p){return p&&p.id!==currentUser.id;});
-        followers=followers.filter(function(p){return p&&p.id!==currentUser.id;});
+        following=following.filter(function(p){return p&&p.id!==currentUser.id&&!blockedUsers[p.id];});
+        followers=followers.filter(function(p){return p&&p.id!==currentUser.id&&!blockedUsers[p.id];});
         // Deduplicate: separate mutual follows, following-only, followers-only
         var followingIds={};
         following.forEach(function(p){followingIds[p.id]=true;});
@@ -4166,6 +4172,7 @@ async function renderDiscover(container,query){
                 profiles=profiles.concat(extras);
             }
         }
+        profiles=profiles.filter(function(p){return !blockedUsers[p.id];});
         if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>'+(query?'No results for "'+query+'"':'No suggestions yet')+'</p></div>';
         else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{noBio:true});});html+='</div>';}
     }catch(e){console.error('renderDiscover:',e);html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}
@@ -4182,7 +4189,7 @@ async function renderNotFollowingBack(container,query){
         var following=await sbGetFollowing(currentUser.id);
         var followers=await sbGetFollowers(currentUser.id);
         if(myVersion!==_nfbRenderVersion) return;
-        following=following.filter(function(p){return p&&p.id!==currentUser.id;});
+        following=following.filter(function(p){return p&&p.id!==currentUser.id&&!blockedUsers[p.id];});
         var followerIds={};
         followers.forEach(function(p){if(p)followerIds[p.id]=true;});
         var notFollowingBack=following.filter(function(p){return !followerIds[p.id];});
@@ -4895,7 +4902,7 @@ async function loadConversations(){
 }
 function updateMsgBadge(){
     var total=0;
-    msgConversations.forEach(function(c){total+=c.unread||0;});
+    msgConversations.forEach(function(c){if(!blockedUsers[c.partnerId]) total+=c.unread||0;});
     var badge=$('#msgBadge');
     if(badge){
         if(total>0){badge.style.display='flex';badge.textContent=total;}
@@ -4906,7 +4913,7 @@ function updateMsgBadge(){
 function renderMsgContacts(search){
     var list=$('#msgContactList');
     if(!list) return;
-    var convos=msgConversations;
+    var convos=msgConversations.filter(function(c){return !blockedUsers[c.partnerId];});
     if(search){
         var q=search.toLowerCase();
         convos=convos.filter(function(c){
@@ -4946,14 +4953,21 @@ function renderMsgContacts(search){
 }
 
 async function openChat(contact){
+    if(blockedUsers[contact.partnerId]){showToast('This user is blocked');return;}
     activeChat=contact;
     renderMsgContacts();
     var name=contact.partner.display_name||contact.partner.username||'User';
     var avatar=contact.partner.avatar_url||DEFAULT_AVATAR;
-    var html='<div class="msg-chat-header"><img src="'+avatar+'" alt="'+name+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;" data-uid="'+contact.partnerId+'"><h4>'+name+'</h4></div>';
+    var html='<div class="msg-chat-header"><button class="msg-back-btn" id="msgBackBtn"><i class="fas fa-arrow-left"></i></button><img src="'+avatar+'" alt="'+name+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;" data-uid="'+contact.partnerId+'"><h4>'+name+'</h4></div>';
     html+='<div class="msg-chat-messages" id="chatMessages"><div style="text-align:center;padding:20px;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>';
     html+='<div class="msg-chat-input"><button id="msgImgBtn" title="Send image" style="background:none;border:none;color:var(--primary);font-size:18px;padding:8px;cursor:pointer;"><i class="fas fa-image"></i></button><input type="file" id="msgImgInput" accept="image/*" style="display:none;"><input type="text" placeholder="Type a message..." id="msgInput" style="flex:1;"><button id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button></div>';
     $('#msgChat').innerHTML=html;
+    // Mobile: show chat area, hide sidebar
+    var msgLayout=document.querySelector('.messages-layout');
+    if(msgLayout) msgLayout.classList.add('chat-open');
+    // Back button handler
+    var backBtn=document.getElementById('msgBackBtn');
+    if(backBtn){backBtn.addEventListener('click',function(){if(msgLayout)msgLayout.classList.remove('chat-open');activeChat=null;renderMsgContacts();});}
 
     // Load messages
     try{
@@ -5434,6 +5448,14 @@ function blockUser(uid){
     if(idx!==-1){myFollowers.splice(idx,1);}
     updateFollowCounts();
     renderFeed(activeFeedTab);
+    renderMsgContacts();
+    updateMsgBadge();
+    // If currently chatting with blocked user, clear chat
+    if(activeChat&&activeChat.partnerId===uid){
+        activeChat=null;
+        var mc=$('#msgChat');
+        if(mc) mc.innerHTML='<div class="msg-chat-placeholder"><i class="fas fa-envelope-open-text"></i><p>Select a conversation to start messaging</p></div>';
+    }
     showToast('User blocked');
 }
 function unblockUser(uid){

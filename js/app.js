@@ -4071,6 +4071,7 @@ async function renderMyNetwork(container,query){
             followingOnly=followingOnly.filter(matchName);
             followersOnly=followersOnly.filter(matchName);
         }
+        html+='<div class="connections-wrap">';
         if(mutual.length||followingOnly.length){
             html+='<div class="connections-columns">';
             // Left column — Mutual
@@ -4093,7 +4094,14 @@ async function renderMyNetwork(container,query){
             html+='</div>';
             html+='</div>';
         }
-        if(followersOnly.length){html+='<h3 class="connections-heading" style="margin-top:24px;"><i class="fas fa-users"></i> Followers <span class="connections-count">'+followersOnly.length+'</span></h3><div class="search-results-grid">';followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
+        if(followersOnly.length){
+            html+='<div class="connections-followers">';
+            html+='<h3 class="connections-heading"><i class="fas fa-users"></i> Followers <span class="connections-count">'+followersOnly.length+'</span></h3>';
+            html+='<div class="connections-followers-scroll"><div class="connections-followers-row">';
+            followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+            html+='</div></div></div>';
+        }
+        html+='</div>';
         if(!mutual.length&&!followingOnly.length&&!followersOnly.length) html='<div class="empty-state"><i class="fas fa-user-group"></i><p>'+(query?'No results for "'+query+'"':'Your network is empty. Follow some people!')+'</p></div>';
     }catch(e){html='<div class="empty-state"><i class="fas fa-user-group"></i><p>Could not load network.</p></div>';}
     if(myVersion!==_networkRenderVersion) return;

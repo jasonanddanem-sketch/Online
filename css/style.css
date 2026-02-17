@@ -1702,18 +1702,39 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
 .search-tab .tab-count{background:rgba(0,0,0,.1);color:var(--gray);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
 .search-tab.active .tab-count{background:rgba(255,255,255,.25);color:#fff;}
 .search-results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
-.connections-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px;}
-.connections-col{display:flex;flex-direction:column;gap:12px;background:var(--card);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
-.connections-heading{font-size:15px;font-weight:600;color:var(--dark);display:flex;align-items:center;gap:8px;margin:0;}
-.connections-heading i{color:var(--primary);font-size:14px;}
-.connections-count{font-size:12px;font-weight:500;color:var(--gray);background:var(--border);border-radius:10px;padding:2px 8px;margin-left:auto;}
+#page-profiles{min-height:auto!important;height:100vh;overflow:hidden;}
+#page-profiles .page-container{padding-bottom:0;display:flex;flex-direction:column;height:calc(100vh - 80px);overflow:hidden;}
+#page-profiles .page-header{flex-shrink:0;}
+#page-profiles #profilesTabs{flex-shrink:0;}
+#page-profiles #profilesSections{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+.connections-wrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;overflow:hidden;}
+.connections-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;min-height:0;}
+.connections-col{display:flex;flex-direction:column;gap:10px;background:var(--card);border-radius:12px;padding:14px;box-shadow:var(--shadow);min-height:0;}
+.connections-heading{font-size:14px;font-weight:600;color:var(--dark);display:flex;align-items:center;gap:8px;margin:0;flex-shrink:0;}
+.connections-heading i{color:var(--primary);font-size:13px;}
+.connections-count{font-size:11px;font-weight:500;color:var(--gray);background:var(--border);border-radius:10px;padding:2px 8px;margin-left:auto;}
 .connections-empty{color:var(--gray);font-size:13px;text-align:center;padding:20px 0;}
-.connections-scroll{max-height:660px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent;border-radius:8px;}
+.connections-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent;border-radius:8px;}
 .connections-scroll::-webkit-scrollbar{width:5px;}
 .connections-scroll::-webkit-scrollbar-track{background:transparent;}
 .connections-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.connections-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.connections-grid .profile-card-item{min-width:0;max-width:none;width:100%;}
+.connections-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.connections-grid .profile-card-item{min-width:0;max-width:none;width:100%;padding:12px;box-shadow:none;border:1px solid var(--border);}
+.connections-grid .profile-card-item img{width:48px;height:48px;margin:0 auto 6px;}
+.connections-grid .profile-card-item h4{font-size:calc(13px * var(--font-scale));}
+.connections-grid .profile-card-item p{font-size:11px;margin-bottom:8px;}
+.connections-grid .profile-card-item .btn{padding:5px 8px;font-size:11px;}
+.connections-grid .profile-card-item:hover{transform:none;}
+.connections-followers{flex-shrink:0;max-height:30%;overflow:hidden;display:flex;flex-direction:column;gap:8px;}
+.connections-followers .connections-heading{flex-shrink:0;}
+.connections-followers .connections-followers-scroll{flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.connections-followers .connections-followers-scroll::-webkit-scrollbar{display:none;}
+.connections-followers .connections-followers-row{display:flex;gap:10px;padding:4px 0;}
+.connections-followers .profile-card-item{min-width:140px;max-width:140px;flex-shrink:0;padding:10px;box-shadow:none;border:1px solid var(--border);}
+.connections-followers .profile-card-item img{width:40px;height:40px;margin:0 auto 4px;}
+.connections-followers .profile-card-item h4{font-size:calc(12px * var(--font-scale));}
+.connections-followers .profile-card-item p{font-size:10px;margin-bottom:6px;}
+.connections-followers .profile-card-item .btn{padding:4px 6px;font-size:10px;}
 .search-post-card{padding:16px 20px;}
 .search-post-card .post-header{margin-bottom:10px;}
 .search-post-card .post-tags{margin-bottom:0;}

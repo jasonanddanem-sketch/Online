@@ -1835,6 +1835,9 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .pv-col-skin{grid-column:1!important;grid-row:auto!important;position:static!important;max-width:none!important;margin:0!important;}
     .pv-cover-banner{height:200px!important;}
 
+    /* --- Cover edit button — move to bottom so navbar doesn't hide it --- */
+    .timeline-cover-btn{top:auto!important;bottom:8px!important;right:8px!important;padding:6px 10px!important;font-size:12px!important;}
+
     /* --- Group view — single column --- */
     .gv-layout{
         grid-template-columns:1fr!important;max-width:100%!important;

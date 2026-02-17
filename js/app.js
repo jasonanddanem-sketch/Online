@@ -861,6 +861,7 @@ function navigateTo(page,skipPush){
         applySkin(_pvSaved.skin||null,true);
         if(_pvSaved.premiumSkin)applyPremiumSkin(_pvSaved.premiumSkin,true);
         else updatePremiumBg();
+        applyFont(_pvSaved.font||null,true);
         _pvSaved=null;
     }
     // Restore user's skin when leaving group view
@@ -1784,7 +1785,7 @@ async function showProfileView(person){
             premiumBgImage=null;updatePremiumBg();
             applySkin(person.skin||null,true);
         }
-        // Don't change font/template/icons when viewing other profiles — only skin color
+        applyFont(person.font||null,true);
     }
 
     // Cover banner

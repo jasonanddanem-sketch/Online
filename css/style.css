@@ -156,15 +156,15 @@ img{display:block;}
 .dq-toast-undo-btn{background:none;color:var(--primary);font-weight:700;font-size:14px;padding:0;text-decoration:underline;cursor:pointer;}
 @media(max-width:900px){
     .login-center{padding:30px 16px;}
-    .login-logo-img{width:200px!important;}
-    .login-logo-area{margin-bottom:-60px!important;}
+    .login-logo-img{width:280px!important;}
+    .login-logo-area{margin-bottom:-80px!important;}
     .login-stats{gap:32px!important;}
     .login-stat strong{font-size:34px!important;}
     .login-card{padding:28px 24px;}
 }
 @media(max-width:480px){
-    .login-logo-img{width:150px!important;}
-    .login-logo-area{margin-bottom:-40px!important;}
+    .login-logo-img{width:220px!important;}
+    .login-logo-area{margin-bottom:-60px!important;}
     .login-stats{gap:20px!important;}
     .login-stat strong{font-size:28px!important;}
 }

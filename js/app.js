@@ -2609,10 +2609,10 @@ function bindGvPostEvents(){
 
 function openGroupPostModal(group){
     var html='<div class="create-post-modal"><div class="modal-header"><h3>Post in '+group.name+'</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    html+='<div class="modal-body"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px 0;"><img src="'+$('#profileAvatarImg').src+'" style="width:40px;height:40px;border-radius:50%;"><strong style="font-size:14px;">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</strong></div>';
+    html+='<div class="cpm-scroll"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px 0;"><img src="'+$('#profileAvatarImg').src+'" style="width:40px;height:40px;border-radius:50%;"><strong style="font-size:14px;">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</strong></div>';
     html+='<textarea class="cpm-textarea" id="gvCpmText" placeholder="Write something..."></textarea>';
     html+='<div class="cpm-media-zone" id="gvCpmMediaZone"><div class="cpm-media-grid" id="gvCpmGrid"></div><div id="gvCpmDropZone"><i class="fas fa-photo-video"></i><br>Add Photos/Videos</div><input type="file" accept="image/*,video/*" multiple id="gvCpmFileInput" style="display:none;"></div>';
-    html+='<div class="cpm-footer"><button class="btn btn-primary" id="gvCpmPublish">Publish</button></div></div></div>';
+    html+='</div><div class="cpm-footer"><button class="btn btn-primary" id="gvCpmPublish">Publish</button></div></div>';
     showModal(html);
     var mediaList=[];
     var zone=document.getElementById('gvCpmMediaZone'),grid=document.getElementById('gvCpmGrid'),dropZone=document.getElementById('gvCpmDropZone'),fileInput=document.getElementById('gvCpmFileInput');
@@ -3461,12 +3461,12 @@ function autoFetchLinkPreviews(container){
 // ======================== POST CREATION ========================
 $('#openPostModal').addEventListener('click',function(){
     var html='<div class="create-post-modal"><div class="modal-header"><h3>Create a Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    html+='<div class="modal-body"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px 0;"><img src="'+$('#profileAvatarImg').src+'" style="width:40px;height:40px;border-radius:50%;"><strong style="font-size:14px;">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</strong></div>';
+    html+='<div class="cpm-scroll"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px 0;"><img src="'+$('#profileAvatarImg').src+'" style="width:40px;height:40px;border-radius:50%;"><strong style="font-size:14px;">'+(currentUser?(currentUser.display_name||currentUser.username):'You')+'</strong></div>';
     html+='<textarea class="cpm-textarea" id="cpmText" placeholder="Write something..."></textarea>';
     html+='<div class="cpm-media-zone" id="cpmMediaZone"><div class="cpm-media-grid" id="cpmGrid"></div><div id="cpmDropZone"><i class="fas fa-photo-video"></i><br>Add Photos/Videos</div><input type="file" accept="image/*,video/*" multiple id="cpmFileInput" style="display:none;"></div>';
     html+='<div class="cpm-tags-section"><div class="cpm-tags-wrap" id="cpmTagsWrap"></div></div>';
     html+='<div class="cpm-link-section" id="cpmLinkSection" style="display:none;"><div id="cpmLinkPreview"></div></div>';
-    html+='<div class="cpm-footer"><button class="btn btn-primary" id="cpmPublish">Publish</button></div></div></div>';
+    html+='</div><div class="cpm-footer"><button class="btn btn-primary" id="cpmPublish">Publish</button></div></div>';
     showModal(html);
     var mediaList=[];
     var zone=document.getElementById('cpmMediaZone');

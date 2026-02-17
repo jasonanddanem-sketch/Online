@@ -256,12 +256,9 @@ async function initApp() {
         }
     }
     state.coins = currentUser.coin_balance || 0;
-    loadState(); // Restore skins, settings, purchases from localStorage
-    // If localStorage had no data, try loading from Supabase (cross-browser sync)
-    var localKey='blipvibe_'+currentUser.id;
-    if(!localStorage.getItem(localKey)){
-        await loadSkinDataFromSupabase();
-    }
+    loadState(); // Restore skins, settings, purchases from localStorage (fast)
+    // Always load from Supabase to pick up cross-device changes
+    await loadSkinDataFromSupabase();
     populateUserUI();
     showApp();
     reapplyCustomizations(); // Re-apply skins, fonts, nav styles, dark mode
@@ -514,7 +511,8 @@ function syncSkinDataToSupabase(){
             ownedNavStyles:state.ownedNavStyles||{},
             ownedIconSets:state.ownedIconSets||{},
             ownedLogos:state.ownedLogos||{},
-            ownedCoinSkins:state.ownedCoinSkins||{}
+            ownedCoinSkins:state.ownedCoinSkins||{},
+            settings:settings
         };
         sbUpdateProfile(currentUser.id,{skin_data:skinData}).catch(function(e){
             console.warn('Skin data sync error:',e);
@@ -527,19 +525,20 @@ async function loadSkinDataFromSupabase(){
         var profile=await sbGetProfile(currentUser.id);
         if(!profile||!profile.skin_data) return;
         var sd=profile.skin_data;
-        if(sd.activeSkin) state.activeSkin=sd.activeSkin;
-        if(sd.activePremiumSkin) state.activePremiumSkin=sd.activePremiumSkin;
-        if(sd.activeFont) state.activeFont=sd.activeFont;
-        if(sd.activeTemplate) state.activeTemplate=sd.activeTemplate;
-        if(sd.activeNavStyle) state.activeNavStyle=sd.activeNavStyle;
-        if(sd.activeIconSet) state.activeIconSet=sd.activeIconSet;
-        if(sd.activeLogo) state.activeLogo=sd.activeLogo;
-        if(sd.activeCoinSkin) state.activeCoinSkin=sd.activeCoinSkin;
-        if(sd.premiumBgUrl) premiumBgImage=sd.premiumBgUrl;
+        // Override active customizations from Supabase (source of truth for cross-device)
+        if('activeSkin' in sd) state.activeSkin=sd.activeSkin||null;
+        if('activePremiumSkin' in sd) state.activePremiumSkin=sd.activePremiumSkin||null;
+        if('activeFont' in sd) state.activeFont=sd.activeFont||null;
+        if('activeTemplate' in sd) state.activeTemplate=sd.activeTemplate||null;
+        if('activeNavStyle' in sd) state.activeNavStyle=sd.activeNavStyle||null;
+        if('activeIconSet' in sd) state.activeIconSet=sd.activeIconSet||null;
+        if('activeLogo' in sd) state.activeLogo=sd.activeLogo||null;
+        if('activeCoinSkin' in sd) state.activeCoinSkin=sd.activeCoinSkin||null;
+        if('premiumBgUrl' in sd) premiumBgImage=sd.premiumBgUrl||null;
         if(sd.premiumBgOverlay!==undefined) premiumBgOverlay=sd.premiumBgOverlay;
-        else if(sd.premiumBgSaturation!==undefined) premiumBgOverlay=0; // migrate old saturation data
         if(sd.premiumBgDarkness!==undefined) premiumBgDarkness=sd.premiumBgDarkness;
         if(sd.premiumCardTransparency!==undefined) premiumCardTransparency=sd.premiumCardTransparency;
+        // Merge owned items (union — never lose purchases)
         if(sd.ownedSkins) Object.assign(state.ownedSkins,sd.ownedSkins);
         if(sd.ownedPremiumSkins) Object.assign(state.ownedPremiumSkins,sd.ownedPremiumSkins);
         if(sd.ownedFonts) Object.assign(state.ownedFonts,sd.ownedFonts);
@@ -548,6 +547,14 @@ async function loadSkinDataFromSupabase(){
         if(sd.ownedIconSets) Object.assign(state.ownedIconSets,sd.ownedIconSets);
         if(sd.ownedLogos) Object.assign(state.ownedLogos,sd.ownedLogos);
         if(sd.ownedCoinSkins) Object.assign(state.ownedCoinSkins,sd.ownedCoinSkins);
+        // Sync settings (dark mode, etc.) across devices
+        if(sd.settings){
+            if(sd.settings.darkMode!==undefined) settings.darkMode=!!sd.settings.darkMode;
+            if(sd.settings.notifSound!==undefined) settings.notifSound=sd.settings.notifSound;
+            if(sd.settings.privateProfile!==undefined) settings.privateProfile=!!sd.settings.privateProfile;
+            if(sd.settings.commentOrder) settings.commentOrder=sd.settings.commentOrder;
+            if(sd.settings.showLocation!==undefined) settings.showLocation=sd.settings.showLocation;
+        }
     }catch(e){console.warn('Load skin data from Supabase:',e);}
 }
 function loadState(){

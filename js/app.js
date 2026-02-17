@@ -3578,13 +3578,18 @@ $('#openPostModal').addEventListener('click',function(){
         detectAndFetchLink();
     });
     document.getElementById('cpmText').addEventListener('paste',function(){setTimeout(detectAndFetchLink,100);});
+    var _publishing=false;
     document.getElementById('cpmPublish').addEventListener('click', async function(){
+        if(_publishing)return;
         var text=document.getElementById('cpmText').value.trim();
         var linkUrl=_linkData.url||'';
         var linkTitle=_linkData.title||'';
         var linkDesc=_linkData.desc||'';
         var linkImgSrc=_linkData.image||'';
         if(!text&&!mediaList.length&&!linkUrl)return;
+        _publishing=true;
+        var pubBtn=document.getElementById('cpmPublish');
+        pubBtn.disabled=true;pubBtn.textContent='Publishing...';
         var container=$('#feedContainer');
 
         // Upload all images to Supabase Storage
@@ -3616,6 +3621,8 @@ $('#openPostModal').addEventListener('click',function(){
             } catch(e) {
                 console.error('Create post:', e);
                 showToast('Post failed to save: ' + (e.message || e.details || 'Unknown error'));
+                _publishing=false;pubBtn.disabled=false;pubBtn.textContent='Publish';
+                return;
             }
         }
 

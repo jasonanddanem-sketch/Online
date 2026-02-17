@@ -1872,10 +1872,12 @@ async function showProfileView(person){
                 feedHtml+='<div class="post-description"><p>'+post.content+'</p></div>';
                 var pvImgs=post.media_urls&&post.media_urls.length?post.media_urls:(post.image_url?[post.image_url]:[]);
                 feedHtml+=buildMediaGrid(pvImgs);
+                var pvLikes=post.like_count||0;
+                var pvComments=(post.comments&&post.comments[0])?post.comments[0].count:0;
                 feedHtml+='<div class="post-actions"><div class="action-left">';
-                feedHtml+='<button class="action-btn like-btn" data-post-id="'+post.id+'"><i class="'+(state.likedPosts[post.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">0</span></button>';
-                feedHtml+='<button class="action-btn dislike-btn" data-post-id="'+post.id+'"><i class="'+(state.dislikedPosts[post.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
-                feedHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>0</span></button>';
+                feedHtml+='<button class="action-btn like-btn'+(state.likedPosts[post.id]?' liked':'')+'" data-post-id="'+post.id+'"><i class="'+(state.likedPosts[post.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+pvLikes+'</span></button>';
+                feedHtml+='<button class="action-btn dislike-btn'+(state.dislikedPosts[post.id]?' disliked':'')+'" data-post-id="'+post.id+'"><i class="'+(state.dislikedPosts[post.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
+                feedHtml+='<button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+pvComments+'</span></button>';
                 feedHtml+='</div></div>';
                 feedHtml+='</div>';
             });
@@ -1931,22 +1933,26 @@ async function showProfileView(person){
     }
     // Event: Likes
     $$('#pvPostsFeed .like-btn').forEach(function(btn){
-        btn.addEventListener('click',function(e){
+        btn.addEventListener('click',async function(e){
             if(e.target.classList.contains('like-count')) return;
             var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);
             var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);
             if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}
             else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}
             var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            saveState();
+            if(currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){console.error('PV like error:',e2);}}
         });
     });
     $$('#pvPostsFeed .dislike-btn').forEach(function(btn){
-        btn.addEventListener('click',function(){
+        btn.addEventListener('click',async function(){
             var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);
             var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);
             if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];btn.classList.remove('disliked');btn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}
             else{if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}
             var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            saveState();
+            if(currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){console.error('PV dislike error:',e2);}}
         });
     });
     // Event: Comments

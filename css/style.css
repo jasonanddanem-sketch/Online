@@ -1882,8 +1882,9 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .pv-col-skin{grid-column:1!important;grid-row:auto!important;position:static!important;max-width:none!important;margin:0!important;}
     .pv-cover-banner{height:200px!important;}
 
-    /* --- Cover edit button — move to bottom so navbar doesn't hide it --- */
-    .timeline-cover-btn{top:auto!important;bottom:8px!important;right:8px!important;padding:6px 10px!important;font-size:12px!important;}
+    /* --- Cover edit button — camera icon only on mobile, on the cover --- */
+    .timeline-cover-btn{top:auto!important;bottom:10px!important;right:10px!important;padding:0!important;width:36px;height:36px;border-radius:50%!important;font-size:0!important;justify-content:center;align-items:center;}
+    .timeline-cover-btn i{font-size:14px!important;}
 
     /* --- Group view — single column --- */
     .gv-layout{

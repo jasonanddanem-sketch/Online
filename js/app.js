@@ -322,7 +322,7 @@ async function initApp() {
             var text=n.title||n.body||'';
             if(!text&&n.data&&n.data.message) text=n.data.message;
             if(!text) text='Notification';
-            return { type: origType, text: text, time: timeAgoReal(n.created_at), read: n.is_read, id: n.id };
+            return { type: origType, text: text, time: timeAgoReal(n.created_at), read: n.is_read, id: n.id, postId: (n.data&&n.data.post_id)||null, data: n.data||{} };
         });
         updateNotifBadge();
         renderNotifications();
@@ -331,7 +331,7 @@ async function initApp() {
     try {
         sbSubscribeNotifications(currentUser.id, function(newNotif){
             var origType=(newNotif.data&&newNotif.data.originalType)||newNotif.type||'system';
-            state.notifications.unshift({ type: origType, text: newNotif.title||newNotif.body||'', time: 'just now', read: false, id: newNotif.id });
+            state.notifications.unshift({ type: origType, text: newNotif.title||newNotif.body||'', time: 'just now', read: false, id: newNotif.id, postId: (newNotif.data&&newNotif.data.post_id)||null, data: newNotif.data||{} });
             updateNotifBadge();
             renderNotifications();
         });
@@ -1165,13 +1165,15 @@ var notifTabDefs=[
     {key:'message',label:'<i class="fas fa-envelope"></i> Messages',filter:function(n){return n.type==='message';}},
     {key:'system',label:'<i class="fas fa-cog"></i> System',filter:function(n){return n.type==='system'||n.type==='skin'||n.type==='group'||n.type==='coin'||n.type==='purchase';}}
 ];
-function addNotification(type,text){
-    state.notifications.unshift({type:type,text:text,time:new Date().toLocaleTimeString(),read:false});
+function addNotification(type,text,postId){
+    state.notifications.unshift({type:type,text:text,time:new Date().toLocaleTimeString(),read:false,postId:postId||null});
     updateNotifBadge();
     renderNotifications();
     // Persist to Supabase (pass original type in data so it survives DB enum mapping)
     if(currentUser){
-        sbCreateNotification(currentUser.id,type,text,'',{originalType:type}).catch(function(e){console.warn('Notif save error:',e);});
+        var data={originalType:type};
+        if(postId) data.post_id=postId;
+        sbCreateNotification(currentUser.id,type,text,'',data).catch(function(e){console.warn('Notif save error:',e);});
     }
 }
 var _systemTypes={system:1,skin:1,group:1,coin:1,purchase:1};
@@ -1213,11 +1215,21 @@ function renderNotifications(){
         return;
     }
     var html='';
-    filtered.forEach(function(n){
+    filtered.forEach(function(n,i){
         var ic=getNotifIcon(n.type);
-        html+='<div class="notif-item"><div class="notif-icon '+ic.cls+'"><i class="fas '+ic.icon+'"></i></div><div class="notif-text"><p>'+n.text+'</p><span>'+n.time+'</span></div></div>';
+        var clickable=n.postId?' data-post-id="'+n.postId+'" style="cursor:pointer;"':'';
+        html+='<div class="notif-item"'+clickable+'><div class="notif-icon '+ic.cls+'"><i class="fas '+ic.icon+'"></i></div><div class="notif-text"><p>'+n.text+'</p><span>'+n.time+'</span></div></div>';
     });
     container.innerHTML=html;
+    // Click handler for post-linked notifications
+    $$('#notifList .notif-item[data-post-id]').forEach(function(el){
+        el.addEventListener('click',function(){
+            var postId=el.getAttribute('data-post-id');
+            // Navigate to home feed first, then open the post comments
+            navigateTo('home');
+            setTimeout(function(){ showComments(postId); },200);
+        });
+    });
 }
 
 // ======================== MODAL ========================

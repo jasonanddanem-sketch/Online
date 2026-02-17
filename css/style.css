@@ -2136,6 +2136,19 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     }
     .connections-grid{grid-template-columns:1fr 1fr!important;}
     .connections-dots{display:flex!important;}
+
+    /* --- Network page — unlock scroll on mobile --- */
+    #page-profiles{height:auto!important;overflow:auto!important;-webkit-overflow-scrolling:touch;}
+    #page-profiles .page-container{height:auto!important;overflow:visible!important;}
+    #page-profiles #profilesSections{overflow:auto!important;-webkit-overflow-scrolling:touch;flex:none!important;}
+    .connections-wrap{overflow:visible!important;flex:none!important;}
+    .connections-col{min-height:auto!important;max-height:60vh;overflow-y:auto!important;-webkit-overflow-scrolling:touch;}
+
+    /* --- Ensure all pages scroll on mobile --- */
+    .page{overflow:auto!important;-webkit-overflow-scrolling:touch;height:auto!important;}
+    .page-container{overflow:visible!important;height:auto!important;}
+    #gvShopSection{overflow:auto!important;-webkit-overflow-scrolling:touch;}
+
     .photo-album-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))!important;}
 
     /* --- Scroll row cards --- */

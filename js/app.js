@@ -4072,7 +4072,7 @@ async function renderMyNetwork(container,query){
             followersOnly=followersOnly.filter(matchName);
         }
         html+='<div class="connections-wrap">';
-        if(mutual.length||followingOnly.length){
+        if(mutual.length||followersOnly.length){
             html+='<div class="connections-columns">';
             // Left column — Mutual
             html+='<div class="connections-col">';
@@ -4083,22 +4083,22 @@ async function renderMyNetwork(container,query){
                 html+='</div></div>';
             } else { html+='<p class="connections-empty">No mutual connections yet.</p>'; }
             html+='</div>';
-            // Right column — Following
+            // Right column — Followers (people who follow you but you don't follow back)
             html+='<div class="connections-col">';
-            html+='<h3 class="connections-heading"><i class="fas fa-user-plus"></i> Following <span class="connections-count">'+followingOnly.length+'</span></h3>';
-            if(followingOnly.length){
+            html+='<h3 class="connections-heading"><i class="fas fa-users"></i> Followers <span class="connections-count">'+followersOnly.length+'</span></h3>';
+            if(followersOnly.length){
                 html+='<div class="connections-scroll"><div class="connections-grid">';
-                followingOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
+                followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
                 html+='</div></div>';
-            } else { html+='<p class="connections-empty">No one-way follows.</p>'; }
+            } else { html+='<p class="connections-empty">No followers-only yet.</p>'; }
             html+='</div>';
             html+='</div>';
         }
-        if(followersOnly.length){
+        if(followingOnly.length){
             html+='<div class="connections-followers">';
-            html+='<h3 class="connections-heading"><i class="fas fa-users"></i> Followers <span class="connections-count">'+followersOnly.length+'</span></h3>';
+            html+='<h3 class="connections-heading"><i class="fas fa-user-plus"></i> Following <span class="connections-count">'+followingOnly.length+'</span></h3>';
             html+='<div class="connections-followers-scroll"><div class="connections-followers-row">';
-            followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+            followingOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
             html+='</div></div></div>';
         }
         html+='</div>';

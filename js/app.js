@@ -140,11 +140,47 @@ document.querySelector('.login-forgot').addEventListener('click', async function
 
 // Logout handler (wired later after DOM references are set)
 function handleLogout() {
+    saveState(); // persist current user's state before clearing
     sbSignOut().then(function () {
         currentUser = null;
         currentAuthUser = null;
+        resetAllCustomizations();
         showLogin();
     });
+}
+// Reset all in-memory state and visual customizations so nothing leaks between accounts
+function resetAllCustomizations(){
+    // Reset state object to defaults
+    state.coins=0;state.following=0;state.followers=0;state.followedUsers={};
+    state.ownedSkins={};state.activeSkin=null;state.ownedFonts={};state.activeFont=null;
+    state.ownedLogos={};state.activeLogo=null;state.notifications=[];state.joinedGroups={};
+    state.messages={};state.likedPosts={};state.coverPhoto=null;state.comments={};
+    state.ownedIconSets={};state.activeIconSet=null;state.ownedCoinSkins={};state.activeCoinSkin=null;
+    state.ownedTemplates={};state.activeTemplate=null;state.ownedNavStyles={};state.activeNavStyle=null;
+    state.ownedPremiumSkins={};state.activePremiumSkin=null;state.groupPosts={};
+    state.privateFollowers=false;state.dislikedPosts={};
+    state.photos={profile:[],cover:[],post:[],albums:[]};
+    state.postCoinCount=0;state.commentCoinPosts={};state.replyCoinPosts={};
+    state.groupCoins={};state.groupOwnedSkins={};state.groupOwnedPremiumSkins={};
+    state.groupActiveSkin={};state.groupActivePremiumSkin={};
+    state.groupPostCoinCount={};state.groupCommentCoinPosts={};state.groupReplyCoinPosts={};
+    settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top',showLocation:true};
+    // Reset premium background globals
+    premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;
+    // Strip visual customizations from DOM
+    applySkin(null,true); // resets colors + removes skin classes
+    applyFont(null,true); // resets font
+    applyTemplate(null,true); // removes template classes
+    applyNavStyle(null,true); // removes nav style classes
+    applyLogo(null); // resets logo text
+    applyIconSet(null,true); // resets icons
+    applyCoinSkin(null,true); // resets coin icon
+    updatePremiumBg(); // clears premium background
+    // Remove cover photo
+    var coverEl=document.querySelector('.cover-photo');
+    if(coverEl) coverEl.style.backgroundImage='';
+    // Reset dark mode body styles
+    document.body.style.background='';document.body.style.color='';
 }
 
 var DEFAULT_AVATAR = 'images/default-avatar.svg';

@@ -321,6 +321,8 @@ var _initAppRunning = false;
 async function initApp() {
     if (_initAppRunning) return;
     _initAppRunning = true;
+    // Always reset state before loading a new user — prevents leaking between accounts
+    resetAllCustomizations();
     var authUser = await sbGetUser();
     if (!authUser) { _initAppRunning = false; showLogin(); return; }
     currentAuthUser = authUser;
@@ -342,9 +344,16 @@ async function initApp() {
         return;
     }
     state.coins = currentUser.coin_balance || 0;
+    // Guard against corrupted localStorage from previous account-leak bug:
+    // If Supabase has no skin_data but localStorage exists, the data was leaked — purge it.
+    var localKey='blipvibe_'+currentUser.id;
+    var sd=currentUser.skin_data;
+    var supabaseHasSkins=sd&&(sd.activeSkin||sd.activePremiumSkin||sd.activeFont||(sd.ownedSkins&&Object.keys(sd.ownedSkins).length>0));
+    if(!supabaseHasSkins&&localStorage.getItem(localKey)){
+        localStorage.removeItem(localKey);
+    }
     loadState(); // Restore skins, settings, purchases from localStorage
     // If localStorage had no data, try loading from Supabase (cross-browser sync)
-    var localKey='blipvibe_'+currentUser.id;
     if(!localStorage.getItem(localKey)){
         await loadSkinDataFromSupabase();
     }

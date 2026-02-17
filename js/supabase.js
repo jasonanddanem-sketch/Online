@@ -29,7 +29,8 @@ async function sbSignUp(email, password, username, birthday = null) {
       display_name: username,
       bio: '',
       avatar_url: null,
-      cover_photo_url: null
+      cover_photo_url: null,
+      terms_accepted: true
     };
     if (birthday) row.birthday = birthday;
     const { error: profileErr } = await sb.from('profiles')
@@ -74,7 +75,8 @@ async function sbEnsureProfile(authUser) {
       display_name: username,
       bio: '',
       avatar_url: null,
-      cover_photo_url: null
+      cover_photo_url: null,
+      terms_accepted: true
     }, { onConflict: 'id' })
     .select()
     .single();

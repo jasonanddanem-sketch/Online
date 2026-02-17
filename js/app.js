@@ -23,6 +23,8 @@ function showLogin() {
     appShell.classList.remove('active');
     loginPage.classList.remove('hidden');
     loginPage.classList.add('visible');
+    // Remove auth cloak so login page fades in (prevents flash on refresh)
+    var cloak=document.getElementById('auth-cloak');if(cloak)cloak.remove();
 }
 
 // Toggle password visibility
@@ -4185,10 +4187,23 @@ function renderShop(){
     $$('.buy-premium-btn').forEach(function(btn){btn.addEventListener('click',function(){var pid=btn.getAttribute('data-pid');var skin=premiumSkins.find(function(s){return s.id===pid;});if(state.coins>=skin.price){state.coins-=skin.price;state.ownedPremiumSkins[pid]=true;updateCoins();shopPurchased(btn);addNotification('skin','You purchased the "'+skin.name+'" premium skin!');}});});
     $$('.buy-nav-btn').forEach(function(btn){btn.addEventListener('click',function(){var nid=btn.getAttribute('data-nid');var n=navStyles.find(function(x){return x.id===nid;});if(state.coins>=n.price){state.coins-=n.price;state.ownedNavStyles[nid]=true;updateCoins();shopPurchased(btn);addNotification('skin','You purchased the "'+n.name+'" nav style!');}});});
     initDragScroll('#shopGrid');
+    initDragScroll('#shopTabs');
     $$('#shopTabs .search-tab').forEach(function(tab){tab.addEventListener('click',function(){
         $$('#shopTabs .search-tab').forEach(function(t){t.classList.remove('active');});
         tab.classList.add('active');currentShopTab=tab.dataset.stab;renderShop();
     });});
+    // Swipe left/right to switch Shop tabs
+    var _shopSwTx=0;
+    var shopGrid=$('#shopGrid');
+    shopGrid.addEventListener('touchstart',function(e){_shopSwTx=e.touches[0].clientX;},{passive:true});
+    shopGrid.addEventListener('touchend',function(e){
+        var dx=e.changedTouches[0].clientX-_shopSwTx;
+        if(Math.abs(dx)<50) return;
+        var keys=cats.map(function(c){return c.key;});
+        var ci=keys.indexOf(currentShopTab);
+        if(dx<0&&ci<keys.length-1){currentShopTab=keys[ci+1];renderShop();}
+        else if(dx>0&&ci>0){currentShopTab=keys[ci-1];renderShop();}
+    });
 }
 
 // ======================== GROUP SHOP ========================
@@ -4711,10 +4726,23 @@ function renderMySkins(){
     $$('#mySkinsGrid .apply-premium-btn').forEach(function(btn){btn.addEventListener('click',function(){applyPremiumSkin(btn.dataset.pid==='default'?null:btn.dataset.pid);mySkinsRerender();});});
     $$('#mySkinsGrid .apply-nav-btn').forEach(function(btn){btn.addEventListener('click',function(){applyNavStyle(btn.dataset.nid==='default'?null:btn.dataset.nid);mySkinsRerender();});});
     initDragScroll('#mySkinsGrid');
+    initDragScroll('#mySkinsTabs');
     $$('#mySkinsTabs .search-tab').forEach(function(tab){tab.addEventListener('click',function(){
         $$('#mySkinsTabs .search-tab').forEach(function(t){t.classList.remove('active');});
         tab.classList.add('active');currentMySkinsTab=tab.dataset.mtab;renderMySkins();
     });});
+    // Swipe left/right to switch My Skins tabs
+    var _msSwTx=0;
+    var msGrid=$('#mySkinsGrid');
+    msGrid.addEventListener('touchstart',function(e){_msSwTx=e.touches[0].clientX;},{passive:true});
+    msGrid.addEventListener('touchend',function(e){
+        var dx=e.changedTouches[0].clientX-_msSwTx;
+        if(Math.abs(dx)<50) return;
+        var keys=cats.map(function(c){return c.key;});
+        var ci=keys.indexOf(currentMySkinsTab);
+        if(dx<0&&ci<keys.length-1){currentMySkinsTab=keys[ci+1];renderMySkins();}
+        else if(dx>0&&ci>0){currentMySkinsTab=keys[ci-1];renderMySkins();}
+    });
 }
 
 // ======================== MESSAGES (Supabase) ========================
@@ -5499,16 +5527,22 @@ document.getElementById('createFolderBtn').addEventListener('click',function(){
 });
 
 // ======================== DRAG-TO-SCROLL ========================
+function _bindDragScroll(row){
+    if(row._dragBound) return;
+    row._dragBound=true;
+    var isDown=false,startX,scrollL,moved,velX=0,lastX=0,lastT=0,raf;
+    function coast(){velX*=0.92;if(Math.abs(velX)>0.3){row.scrollLeft-=velX;raf=requestAnimationFrame(coast);}else{row.classList.remove('dragging');}};
+    row.addEventListener('mousedown',function(e){isDown=true;moved=false;cancelAnimationFrame(raf);row.classList.remove('dragging');startX=e.pageX-row.offsetLeft;scrollL=row.scrollLeft;lastX=e.pageX;lastT=Date.now();velX=0;});
+    row.addEventListener('mouseleave',function(){isDown=false;if(moved){coast();}else{row.classList.remove('dragging');}});
+    row.addEventListener('mouseup',function(){isDown=false;if(moved){coast();}else{row.classList.remove('dragging');}});
+    row.addEventListener('mousemove',function(e){if(!isDown)return;var dx=Math.abs(e.pageX-row.offsetLeft-startX);if(dx>5){moved=true;row.classList.add('dragging');}if(!moved)return;e.preventDefault();var now=Date.now(),dt=now-lastT||1;velX=0.8*velX+0.2*((e.pageX-lastX)/dt*16);lastX=e.pageX;lastT=now;row.scrollLeft=scrollL-(e.pageX-row.offsetLeft-startX);});
+    row.addEventListener('click',function(e){if(moved){e.preventDefault();e.stopPropagation();moved=false;}},true);
+}
 function initDragScroll(container){
-    $$(container+' .shop-scroll-row').forEach(function(row){
-        var isDown=false,startX,scrollL,moved,velX=0,lastX=0,lastT=0,raf;
-        function coast(){velX*=0.92;if(Math.abs(velX)>0.3){row.scrollLeft-=velX;raf=requestAnimationFrame(coast);}else{row.classList.remove('dragging');}};
-        row.addEventListener('mousedown',function(e){isDown=true;moved=false;cancelAnimationFrame(raf);row.classList.remove('dragging');startX=e.pageX-row.offsetLeft;scrollL=row.scrollLeft;lastX=e.pageX;lastT=Date.now();velX=0;});
-        row.addEventListener('mouseleave',function(){isDown=false;if(moved){coast();}else{row.classList.remove('dragging');}});
-        row.addEventListener('mouseup',function(){isDown=false;if(moved){coast();}else{row.classList.remove('dragging');}});
-        row.addEventListener('mousemove',function(e){if(!isDown)return;var dx=Math.abs(e.pageX-row.offsetLeft-startX);if(dx>5){moved=true;row.classList.add('dragging');}if(!moved)return;e.preventDefault();var now=Date.now(),dt=now-lastT||1;velX=0.8*velX+0.2*((e.pageX-lastX)/dt*16);lastX=e.pageX;lastT=now;row.scrollLeft=scrollL-(e.pageX-row.offsetLeft-startX);});
-        row.addEventListener('click',function(e){if(moved){e.preventDefault();e.stopPropagation();moved=false;}},true);
-    });
+    $$(container+' .shop-scroll-row').forEach(_bindDragScroll);
+    // Also bind the container itself if it's a scrollable element (e.g. .search-tabs)
+    var el=$(container);
+    if(el&&el.classList.contains('search-tabs')) _bindDragScroll(el);
 }
 
 // ======================== INITIALIZE ========================

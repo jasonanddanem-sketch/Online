@@ -1223,23 +1223,6 @@ $('#navCoins').addEventListener('click',function(){
 function updateFollowCounts(){
     $('#followingCount').textContent=state.following;
     $('#followersCount').textContent=state.followers;
-    updateNotFollowingBackCount();
-}
-async function updateNotFollowingBackCount(){
-    if(!currentUser) return;
-    try{
-        var following=await sbGetFollowing(currentUser.id);
-        var followers=await sbGetFollowers(currentUser.id);
-        var followerIds={};
-        followers.forEach(function(p){if(p)followerIds[p.id]=true;});
-        var count=following.filter(function(p){return p&&p.id!==currentUser.id&&!followerIds[p.id];}).length;
-        var link=$('#notFollowingBackLink');
-        var countEl=$('#nfbCount');
-        if(link&&countEl){
-            countEl.textContent=count;
-            link.style.display=count>0?'':'none';
-        }
-    }catch(e){console.warn('NFB count error:',e);}
 }
 
 function updateStatClickable(){
@@ -2920,14 +2903,6 @@ $('#pvCoverFileInput').addEventListener('change',function(){
 // View Profile links
 $('#viewMyProfile').addEventListener('click',function(e){e.preventDefault();showMyProfileModal();});
 $('#dropdownViewProfile').addEventListener('click',function(e){e.preventDefault();$('#userDropdownMenu').classList.remove('show');showMyProfileModal();});
-// Not Following Back link → navigate to Network page, Not Following Back tab
-$('#notFollowingBackLink').addEventListener('click',function(e){
-    e.preventDefault();
-    currentProfileTab='notfollowing';
-    $$('#profilesTabs .search-tab').forEach(function(t){t.classList.toggle('active',t.dataset.ptab==='notfollowing');});
-    navigateTo('profiles');
-    renderProfiles('notfollowing');
-});
 
 // Edit Profile
 $('#editProfileBtn').addEventListener('click',function(e){
@@ -4060,13 +4035,16 @@ $('#createGroupBtn').addEventListener('click',function(){
 
 // ======================== PROFILES PAGE ========================
 var currentProfileTab='network';
-function profileCardHtml(p){
+function profileCardHtml(p,opts){
     var name=p.display_name||p.name||p.username||'User';
     var bio=p.bio||'';
     var avatar=p.avatar_url||DEFAULT_AVATAR;
     var isFollowed=state.followedUsers[p.id];
     var isSelf=currentUser&&p.id===currentUser.id;
-    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4><p class="profile-card-bio">'+bio.substring(0,60)+'</p>'+(isSelf?'':'<button class="btn '+(isFollowed?'btn-outline':'btn-primary')+' profile-follow-btn" data-uid="'+p.id+'">'+(isFollowed?'Following':'Follow')+'</button>')+'</div>';
+    var nfb=opts&&opts.notFollowingBack;
+    var btnLabel=isFollowed?(nfb?'Not Following Back':'Following'):'Follow';
+    var btnClass=isFollowed?(nfb?'btn-outline nfb-label':'btn-outline'):'btn-primary';
+    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4><p class="profile-card-bio">'+bio.substring(0,60)+'</p>'+(isSelf?'':'<button class="btn '+btnClass+' profile-follow-btn" data-uid="'+p.id+'">'+btnLabel+'</button>')+'</div>';
 }
 var _networkRenderVersion=0;
 async function renderMyNetwork(container,query){
@@ -4109,7 +4087,7 @@ async function renderMyNetwork(container,query){
             html+='<h3 class="connections-heading"><i class="fas fa-user-plus"></i> Following <span class="connections-count">'+followingOnly.length+'</span></h3>';
             if(followingOnly.length){
                 html+='<div class="connections-scroll"><div class="connections-grid">';
-                followingOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+                followingOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
                 html+='</div></div>';
             } else { html+='<p class="connections-empty">No one-way follows.</p>'; }
             html+='</div>';
@@ -4180,7 +4158,7 @@ async function renderNotFollowingBack(container,query){
         if(notFollowingBack.length){
             html='<p style="color:var(--gray);margin:12px 0 16px;font-size:14px;">'+notFollowingBack.length+' '+(notFollowingBack.length===1?'person':'people')+' you follow '+(notFollowingBack.length===1?'doesn\'t':'don\'t')+' follow you back.</p>';
             html+='<div class="search-results-grid">';
-            notFollowingBack.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+            notFollowingBack.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
             html+='</div>';
         } else {
             html='<div class="empty-state"><i class="fas fa-handshake"></i><p>'+(query?'No results for "'+query+'"':'Everyone you follow follows you back!')+'</p></div>';

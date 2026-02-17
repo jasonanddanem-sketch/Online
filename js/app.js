@@ -1458,6 +1458,7 @@ function buildCommentHtml(cid,name,img,text,likes,isReply,authorId,replyToName){
     h+='<button class="comment-like-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
     h+='<button class="comment-dislike-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
     h+='<button class="comment-reply-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>';
+    if(isOwn) h+='<button class="comment-edit-btn" data-cid="'+cid+'" data-text="'+text.replace(/"/g,'&quot;')+'" style="background:none;font-size:12px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i> Edit</button>';
     if(isOwn) h+='<button class="comment-delete-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button>';
     h+='</div></div></div>';
     return h;
@@ -1691,6 +1692,19 @@ function bindCommentDeletes(postId,countEl){
             }
         });
     });
+    $$('.comment-edit-btn').forEach(function(btn){
+        if(btn._editBound)return;btn._editBound=true;
+        btn.addEventListener('click',function(){
+            var cid=btn.dataset.cid;
+            var text=btn.dataset.text||'';
+            showEditCommentModal(cid,text,function(newText){
+                var item=btn.closest('.comment-item');
+                if(item){var p=item.querySelector('.comment-text');if(p)p.textContent=newText;}
+                btn.dataset.text=newText;
+                if(postId) renderInlineComments(postId);
+            });
+        });
+    });
 }
 
 async function renderInlineComments(postId){
@@ -1744,8 +1758,9 @@ async function renderInlineComments(postId){
         var disliked=dislikedComments[c.cid];var dc=disliked?1:0;
         var avatarSrc=c.img||DEFAULT_AVATAR;
         var isOwnComment=currentUser&&c.authorId&&c.authorId===currentUser.id;
+        var editBtn=isOwnComment?'<button class="inline-comment-edit" data-cid="'+c.cid+'" data-postid="'+postId+'" data-text="'+c.text.replace(/"/g,'&quot;')+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i></button>':'';
         var deleteBtn=isOwnComment?'<button class="inline-comment-delete" data-cid="'+c.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
-        html+='<div class="inline-comment" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+deleteBtn+'</div></div></div>';
+        html+='<div class="inline-comment" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+editBtn+deleteBtn+'</div></div></div>';
         // Show replies threaded under this comment
         var replies=repliesByParent[c.cid]||[];
         var shownReplies=replies.slice(0,2);
@@ -1755,8 +1770,9 @@ async function renderInlineComments(postId){
             var rDisliked=dislikedComments[r.cid];var rdc=rDisliked?1:0;
             var rAvatar=r.img||DEFAULT_AVATAR;
             var rIsOwn=currentUser&&r.authorId&&r.authorId===currentUser.id;
+            var rEdit=rIsOwn?'<button class="inline-comment-edit" data-cid="'+r.cid+'" data-postid="'+postId+'" data-text="'+r.text.replace(/"/g,'&quot;')+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i></button>':'';
             var rDel=rIsOwn?'<button class="inline-comment-delete" data-cid="'+r.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
-            html+='<div class="inline-comment" style="margin-left:28px;" data-cid="'+r.cid+'"><img src="'+rAvatar+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><i class="fas fa-reply" style="font-size:9px;color:var(--primary);margin-right:4px;transform:scaleX(-1);"></i><span style="color:var(--primary);font-size:11px;margin-right:3px;">@'+c.name+'</span><strong style="font-size:12px;">'+r.name+'</strong> <span style="font-size:12px;color:#555;">'+r.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rLiked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rLiked?'fas':'far')+' fa-thumbs-up"></i>'+rlc+'</button><button class="inline-comment-dislike" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rDisliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rDisliked?'fas':'far')+' fa-thumbs-down"></i>'+rdc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+rDel+'</div></div></div>';
+            html+='<div class="inline-comment" style="margin-left:28px;" data-cid="'+r.cid+'"><img src="'+rAvatar+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><i class="fas fa-reply" style="font-size:9px;color:var(--primary);margin-right:4px;transform:scaleX(-1);"></i><span style="color:var(--primary);font-size:11px;margin-right:3px;">@'+c.name+'</span><strong style="font-size:12px;">'+r.name+'</strong> <span style="font-size:12px;color:#555;">'+r.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rLiked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rLiked?'fas':'far')+' fa-thumbs-up"></i>'+rlc+'</button><button class="inline-comment-dislike" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rDisliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rDisliked?'fas':'far')+' fa-thumbs-down"></i>'+rdc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+rEdit+rDel+'</div></div></div>';
         });
         if(replies.length>2) html+='<a href="#" class="show-more-comments" style="font-size:11px;color:var(--primary);display:block;margin-left:28px;margin-top:2px;margin-bottom:4px;">'+( replies.length-2)+' more repl'+(replies.length-2===1?'y':'ies')+'</a>';
     });
@@ -1806,6 +1822,12 @@ async function renderInlineComments(postId){
                 showToast('Comment deleted');
                 renderInlineComments(postId);
             }catch(err){showToast('Failed to delete comment');}
+        };
+    });
+    el.querySelectorAll('.inline-comment-edit').forEach(function(btn){
+        btn.onclick=function(e){
+            e.stopPropagation();
+            showEditCommentModal(btn.dataset.cid,btn.dataset.text||'',function(){renderInlineComments(btn.dataset.postid);});
         };
     });
     el.querySelectorAll('.show-more-comments').forEach(function(link){
@@ -3329,7 +3351,7 @@ function renderFeed(tab){
         html+='<button class="post-menu-btn" data-menu="'+menuId+'"><i class="fas fa-ellipsis-h"></i></button>';
         var isOwnPost=currentUser&&person.id===currentUser.id;
         html+='<div class="post-dropdown" id="'+menuId+'"><a href="#" data-action="save" data-pid="'+i+'"><i class="fas fa-bookmark"></i> Save Post</a><a href="#" data-action="report" data-pid="'+i+'"><i class="fas fa-flag"></i> Report</a><a href="#" data-action="hide" data-pid="'+i+'"><i class="fas fa-eye-slash"></i> Hide</a>';
-        if(isOwnPost) html+='<a href="#" data-action="delete" data-pid="'+i+'" style="color:#e74c3c;"><i class="fas fa-trash"></i> Delete</a>';
+        if(isOwnPost) html+='<a href="#" data-action="edit" data-pid="'+i+'"><i class="fas fa-pen"></i> Edit</a><a href="#" data-action="delete" data-pid="'+i+'" style="color:#e74c3c;"><i class="fas fa-trash"></i> Delete</a>';
         html+='</div>';
         html+='</div>';
         html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';
@@ -3502,6 +3524,7 @@ function bindPostEvents(){
             if(action==='save') showSaveModal(pid);
             else if(action==='report') showReportModal(pid);
             else if(action==='hide') hidePost(pid);
+            else if(action==='edit') showEditPostModal(pid);
             else if(action==='delete') confirmDeletePost(pid);
         });
     });
@@ -4980,13 +5003,30 @@ async function openChat(contact){
             messages.forEach(function(m){
                 var isMine=m.sender_id===currentUser.id;
                 var content=m.content;
+                var isImg=/^\[img\]/.test(content);
                 // Render image messages
                 var imgMatch=content.match(/^\[img\](.*?)\[\/img\]$/);
                 if(imgMatch){content='<img src="'+imgMatch[1]+'" style="max-width:200px;border-radius:8px;">';}
-                mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'">'+content+'</div>';
-
+                mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'" data-mid="'+m.id+'" data-raw="'+(isImg?'':m.content.replace(/"/g,'&quot;'))+'">'+content+(isMine&&!isImg?'<button class="msg-edit-btn" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;padding:2px 0 0;cursor:pointer;display:block;text-align:right;"><i class="fas fa-pen"></i></button>':'')+'</div>';
             });
             msgArea.innerHTML=mhtml;
+            // Bind message edit buttons
+            msgArea.querySelectorAll('.msg-edit-btn').forEach(function(btn){
+                btn.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var bubble=btn.closest('.msg-bubble');
+                    var mid=bubble.dataset.mid;
+                    var raw=bubble.dataset.raw;
+                    showEditMessageModal(mid,raw,function(newText){
+                        bubble.dataset.raw=newText;
+                        // Replace text content, keep edit button
+                        var editBtn=bubble.querySelector('.msg-edit-btn');
+                        bubble.textContent='';
+                        bubble.appendChild(document.createTextNode(newText));
+                        if(editBtn) bubble.appendChild(editBtn);
+                    });
+                });
+            });
             msgArea.scrollTop=msgArea.scrollHeight;
             autoFetchLinkPreviewsMini(msgArea,'.msg-bubble');
         }
@@ -5364,6 +5404,63 @@ function showReportModal(pid){
 }
 
 // ======================== HIDE POST ========================
+// ======================== EDIT POST / COMMENT / MESSAGE ========================
+function showEditPostModal(pid){
+    var fp=feedPosts.find(function(p){return p.idx===pid;});
+    var currentText=fp?fp.text||'':'';
+    var h='<div class="modal-header"><h3>Edit Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body"><textarea id="editPostText" class="cpm-textarea" style="min-height:100px;">'+currentText+'</textarea>';
+    h+='<div class="modal-actions" style="margin-top:12px;"><button class="btn btn-outline modal-close">Cancel</button><button class="btn btn-primary" id="saveEditPostBtn">Save</button></div></div>';
+    showModal(h);
+    document.getElementById('saveEditPostBtn').addEventListener('click',async function(){
+        var newText=$('#editPostText').value.trim();
+        if(!newText){showToast('Post cannot be empty');return;}
+        try{
+            var isUUID=/^[0-9a-f]{8}-/.test(pid);
+            if(isUUID) await sbEditPost(pid,newText);
+            if(fp) fp.text=newText;
+            // Update DOM
+            var postEl=document.querySelector('.feed-post[data-post-id="'+pid+'"] .post-description p');
+            if(postEl) postEl.textContent=newText;
+            closeModal();
+            showToast('Post updated');
+        }catch(e){console.error('Edit post:',e);showToast('Failed to edit post');}
+    });
+}
+function showEditCommentModal(cid,currentText,onSaved){
+    var h='<div class="modal-header"><h3>Edit Comment</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body"><textarea id="editCommentText" class="cpm-textarea" style="min-height:80px;">'+currentText+'</textarea>';
+    h+='<div class="modal-actions" style="margin-top:12px;"><button class="btn btn-outline modal-close">Cancel</button><button class="btn btn-primary" id="saveEditCommentBtn">Save</button></div></div>';
+    showModal(h);
+    document.getElementById('saveEditCommentBtn').addEventListener('click',async function(){
+        var newText=$('#editCommentText').value.trim();
+        if(!newText){showToast('Comment cannot be empty');return;}
+        try{
+            var isUUID=/^[0-9a-f]{8}-/.test(cid);
+            if(isUUID) await sbEditComment(cid,newText);
+            closeModal();
+            showToast('Comment updated');
+            if(onSaved) onSaved(newText);
+        }catch(e){console.error('Edit comment:',e);showToast('Failed to edit comment');}
+    });
+}
+
+function showEditMessageModal(mid,currentText,onSaved){
+    var h='<div class="modal-header"><h3>Edit Message</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body"><textarea id="editMessageText" class="cpm-textarea" style="min-height:80px;">'+currentText+'</textarea>';
+    h+='<div class="modal-actions" style="margin-top:12px;"><button class="btn btn-outline modal-close">Cancel</button><button class="btn btn-primary" id="saveEditMessageBtn">Save</button></div></div>';
+    showModal(h);
+    document.getElementById('saveEditMessageBtn').addEventListener('click',async function(){
+        var newText=$('#editMessageText').value.trim();
+        if(!newText){showToast('Message cannot be empty');return;}
+        try{
+            await sbEditMessage(mid,newText);
+            closeModal();
+            showToast('Message updated');
+            if(onSaved) onSaved(newText);
+        }catch(e){console.error('Edit message:',e);showToast('Failed to edit message');}
+    });
+}
 function confirmDeletePost(pid){
     showModal('<div class="modal-header"><h3>Delete Post</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="color:var(--gray);text-align:center;margin-bottom:16px;">Are you sure you want to delete this post? This cannot be undone.</p><div class="modal-actions"><button class="btn btn-outline modal-close">Cancel</button><button class="btn" id="confirmDeletePostBtn" style="background:#e74c3c;color:#fff;">Delete</button></div></div>');
     document.getElementById('confirmDeletePostBtn').addEventListener('click',async function(){

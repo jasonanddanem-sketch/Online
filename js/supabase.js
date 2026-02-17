@@ -248,6 +248,13 @@ async function sbDeletePost(postId) {
   if (error) throw error;
 }
 
+async function sbEditPost(postId, newContent) {
+  const { error } = await sb.from('posts')
+    .update({ content: newContent })
+    .eq('id', postId);
+  if (error) throw error;
+}
+
 // ---- 5. COMMENTS ------------------------------------------------------------
 
 async function sbCreateComment(postId, authorId, content, parentCommentId = null) {
@@ -302,6 +309,13 @@ async function sbGetComments(postId, sortBy = 'top') {
 async function sbDeleteComment(commentId) {
   const { error } = await sb.from('comments')
     .delete()
+    .eq('id', commentId);
+  if (error) throw error;
+}
+
+async function sbEditComment(commentId, newContent) {
+  const { error } = await sb.from('comments')
+    .update({ content: newContent })
     .eq('id', commentId);
   if (error) throw error;
 }
@@ -755,6 +769,13 @@ async function sbGetMessages(userId, partnerId, limit = 100) {
     .limit(limit);
   if (error) throw error;
   return data;
+}
+
+async function sbEditMessage(messageId, newContent) {
+  const { error } = await sb.from('messages')
+    .update({ content: newContent })
+    .eq('id', messageId);
+  if (error) throw error;
 }
 
 async function sbSendMessage(senderId, receiverId, content) {

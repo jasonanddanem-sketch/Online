@@ -177,7 +177,7 @@ img{display:block;}
 .nav-logo:hover{background:rgba(255,255,255,.3);}
 .nav-logo.nav-logo-image{background:none;padding:0;border-radius:0;}
 .nav-logo.nav-logo-image:hover{background:none;}
-.nav-logo-img{height:44px;width:auto;object-fit:contain;display:block;}
+.nav-logo-img{height:52px;width:auto;object-fit:contain;display:block;}
 .search-bar{position:relative;width:200px;}
 .search-bar i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.6);font-size:14px;}
 .search-bar input{width:100%;padding:8px 12px 8px 36px;border:none;border-radius:20px;background:rgba(255,255,255,.2);color:#fff;font-size:calc(14px * var(--font-scale));outline:none;transition:background .3s;}

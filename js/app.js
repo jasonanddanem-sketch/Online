@@ -1223,6 +1223,23 @@ $('#navCoins').addEventListener('click',function(){
 function updateFollowCounts(){
     $('#followingCount').textContent=state.following;
     $('#followersCount').textContent=state.followers;
+    updateNotFollowingBackCount();
+}
+async function updateNotFollowingBackCount(){
+    if(!currentUser) return;
+    try{
+        var following=await sbGetFollowing(currentUser.id);
+        var followers=await sbGetFollowers(currentUser.id);
+        var followerIds={};
+        followers.forEach(function(p){if(p)followerIds[p.id]=true;});
+        var count=following.filter(function(p){return p&&p.id!==currentUser.id&&!followerIds[p.id];}).length;
+        var link=$('#notFollowingBackLink');
+        var countEl=$('#nfbCount');
+        if(link&&countEl){
+            countEl.textContent=count;
+            link.style.display=count>0?'':'none';
+        }
+    }catch(e){console.warn('NFB count error:',e);}
 }
 
 function updateStatClickable(){
@@ -2903,6 +2920,14 @@ $('#pvCoverFileInput').addEventListener('change',function(){
 // View Profile links
 $('#viewMyProfile').addEventListener('click',function(e){e.preventDefault();showMyProfileModal();});
 $('#dropdownViewProfile').addEventListener('click',function(e){e.preventDefault();$('#userDropdownMenu').classList.remove('show');showMyProfileModal();});
+// Not Following Back link → navigate to Network page, Not Following Back tab
+$('#notFollowingBackLink').addEventListener('click',function(e){
+    e.preventDefault();
+    currentProfileTab='notfollowing';
+    $$('#profilesTabs .search-tab').forEach(function(t){t.classList.toggle('active',t.dataset.ptab==='notfollowing');});
+    navigateTo('profiles');
+    renderProfiles('notfollowing');
+});
 
 // Edit Profile
 $('#editProfileBtn').addEventListener('click',function(e){

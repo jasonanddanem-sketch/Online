@@ -148,9 +148,9 @@ function handleLogout() {
         showLogin();
     });
 }
-// Lightweight reset — only clears in-memory data, no DOM manipulation.
-// Safe to call early before DOM is fully ready.
-function resetStateData(){
+// Reset all in-memory state and visual customizations so nothing leaks between accounts
+function resetAllCustomizations(){
+    // Reset state object to defaults
     state.coins=0;state.following=0;state.followers=0;state.followedUsers={};
     state.ownedSkins={};state.activeSkin=null;state.ownedFonts={};state.activeFont=null;
     state.ownedLogos={};state.activeLogo=null;state.notifications=[];state.joinedGroups={};
@@ -165,50 +165,22 @@ function resetStateData(){
     state.groupActiveSkin={};state.groupActivePremiumSkin={};
     state.groupPostCoinCount={};state.groupCommentCoinPosts={};state.groupReplyCoinPosts={};
     settings={darkMode:false,notifSound:true,privateProfile:false,autoplay:true,commentOrder:'top',showLocation:true};
+    // Reset premium background globals
     premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;
-}
-
-// Full reset — clears data AND strips visual customizations from DOM.
-// Used on logout when the DOM is fully loaded.
-function resetAllCustomizations(){
-    resetStateData();
-    // --- Aggressively strip ALL customization classes from body ---
-    var bodyClasses=Array.from(document.body.classList);
-    bodyClasses.forEach(function(c){
-        if(c.indexOf('skin-')===0||c.indexOf('premium-')===0||c.indexOf('tpl-')===0||c.indexOf('nav-')===0||c==='has-premium-bg')
-            document.body.classList.remove(c);
-    });
-    // Reset CSS variables to defaults
-    var root=document.documentElement;
-    root.style.setProperty('--primary','#8b5cf6');
-    root.style.setProperty('--primary-hover','#7c3aed');
-    root.style.setProperty('--nav-bg','#0f172a');
-    root.style.setProperty('--dark','#e2e8f0');root.style.setProperty('--gray','#94a3b8');
-    root.style.setProperty('--light-bg','#0f172a');root.style.setProperty('--card','#1e293b');
-    root.style.setProperty('--border','#334155');
-    root.style.setProperty('--shadow','0 2px 8px rgba(0,0,0,.25)');
-    root.style.setProperty('--shadow-hover','0 4px 16px rgba(0,0,0,.35)');
-    root.style.setProperty('--font-scale',1);
-    root.style.removeProperty('--card-opacity');
-    // Reset font
-    document.body.style.fontFamily="'Roboto',sans-serif";
-    // Clear premium background layer
-    var layer=document.getElementById('premiumBgLayer');
-    if(layer){layer.style.backgroundImage='';layer.style.filter='';layer.classList.remove('active');}
-    var overlay=document.getElementById('premiumBgOverlay');
-    if(overlay){overlay.style.backdropFilter='';overlay.style.webkitBackdropFilter='';}
-    var darknessEl=document.getElementById('premiumBgDarkness');
-    if(darknessEl) darknessEl.style.opacity='';
-    // Remove premium avatar borders
-    document.querySelectorAll('.premium-border').forEach(function(el){el.classList.remove('premium-border');el.removeAttribute('data-premium');});
+    // Strip visual customizations from DOM
+    applySkin(null,true); // resets colors + removes skin classes
+    applyFont(null,true); // resets font
+    applyTemplate(null,true); // removes template classes
+    applyNavStyle(null,true); // removes nav style classes
+    applyLogo(null); // resets logo text
+    applyIconSet(null,true); // resets icons
+    applyCoinSkin(null,true); // resets coin icon
+    updatePremiumBg(); // clears premium background
     // Remove cover photo
     var coverEl=document.querySelector('.cover-photo');
     if(coverEl) coverEl.style.backgroundImage='';
-    // Reset body background
-    document.body.style.background='';document.body.style.color='';document.body.style.backgroundImage='';
-    // Reset logo text
-    var logo=document.querySelector('.nav-logo');
-    if(logo) logo.textContent='BlipVibe';
+    // Reset dark mode body styles
+    document.body.style.background='';document.body.style.color='';
 }
 
 var DEFAULT_AVATAR = 'images/default-avatar.svg';
@@ -261,74 +233,11 @@ function syncAllAvatars(newSrc) {
     populateUserUI();
 }
 
-// ---- Terms of Use modal (shown to users who haven't accepted yet) ----
-function showTermsModal(){
-    var html='<div class="modal-header"><h3>Terms of Use</h3></div><div class="modal-body">'
-        +'<div class="login-terms-text" style="max-height:300px;margin-bottom:14px;">'
-        +'<h4>BlipVibe – Terms of Use &amp; Disclaimer (Beta)</h4>'
-        +'<p><strong>Effective Date:</strong> February 16, 2026</p>'
-        +'<p>Welcome to BlipVibe.</p>'
-        +'<p>By using BlipVibe, you agree to the following terms:</p>'
-        +'<h5>1. Free Expression Policy</h5>'
-        +'<p>BlipVibe supports open conversation and the free exchange of ideas. Users are allowed to express opinions, debate topics, and share perspectives, even if others may disagree.</p>'
-        +'<p>However, free expression does not include harassment, threats, or targeted abuse. The following content is strictly prohibited:</p>'
-        +'<ul><li>Racial slurs</li><li>Sexual orientation slurs</li><li>Credible threats of violence</li><li>Doxing (sharing private personal information without consent)</li><li>Direct harassment or intimidation</li></ul>'
-        +'<p>BlipVibe reserves the right to remove content that violates these rules.</p>'
-        +'<h5>2. Beta Platform Notice</h5>'
-        +'<p>BlipVibe is currently in beta. Features may change, break, or be removed without notice. Data may be reset or deleted during development updates. Use of the platform is at your own discretion.</p>'
-        +'<h5>3. User Responsibility</h5>'
-        +'<p>You are responsible for all content you post, including text, images, comments, and messages. You agree not to post illegal content, spam, or harmful material.</p>'
-        +'<h5>4. No Warranty</h5>'
-        +'<p>BlipVibe is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service, permanent data storage, or error-free performance.</p>'
-        +'<h5>5. Limitation of Liability</h5>'
-        +'<p>BlipVibe and its creator are not liable for data loss, disputes between users, or damages resulting from platform use.</p>'
-        +'<h5>6. Account Termination</h5>'
-        +'<p>BlipVibe reserves the right to suspend or terminate accounts that violate these terms.</p>'
-        +'<h5>7. Privacy</h5>'
-        +'<p>Basic account data (such as email and profile information) is stored for platform functionality. BlipVibe does not sell personal data.</p>'
-        +'<h5>8. Acceptance</h5>'
-        +'<p>By using BlipVibe, you confirm that you have read and agree to these terms and understand BlipVibe is currently in beta.</p>'
-        +'</div>'
-        +'<div class="modal-actions"><button class="btn btn-outline" id="termsDeny">Decline</button><button class="btn btn-primary" id="termsAccept">I Accept</button></div>'
-        +'</div>';
-    showModal(html);
-    // Prevent closing by clicking overlay
-    var overlay=$('#modalOverlay');
-    var blockClose=function(e){if(e.target===overlay)e.stopImmediatePropagation();};
-    overlay.addEventListener('click',blockClose,true);
-    document.getElementById('termsAccept').addEventListener('click',function(){
-        overlay.removeEventListener('click',blockClose,true);
-        closeModal();
-        // Mark terms accepted in Supabase
-        sbUpdateProfile(currentUser.id,{terms_accepted:true}).then(function(){
-            currentUser.terms_accepted=true;
-            initApp();
-        }).catch(function(e){
-            console.error('Failed to save terms acceptance:',e);
-            currentUser.terms_accepted=true;
-            initApp();
-        });
-    });
-    document.getElementById('termsDeny').addEventListener('click',function(){
-        overlay.removeEventListener('click',blockClose,true);
-        closeModal();
-        // Log them out
-        sbSignOut().then(function(){
-            currentUser=null;currentAuthUser=null;
-            resetAllCustomizations();
-            showLogin();
-        });
-    });
-}
-
 // ---- Init app after auth ----
 var _initAppRunning = false;
 async function initApp() {
     if (_initAppRunning) return;
     _initAppRunning = true;
-    // Reset in-memory state to defaults — prevents leaking between accounts.
-    // Only resets data, not DOM (DOM gets set by reapplyCustomizations later).
-    resetStateData();
     var authUser = await sbGetUser();
     if (!authUser) { _initAppRunning = false; showLogin(); return; }
     currentAuthUser = authUser;
@@ -340,28 +249,13 @@ async function initApp() {
             currentUser = await sbEnsureProfile(authUser);
         } catch (e2) {
             console.error('Failed to create profile:', e2);
-            _initAppRunning = false;
             showLogin(); return;
         }
     }
-    // Check if user has accepted terms of use
-    if(!currentUser.terms_accepted){
-        _initAppRunning=false;
-        showApp(); // show app shell so modal overlay is visible
-        showTermsModal();
-        return;
-    }
     state.coins = currentUser.coin_balance || 0;
-    // Guard against corrupted localStorage from previous account-leak bug:
-    // If Supabase has no skin_data but localStorage exists, the data was leaked — purge it.
-    var localKey='blipvibe_'+currentUser.id;
-    var sd=currentUser.skin_data;
-    var supabaseHasSkins=sd&&(sd.activeSkin||sd.activePremiumSkin||sd.activeFont||(sd.ownedSkins&&Object.keys(sd.ownedSkins).length>0));
-    if(!supabaseHasSkins&&localStorage.getItem(localKey)){
-        localStorage.removeItem(localKey);
-    }
     loadState(); // Restore skins, settings, purchases from localStorage
     // If localStorage had no data, try loading from Supabase (cross-browser sync)
+    var localKey='blipvibe_'+currentUser.id;
     if(!localStorage.getItem(localKey)){
         await loadSkinDataFromSupabase();
     }

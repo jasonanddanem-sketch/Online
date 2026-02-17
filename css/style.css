@@ -1,5 +1,7 @@
 /* ========== RESET & BASE ========== */
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;cursor:default;}
+input,textarea,select,[contenteditable="true"]{cursor:text;}
+a,button,label,[role="button"],[onclick]{cursor:pointer;}
 body{font-family:'Roboto',sans-serif;background:var(--light-bg);color:var(--dark);line-height:1.6;background-image:radial-gradient(ellipse at 20% 50%,rgba(139,92,246,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(92,189,185,.06) 0%,transparent 50%);background-attachment:fixed;}
 #premiumBgLayer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat;display:none;}
 #premiumBgLayer.active{display:block;}

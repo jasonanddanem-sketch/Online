@@ -4042,9 +4042,10 @@ function profileCardHtml(p,opts){
     var isFollowed=state.followedUsers[p.id];
     var isSelf=currentUser&&p.id===currentUser.id;
     var nfb=opts&&opts.notFollowingBack;
+    var noBio=opts&&opts.noBio;
     var btnLabel=isFollowed?(nfb?'Not Following Back':'Following'):'Follow';
     var btnClass=isFollowed?(nfb?'btn-outline nfb-label':'btn-outline'):'btn-primary';
-    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4><p class="profile-card-bio">'+bio.substring(0,60)+'</p>'+(isSelf?'':'<button class="btn '+btnClass+' profile-follow-btn" data-uid="'+p.id+'">'+btnLabel+'</button>')+'</div>';
+    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4>'+(noBio?'':'<p class="profile-card-bio">'+bio.substring(0,60)+'</p>')+(isSelf?'':'<button class="btn '+btnClass+' profile-follow-btn" data-uid="'+p.id+'">'+btnLabel+'</button>')+'</div>';
 }
 var _networkRenderVersion=0;
 async function renderMyNetwork(container,query){
@@ -4079,7 +4080,7 @@ async function renderMyNetwork(container,query){
             html+='<h3 class="connections-heading"><i class="fas fa-handshake"></i> Mutual <span class="connections-count">'+mutual.length+'</span></h3>';
             if(mutual.length){
                 html+='<div class="connections-scroll"><div class="connections-grid">';
-                mutual.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+                mutual.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{noBio:true});});
                 html+='</div></div>';
             } else { html+='<p class="connections-empty">No mutual connections yet.</p>'; }
             html+='</div>';
@@ -4088,7 +4089,7 @@ async function renderMyNetwork(container,query){
             html+='<h3 class="connections-heading"><i class="fas fa-users"></i> Followers <span class="connections-count">'+followersOnly.length+'</span></h3>';
             if(followersOnly.length){
                 html+='<div class="connections-scroll"><div class="connections-grid">';
-                followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});
+                followersOnly.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{noBio:true});});
                 html+='</div></div>';
             } else { html+='<p class="connections-empty">No followers-only yet.</p>'; }
             html+='</div>';
@@ -4154,7 +4155,7 @@ async function renderDiscover(container,query){
             }
         }
         if(!profiles.length) html='<div class="empty-state"><i class="fas fa-users"></i><p>'+(query?'No results for "'+query+'"':'No suggestions yet')+'</p></div>';
-        else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url});});html+='</div>';}
+        else{html='<div class="search-results-grid">';profiles.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{noBio:true});});html+='</div>';}
     }catch(e){console.error('renderDiscover:',e);html='<div class="empty-state"><i class="fas fa-users"></i><p>Could not load profiles.</p></div>';}
     if(myVersion!==_discoverRenderVersion) return;
     container.innerHTML=html;
@@ -4180,7 +4181,7 @@ async function renderNotFollowingBack(container,query){
         if(notFollowingBack.length){
             html='<p style="color:var(--gray);margin:12px 0 16px;font-size:14px;">'+notFollowingBack.length+' '+(notFollowingBack.length===1?'person':'people')+' you follow '+(notFollowingBack.length===1?'doesn\'t':'don\'t')+' follow you back.</p>';
             html+='<div class="search-results-grid">';
-            notFollowingBack.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true});});
+            notFollowingBack.forEach(function(p){html+=profileCardHtml({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},{notFollowingBack:true,noBio:true});});
             html+='</div>';
         } else {
             html='<div class="empty-state"><i class="fas fa-handshake"></i><p>'+(query?'No results for "'+query+'"':'Everyone you follow follows you back!')+'</p></div>';

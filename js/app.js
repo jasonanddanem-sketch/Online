@@ -938,7 +938,7 @@ $('#navUserDropdown').addEventListener('click',function(e){
 $('#globalSearch').addEventListener('keydown',function(e){
     if(e.key==='Enter'){
         var q=this.value.trim();
-        if(q.length>0) performSearch(q);
+        if(q.length>0){performSearch(q);this.value='';this.blur();}
     }
 });
 
@@ -1316,7 +1316,7 @@ function buildCommentHtml(cid,name,img,text,likes,isReply,authorId,replyToName){
     var h='<div class="comment-item'+(isReply?' comment-reply':'')+'" data-cid="'+cid+'">';
     h+='<img src="'+avatarSrc+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;object-fit:cover;">';
     h+='<div style="flex:1;"><strong style="font-size:13px;">'+name+'</strong>';
-    h+='<p style="font-size:13px;color:#555;margin-top:2px;">'+replyTag+text+'</p>';
+    h+='<p class="comment-text" style="font-size:13px;color:#555;margin-top:2px;">'+replyTag+text+'</p>';
     h+='<div class="comment-actions-row" style="display:flex;gap:10px;margin-top:4px;">';
     h+='<button class="comment-like-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
     h+='<button class="comment-dislike-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
@@ -1375,28 +1375,65 @@ async function showComments(postId,countEl,sortMode,autoReplyToCid){
         if(!repliesByParent[root])repliesByParent[root]=[];
         repliesByParent[root].push(c);
     });
-    var tabsHtml='<div class="search-tabs" style="margin-bottom:12px;">';
-    tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='top'?' active':'')+'" data-sort="top">Top Comments</button>';
+
+    // Build the original post embed at the top
+    var postEmbed='';
+    var fp=feedPosts.find(function(x){return x.idx===postId;});
+    if(fp){
+        var person=fp.person;
+        var avatarSrc=person.avatar_url||DEFAULT_AVATAR;
+        var timeStr=fp.created_at?timeAgoReal(fp.created_at):timeAgo(typeof fp.idx==='number'?fp.idx:0);
+        postEmbed+='<div class="comment-post-embed">';
+        postEmbed+='<div class="post-header" style="margin-bottom:10px;position:relative;">';
+        postEmbed+='<img src="'+avatarSrc+'" alt="'+person.name+'" class="post-avatar" style="width:40px;height:40px;">';
+        postEmbed+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeStr+'</span></div></div>';
+        postEmbed+='</div>';
+        postEmbed+='<div class="post-description"><p>'+fp.text+'</p></div>';
+        if(fp.images){var imgs=fp.images;postEmbed+='<div class="post-media-grid pm-count-'+imgs.length+'" style="margin-bottom:8px;">';imgs.forEach(function(src){postEmbed+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});postEmbed+='</div>';}
+        if(fp.tags&&fp.tags.length){postEmbed+='<div class="post-tags" style="margin-bottom:8px;">';fp.tags.forEach(function(t){postEmbed+='<span class="skill-tag">'+t+'</span>';});postEmbed+='</div>';}
+        postEmbed+='<div class="post-actions" style="padding-top:10px;"><div class="action-left">';
+        postEmbed+='<span class="action-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i><span>'+fp.likes+'</span></span>';
+        postEmbed+='<span class="action-btn" style="cursor:default;"><i class="far fa-comment"></i><span>'+(fp.commentCount||(fp.comments||[]).length)+'</span></span>';
+        postEmbed+='<span class="action-btn" style="cursor:default;"><i class="fas fa-share-from-square"></i><span>'+fp.shares+'</span></span>';
+        postEmbed+='</div></div>';
+        postEmbed+='</div>';
+    }
+
+    var tabsHtml='<div class="search-tabs" style="margin-bottom:0;padding:0;">';
+    tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='top'?' active':'')+'" data-sort="top">Top</button>';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='newest'?' active':'')+'" data-sort="newest">Newest</button>';
     tabsHtml+='<button class="search-tab comment-sort-tab'+(sortMode==='oldest'?' active':'')+'" data-sort="oldest">Oldest</button>';
     tabsHtml+='</div>';
-    var html='<div class="modal-header"><h3>Comments</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">'+tabsHtml+'<div id="commentsList">';
-    if(!topLevel.length) html+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
+
+    var commentsHtml='';
+    if(!topLevel.length) commentsHtml+='<p style="color:#777;margin-bottom:12px;" id="noCommentsMsg">No comments yet.</p>';
     // Build name lookup for "replying to" labels
     var nameById={};
     allComments.forEach(function(c){nameById[c.cid]=c.name;});
     topLevel.forEach(function(c){
-        html+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false,c.authorId);
+        commentsHtml+=buildCommentHtml(c.cid,c.name,c.img,c.text,c.likes,false,c.authorId);
         var replies=repliesByParent[c.cid]||[];
         replies.forEach(function(r){
             var replyToName=nameById[r.parentId]||c.name;
-            html+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId,replyToName);
+            commentsHtml+=buildCommentHtml(r.cid,r.name,r.img,r.text,r.likes,true,r.authorId,replyToName);
         });
     });
-    html+='</div><div style="display:flex;gap:10px;margin-top:12px;"><input type="text" class="post-input" id="commentInput" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary" id="postCommentBtn">Post</button></div><div id="replyIndicator" style="display:none;font-size:12px;color:var(--primary);margin-top:4px;">Replying to <span id="replyToName"></span> <button id="cancelReply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div></div>';
+
+    var html='<div class="modal-header"><h3>Comments</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    html+='<div class="comment-modal-layout">';
+    html+=postEmbed;
+    html+='<div class="comment-modal-scroll">'+tabsHtml+'<div id="commentsList">'+commentsHtml+'</div></div>';
+    html+='<div class="comment-modal-input"><div id="replyIndicator" style="display:none;font-size:12px;color:var(--primary);margin-bottom:6px;">Replying to <span id="replyToName"></span> <button id="cancelReply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div><div style="display:flex;gap:10px;"><input type="text" class="post-input" id="commentInput" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary" id="postCommentBtn">Post</button></div></div>';
+    html+='</div>';
     showModal(html);
+    // Scroll comments to bottom
+    var scrollArea=document.querySelector('.comment-modal-scroll');
+    if(scrollArea) scrollArea.scrollTop=0;
     bindCommentLikes();
     bindCommentDeletes(postId,countEl);
+    // Add mini link previews to comment text
+    var commentsList=document.getElementById('commentsList');
+    if(commentsList) autoFetchLinkPreviewsMini(commentsList,'.comment-text');
     var replyTarget=null;
     // Tab click handlers
     $$('.comment-sort-tab').forEach(function(tab){
@@ -1816,9 +1853,9 @@ async function showProfileView(person){
                 feedHtml+='<div class="post-header">';
                 feedHtml+='<img src="'+authorAvatar+'" alt="'+authorName+'" class="post-avatar">';
                 feedHtml+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+authorName+'</h4><span class="post-time">'+postTime+'</span></div></div></div>';
-                feedHtml+='<div class="post-description"><p>'+post.content+'</p>';
-                if(post.image_url) feedHtml+='<img src="'+post.image_url+'" class="post-image" style="max-width:100%;border-radius:8px;margin-top:8px;">';
-                feedHtml+='</div>';
+                feedHtml+='<div class="post-description"><p>'+post.content+'</p></div>';
+                var pvImgs=post.media_urls&&post.media_urls.length?post.media_urls:(post.image_url?[post.image_url]:[]);
+                if(pvImgs.length){feedHtml+='<div class="post-media-grid pm-count-'+pvImgs.length+'">';pvImgs.forEach(function(src){feedHtml+='<div class="pm-thumb"><img src="'+src+'" alt="Post photo"></div>';});feedHtml+='</div>';}
                 feedHtml+='<div class="post-actions"><div class="action-left">';
                 feedHtml+='<button class="action-btn like-btn" data-post-id="'+post.id+'"><i class="'+(state.likedPosts[post.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">0</span></button>';
                 feedHtml+='<button class="action-btn dislike-btn" data-post-id="'+post.id+'"><i class="'+(state.dislikedPosts[post.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button>';
@@ -2296,8 +2333,9 @@ async function showGroupView(group){
                 feedHtml+='</div></div>';
                 feedHtml+='<div class="post-description">';
                 if(p.content) feedHtml+='<p>'+p.content+'</p>';
-                if(p.image_url) feedHtml+='<div class="post-media-grid pm-count-1"><div class="pm-thumb"><img src="'+p.image_url+'"></div></div>';
                 feedHtml+='</div>';
+                var gvImgs=p.media_urls&&p.media_urls.length?p.media_urls:(p.image_url?[p.image_url]:[]);
+                if(gvImgs.length){feedHtml+='<div class="post-media-grid pm-count-'+gvImgs.length+'">';gvImgs.forEach(function(src){feedHtml+='<div class="pm-thumb"><img src="'+src+'"></div>';});feedHtml+='</div>';}
                 feedHtml+='<div class="post-actions"><div class="action-left"><button class="action-btn like-btn" data-post-id="'+p.id+'"><i class="'+(state.likedPosts[p.id]?'fas':'far')+' fa-thumbs-up"></i><span class="like-count">'+(p.like_count||0)+'</span></button><button class="action-btn dislike-btn" data-post-id="'+p.id+'"><i class="'+(state.dislikedPosts[p.id]?'fas':'far')+' fa-thumbs-down"></i><span class="dislike-count">0</span></button><button class="action-btn comment-btn"><i class="far fa-comment"></i><span>'+commentCount+'</span></button></div></div></div>';
             });
             if(!groupPosts.length){
@@ -3046,7 +3084,7 @@ async function generatePosts(){
                 comments: [],
                 commentCount: (p.comments && p.comments[0]) ? p.comments[0].count : 0,
                 shares: 0,
-                images: p.image_url ? [p.image_url] : null,
+                images: p.media_urls&&p.media_urls.length ? p.media_urls : (p.image_url ? [p.image_url] : null),
                 created_at: p.created_at
             };
             if(p.shared_post_id&&sharedMap[p.shared_post_id]){
@@ -3056,7 +3094,7 @@ async function generatePosts(){
                     avatar_url:sp.author?sp.author.avatar_url:null,
                     text:sp.content||'',
                     time:timeAgoReal(sp.created_at),
-                    images:sp.image_url?[sp.image_url]:null
+                    images:sp.media_urls&&sp.media_urls.length ? sp.media_urls : (sp.image_url?[sp.image_url]:null)
                 };
                 fp.badge={cls:'badge-green',icon:'fa-share',text:'Shared'};
             }
@@ -3352,6 +3390,37 @@ function bindLikeCountClicks(containerSelector){
             var postId=el.closest('.like-btn').getAttribute('data-post-id');
             showLikersModal(postId);
         });
+    });
+}
+
+// Auto-fetch compact link previews for messages, comments, and other small containers
+function autoFetchLinkPreviewsMini(container,selector){
+    if(!container) return;
+    container.querySelectorAll(selector||'.msg-bubble,.comment-text').forEach(function(el){
+        if(el.getAttribute('data-link-checked')) return;
+        el.setAttribute('data-link-checked','1');
+        var text=el.textContent||'';
+        var urlMatch=text.match(/(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i);
+        if(!urlMatch) return;
+        var url=urlMatch[1].replace(/[.,;:!?)]+$/,'');
+        if(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url)) return;
+        fetch('https://api.microlink.io?url='+encodeURIComponent(url))
+            .then(function(r){return r.json();})
+            .then(function(data){
+                if(data.status==='success'&&data.data){
+                    var d=data.data;
+                    var domain=(d.publisher||'').toUpperCase()||url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0].toUpperCase();
+                    var h='<a href="'+url+'" target="_blank" class="link-preview link-preview-mini">';
+                    if(d.image&&d.image.url) h+='<img src="'+d.image.url+'" class="link-preview-image">';
+                    else if(d.logo&&d.logo.url) h+='<img src="'+d.logo.url+'" class="link-preview-image">';
+                    h+='<div class="link-preview-info">';
+                    h+='<div class="link-preview-url">'+domain+'</div>';
+                    if(d.title) h+='<div class="link-preview-title">'+d.title+'</div>';
+                    h+='</div></a>';
+                    el.insertAdjacentHTML('beforeend',h);
+                }
+            })
+            .catch(function(){});
     });
 }
 
@@ -4609,9 +4678,11 @@ async function openChat(contact){
                 var imgMatch=content.match(/^\[img\](.*?)\[\/img\]$/);
                 if(imgMatch){content='<img src="'+imgMatch[1]+'" style="max-width:200px;border-radius:8px;">';}
                 mhtml+='<div class="msg-bubble '+(isMine?'sent':'received')+'">'+content+'</div>';
+
             });
             msgArea.innerHTML=mhtml;
             msgArea.scrollTop=msgArea.scrollHeight;
+            autoFetchLinkPreviewsMini(msgArea,'.msg-bubble');
         }
         // Mark as read
         await sbMarkMessagesRead(currentUser.id,contact.partnerId);
@@ -4666,6 +4737,7 @@ async function sendMessage(){
     var placeholder=msgArea.querySelector('div[style*="text-align:center"]');
     if(placeholder&&placeholder.textContent.indexOf('No messages')!==-1) msgArea.innerHTML='';
     msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble sent">'+text+'</div>');
+    autoFetchLinkPreviewsMini(msgArea,'.msg-bubble:last-child');
     msgArea.scrollTop=msgArea.scrollHeight;
     try{
         await sbSendMessage(currentUser.id,activeChat.partnerId,text);
@@ -4734,6 +4806,7 @@ function initMessageSubscription(){
                     msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received"><img src="'+imgUrl+'" style="max-width:200px;border-radius:8px;cursor:pointer;" onclick="window.open(this.src)"></div>');
                 } else {
                     msgArea.insertAdjacentHTML('beforeend','<div class="msg-bubble received">'+content+'</div>');
+                    autoFetchLinkPreviewsMini(msgArea,'.msg-bubble:last-child');
                 }
                 msgArea.scrollTop=msgArea.scrollHeight;
                 // Mark as read immediately

@@ -2058,14 +2058,17 @@ async function showProfileView(person){
     // Event: Likes
     $$('#pvPostsFeed .like-btn').forEach(function(btn){
         btn.addEventListener('click',async function(e){
-            if(e.target.classList.contains('like-count')) return;
             var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);
+            var isUUID=/^[0-9a-f]{8}-/.test(pid);
             var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);
-            if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}
-            else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}
+            if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;
+                if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){}}
+            }
+            else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;
+                if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){}}
+            }
             var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
             saveState();
-            if(currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){console.error('PV like error:',e2);}}
         });
     });
     $$('#pvPostsFeed .dislike-btn').forEach(function(btn){
@@ -2073,10 +2076,15 @@ async function showProfileView(person){
             var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);
             var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);
             if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];btn.classList.remove('disliked');btn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}
-            else{if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}
+            else{
+                if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';
+                    var isUUID=/^[0-9a-f]{8}-/.test(pid);
+                    if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){}}
+                }
+                state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;
+            }
             var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
             saveState();
-            if(currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){console.error('PV dislike error:',e2);}}
         });
     });
     // Event: Comments
@@ -2747,7 +2755,7 @@ async function showGroupView(group){
 }
 
 function bindGvPostEvents(){
-    $$('#gvPostsFeed .like-btn').forEach(function(btn){btn.addEventListener('click',function(e){if(e.target.classList.contains('like-count'))return;var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();var _glm=pid.match(/^gvp?-(\d+)-/);if(_glm)addGroupCoins(parseInt(_glm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _glm2=pid.match(/^gvp?-(\d+)-/);if(_glm2&&(state.groupCoins[parseInt(_glm2[1])]||0)>0)addGroupCoins(parseInt(_glm2[1]),-1);}});});
+    $$('#gvPostsFeed .like-btn').forEach(function(btn){btn.addEventListener('click',function(e){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();var _glm=pid.match(/^gvp?-(\d+)-/);if(_glm)addGroupCoins(parseInt(_glm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _glm2=pid.match(/^gvp?-(\d+)-/);if(_glm2&&(state.groupCoins[parseInt(_glm2[1])]||0)>0)addGroupCoins(parseInt(_glm2[1]),-1);}});});
     $$('#gvPostsFeed .dislike-btn').forEach(function(btn){btn.addEventListener('click',function(){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];btn.classList.remove('disliked');btn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();var _gdm=pid.match(/^gvp?-(\d+)-/);if(_gdm)addGroupCoins(parseInt(_gdm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _gdm2=pid.match(/^gvp?-(\d+)-/);if(_gdm2&&(state.groupCoins[parseInt(_gdm2[1])]||0)>0)addGroupCoins(parseInt(_gdm2[1]),-1);}});});
     $$('#gvPostsFeed .comment-btn').forEach(function(btn){btn.addEventListener('click',function(){var postId=btn.closest('.action-left').querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,btn.querySelector('span'));});});
     bindLikeCountClicks('#gvPostsFeed');
@@ -3374,7 +3382,6 @@ function bindPostEvents(){
     // Like buttons (Supabase-backed for UUID post IDs, local for legacy numeric IDs)
     _$$('.like-btn').forEach(function(btn){
         btn.addEventListener('click', async function(e){
-            if(e.target.classList.contains('like-count')) return;
             var postId=btn.getAttribute('data-post-id');
             var countEl=btn.querySelector('.like-count');
             var count=parseInt(countEl.textContent);
@@ -5718,7 +5725,24 @@ updateFollowCounts();
 
     // Delegate clicks on images in posts, albums, previews
     document.addEventListener('click',function(e){
-        var t=e.target;if(t.tagName!=='IMG')return;
+        var t=e.target;
+        // Handle +X overlay clicks — open lightbox at the overflow image
+        var moreOverlay=t.closest('.pm-more-overlay');
+        if(moreOverlay){
+            var pmThumb=moreOverlay.closest('.pm-thumb');
+            var grid=pmThumb?pmThumb.closest('.post-media-grid'):null;
+            if(grid){
+                var pgid=grid.dataset.pgid;var allMedia=pgid&&window['_media_'+pgid];
+                if(allMedia){
+                    var list=allMedia.filter(function(m){return m.type==='image';}).map(function(m){return m.src;});
+                    var thumbImg=pmThumb.querySelector('img');
+                    var startIdx=thumbImg?list.indexOf(thumbImg.src):0;
+                    if(startIdx<0)startIdx=0;
+                    if(list.length){open(list,startIdx);e.stopPropagation();return;}
+                }
+            }
+        }
+        if(t.tagName!=='IMG')return;
         // Post media grid
         var grid=t.closest('.post-media-grid');
         if(grid){var pgid=grid.dataset.pgid;var allMedia=pgid&&window['_media_'+pgid];var list;if(allMedia){list=allMedia.filter(function(m){return m.type==='image';}).map(function(m){return m.src;});}else{list=collect(grid);}if(list.length){open(list,list.indexOf(t.src));e.stopPropagation();return;}}

@@ -4373,10 +4373,10 @@ function applyLogo(logoId){
     var el=$('.nav-logo');
     if(logoId){
         var l=logos.find(function(x){return x.id===logoId;});
-        if(l.img){el.innerHTML='<img src="'+l.img+'" alt="BlipVibe" class="nav-logo-img">';}
-        else{el.textContent=l.text;}
+        if(l.img){el.innerHTML='<img src="'+l.img+'" alt="BlipVibe" class="nav-logo-img">';el.classList.add('nav-logo-image');}
+        else{el.textContent=l.text;el.classList.remove('nav-logo-image');}
         state.activeLogo=logoId;
-    } else{el.textContent='BlipVibe';state.activeLogo=null;}
+    } else{el.textContent='BlipVibe';state.activeLogo=null;el.classList.remove('nav-logo-image');}
 }
 
 function applyIconSet(setId,silent){

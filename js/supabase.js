@@ -69,22 +69,23 @@ async function sbGetUser() {
 // Called after email confirmation when the signup didn't create one.
 async function sbEnsureProfile(authUser) {
   // Try to fetch existing profile first
-  const { data: existing } = await sb.from('profiles')
+  const { data: existing, error: fetchErr } = await sb.from('profiles')
     .select('*')
     .eq('id', authUser.id)
     .maybeSingle();
   if (existing) return existing;
+  // If the fetch failed (network error), don't create/overwrite — just throw
+  if (fetchErr) throw fetchErr;
 
   // No profile yet — create one using metadata from signup
+  // Note: do NOT include avatar_url or cover_photo_url so upsert won't overwrite them
   const username = authUser.user_metadata?.username || authUser.email.split('@')[0];
   const { data, error } = await sb.from('profiles')
     .upsert({
       id: authUser.id,
       username: username,
       display_name: username,
-      bio: '',
-      avatar_url: null,
-      cover_photo_url: null
+      bio: ''
     }, { onConflict: 'id' })
     .select()
     .single();

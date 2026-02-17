@@ -276,10 +276,25 @@ async function initApp() {
     try {
         var prevAvatars = await sbListUserAvatars(currentUser.id);
         state.photos.profile = prevAvatars.map(function(a){ return { src: a.src, date: a.date }; });
+        // Auto-recover avatar if profile lost reference but storage still has files
+        if(!currentUser.avatar_url && prevAvatars.length > 0){
+            var latestAvatar = prevAvatars[0].src;
+            currentUser.avatar_url = latestAvatar;
+            populateUserUI();
+            sbUpdateProfile(currentUser.id, { avatar_url: latestAvatar }).catch(function(e){ console.warn('Avatar recovery error:', e); });
+        }
     } catch(e){ console.warn('Could not load avatar history:', e); }
     try {
         var prevCovers = await sbListUserCovers(currentUser.id);
         state.photos.cover = prevCovers.map(function(c){ return { src: c.src, date: c.date }; });
+        // Auto-recover cover if profile lost reference but storage still has files
+        if(!currentUser.cover_photo_url && prevCovers.length > 0){
+            var latestCover = prevCovers[0].src;
+            currentUser.cover_photo_url = latestCover;
+            state.coverPhoto = latestCover;
+            applyCoverPhoto();
+            sbUpdateProfile(currentUser.id, { cover_photo_url: latestCover }).catch(function(e){ console.warn('Cover recovery error:', e); });
+        }
     } catch(e){ console.warn('Could not load cover history:', e); }
     try {
         var myPosts = await sbGetUserPosts(currentUser.id, 50);

@@ -26,126 +26,102 @@
 
     <!-- ========== PAGE: LOGIN ========== -->
     <div class="login-page" id="loginPage">
-        <div class="login-bg-shapes">
-            <div class="login-shape login-shape-1"></div>
-            <div class="login-shape login-shape-2"></div>
-            <div class="login-shape login-shape-3"></div>
-        </div>
-        <div class="login-split">
-            <div class="login-hero">
-                <div class="login-hero-content">
-                    <div class="login-brand"><span class="login-brand-icon"><i class="fas fa-bolt"></i></span> BlipVibe</div>
-                    <h1 class="login-tagline">Where ideas<br><span>come alive.</span></h1>
-                    <p class="login-hero-desc">Join a community of creators, thinkers, and doers. Share your world, discover new ones.</p>
-                    <div class="login-hero-stats">
-                        <div class="login-hero-stat"><strong id="statUsers">0</strong><span>Users</span></div>
-                        <div class="login-hero-stat"><strong id="statPosts">0</strong><span>Posts</span></div>
-                        <div class="login-hero-stat"><strong id="statGroups">0</strong><span>Communities</span></div>
-                    </div>
-                </div>
+        <div class="login-center">
+            <div class="login-logo-area">
+                <img src="images/blipvibe-logo.png" alt="BlipVibe" class="login-logo-img">
             </div>
-            <div class="login-form-side">
-                <div class="login-card">
-                    <h2 class="login-title">Welcome back</h2>
-                    <p class="login-subtitle">Sign in to your account</p>
-                    <!-- LOGIN FORM -->
-                    <form id="loginForm" autocomplete="off">
-                        <div class="login-error" id="loginError"></div>
-                        <div class="login-field">
-                            <label class="login-label" for="loginEmail">Email</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-envelope"></i>
-                                <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email">
-                            </div>
+            <div class="login-card">
+                <h2 class="login-title">Log In</h2>
+                <!-- LOGIN FORM -->
+                <form id="loginForm" autocomplete="off">
+                    <div class="login-error" id="loginError"></div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
                         </div>
-                        <div class="login-field">
-                            <label class="login-label" for="loginPassword">Password</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-lock"></i>
-                                <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
-                                <button type="button" class="login-toggle-pw" id="togglePassword"><i class="fas fa-eye"></i></button>
-                            </div>
+                    </div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+                            <button type="button" class="login-toggle-pw" id="togglePassword"><i class="fas fa-eye"></i></button>
                         </div>
-                        <div class="login-options">
-                            <label class="login-remember"><input type="checkbox" id="rememberMe"> Remember me</label>
-                            <a href="#" class="login-forgot">Forgot password?</a>
+                    </div>
+                    <div class="login-options">
+                        <label class="login-remember"><input type="checkbox" id="rememberMe"> Remember me</label>
+                        <a href="#" class="login-forgot">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="login-btn">Log In</button>
+                </form>
+                <div class="login-footer">Don't have an account? <a href="#" class="login-create">Sign up</a></div>
+                <!-- SIGNUP FORM (hidden by default) -->
+                <form id="signupForm" autocomplete="off" style="display:none;">
+                    <div class="login-error" id="signupError"></div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="signupUsername" placeholder="Username" autocomplete="username">
                         </div>
-                        <button type="submit" class="login-btn">Sign In <i class="fas fa-arrow-right"></i></button>
-                    </form>
-                    <div class="login-divider"><span>or</span></div>
-                    <div class="login-footer">New to BlipVibe? <a href="#" class="login-create">Create an account</a></div>
-                    <!-- SIGNUP FORM (hidden by default) -->
-                    <form id="signupForm" autocomplete="off" style="display:none;">
-                        <div class="login-error" id="signupError"></div>
-                        <div class="login-field">
-                            <label class="login-label" for="signupUsername">Username</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-user"></i>
-                                <input type="text" id="signupUsername" placeholder="Choose a username" autocomplete="username">
-                            </div>
+                    </div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="signupEmail" placeholder="Email" autocomplete="email">
                         </div>
-                        <div class="login-field">
-                            <label class="login-label" for="signupEmail">Email</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-envelope"></i>
-                                <input type="email" id="signupEmail" placeholder="Enter your email" autocomplete="email">
-                            </div>
+                    </div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="signupPassword" placeholder="Password" autocomplete="new-password">
                         </div>
-                        <div class="login-field">
-                            <label class="login-label" for="signupPassword">Password</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-lock"></i>
-                                <input type="password" id="signupPassword" placeholder="Create a password" autocomplete="new-password">
-                            </div>
+                    </div>
+                    <div class="login-field">
+                        <div class="login-input-wrap">
+                            <i class="fas fa-cake-candles"></i>
+                            <input type="date" id="signupBirthday" placeholder="Date of Birth" autocomplete="bday">
                         </div>
-                        <div class="login-field">
-                            <label class="login-label" for="signupBirthday">Date of Birth</label>
-                            <div class="login-input-wrap">
-                                <i class="fas fa-cake-candles"></i>
-                                <input type="date" id="signupBirthday" autocomplete="bday">
-                            </div>
+                    </div>
+                    <div class="login-terms">
+                        <div class="login-terms-text">
+                            <h4>BlipVibe – Terms of Use &amp; Disclaimer (Beta)</h4>
+                            <p><strong>Effective Date:</strong> February 16, 2026</p>
+                            <p>Welcome to BlipVibe.</p>
+                            <p>By creating an account, you agree to the following terms:</p>
+                            <h5>1. Free Expression Policy</h5>
+                            <p>BlipVibe supports open conversation and the free exchange of ideas. Users are allowed to express opinions, debate topics, and share perspectives, even if others may disagree.</p>
+                            <p>However, free expression does not include harassment, threats, or targeted abuse. The following content is strictly prohibited:</p>
+                            <ul>
+                                <li>Racial slurs</li>
+                                <li>Sexual orientation slurs</li>
+                                <li>Credible threats of violence</li>
+                                <li>Doxing (sharing private personal information without consent)</li>
+                                <li>Direct harassment or intimidation</li>
+                            </ul>
+                            <p>BlipVibe reserves the right to remove content that violates these rules.</p>
+                            <h5>2. Beta Platform Notice</h5>
+                            <p>BlipVibe is currently in beta. Features may change, break, or be removed without notice. Data may be reset or deleted during development updates. Use of the platform is at your own discretion.</p>
+                            <h5>3. User Responsibility</h5>
+                            <p>You are responsible for all content you post, including text, images, comments, and messages. You agree not to post illegal content, spam, or harmful material.</p>
+                            <h5>4. No Warranty</h5>
+                            <p>BlipVibe is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service, permanent data storage, or error-free performance.</p>
+                            <h5>5. Limitation of Liability</h5>
+                            <p>BlipVibe and its creator are not liable for data loss, disputes between users, or damages resulting from platform use.</p>
+                            <h5>6. Account Termination</h5>
+                            <p>BlipVibe reserves the right to suspend or terminate accounts that violate these terms.</p>
+                            <h5>7. Privacy</h5>
+                            <p>Basic account data (such as email and profile information) is stored for platform functionality. BlipVibe does not sell personal data.</p>
+                            <h5>8. Acceptance</h5>
+                            <p>By creating an account, you confirm that you have read and agree to these terms and understand BlipVibe is currently in beta.</p>
                         </div>
-                        <div class="login-terms">
-                            <div class="login-terms-text">
-                                <h4>BlipVibe – Terms of Use &amp; Disclaimer (Beta)</h4>
-                                <p><strong>Effective Date:</strong> February 16, 2026</p>
-                                <p>Welcome to BlipVibe.</p>
-                                <p>By creating an account, you agree to the following terms:</p>
-                                <h5>1. Free Expression Policy</h5>
-                                <p>BlipVibe supports open conversation and the free exchange of ideas. Users are allowed to express opinions, debate topics, and share perspectives, even if others may disagree.</p>
-                                <p>However, free expression does not include harassment, threats, or targeted abuse. The following content is strictly prohibited:</p>
-                                <ul>
-                                    <li>Racial slurs</li>
-                                    <li>Sexual orientation slurs</li>
-                                    <li>Credible threats of violence</li>
-                                    <li>Doxing (sharing private personal information without consent)</li>
-                                    <li>Direct harassment or intimidation</li>
-                                </ul>
-                                <p>BlipVibe reserves the right to remove content that violates these rules.</p>
-                                <h5>2. Beta Platform Notice</h5>
-                                <p>BlipVibe is currently in beta. Features may change, break, or be removed without notice. Data may be reset or deleted during development updates. Use of the platform is at your own discretion.</p>
-                                <h5>3. User Responsibility</h5>
-                                <p>You are responsible for all content you post, including text, images, comments, and messages. You agree not to post illegal content, spam, or harmful material.</p>
-                                <h5>4. No Warranty</h5>
-                                <p>BlipVibe is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service, permanent data storage, or error-free performance.</p>
-                                <h5>5. Limitation of Liability</h5>
-                                <p>BlipVibe and its creator are not liable for data loss, disputes between users, or damages resulting from platform use.</p>
-                                <h5>6. Account Termination</h5>
-                                <p>BlipVibe reserves the right to suspend or terminate accounts that violate these terms.</p>
-                                <h5>7. Privacy</h5>
-                                <p>Basic account data (such as email and profile information) is stored for platform functionality. BlipVibe does not sell personal data.</p>
-                                <h5>8. Acceptance</h5>
-                                <p>By creating an account, you confirm that you have read and agree to these terms and understand BlipVibe is currently in beta.</p>
-                            </div>
-                            <label class="login-checkbox">
-                                <input type="checkbox" id="signupTerms">
-                                <span>I agree to the BlipVibe Terms of Use</span>
-                            </label>
-                        </div>
-                        <button type="submit" class="login-btn">Create Account <i class="fas fa-arrow-right"></i></button>
-                    </form>
-                    <div id="signupFooter" style="display:none;" class="login-footer">Already have an account? <a href="#" class="login-back">Sign in</a></div>
-                </div>
+                        <label class="login-checkbox">
+                            <input type="checkbox" id="signupTerms">
+                            <span>I agree to the BlipVibe Terms of Use</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="login-btn">Create Account</button>
+                </form>
+                <div id="signupFooter" style="display:none;" class="login-footer">Already have an account? <a href="#" class="login-back">Sign in</a></div>
             </div>
         </div>
     </div>

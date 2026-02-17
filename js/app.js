@@ -104,10 +104,8 @@ signupForm.addEventListener('submit', async function (e) {
 document.querySelector('.login-create').addEventListener('click', function (e) {
     e.preventDefault();
     loginForm.style.display = 'none';
-    document.querySelector('.login-divider').style.display = 'none';
     document.querySelector('.login-footer').style.display = 'none';
-    document.querySelector('.login-title').textContent = 'Create an account';
-    document.querySelector('.login-subtitle').textContent = 'Join BlipVibe today';
+    document.querySelector('.login-title').textContent = 'Create Account';
     signupForm.style.display = '';
     document.getElementById('signupFooter').style.display = '';
 });
@@ -115,10 +113,8 @@ document.querySelector('.login-back') && document.querySelector('.login-back').a
     e.preventDefault();
     signupForm.style.display = 'none';
     document.getElementById('signupFooter').style.display = 'none';
-    document.querySelector('.login-title').textContent = 'Welcome back';
-    document.querySelector('.login-subtitle').textContent = 'Sign in to your account';
+    document.querySelector('.login-title').textContent = 'Log In';
     loginForm.style.display = '';
-    document.querySelector('.login-divider').style.display = '';
     document.querySelector('.login-footer').style.display = '';
 });
 

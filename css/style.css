@@ -271,8 +271,8 @@ img{display:block;}
 .fl-mutual{color:var(--primary);}
 .fl-follows-you{color:var(--gray);}
 .fl-you-follow{color:var(--primary);}
-.status-emoji-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
-.status-emoji-btn{width:36px;height:36px;border-radius:8px;font-size:20px;background:var(--border);border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,border-color .15s,background .15s;}
+.status-emoji-picker{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.status-emoji-btn{width:48px;height:48px;border-radius:10px;font-size:28px;background:var(--border);border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,border-color .15s,background .15s;}
 .status-emoji-btn:hover{transform:scale(1.15);border-color:var(--primary);}
 .status-emoji-btn.active{border-color:var(--primary);background:var(--card);box-shadow:0 0 0 2px var(--primary);}
 .nfb-label{color:var(--gray)!important;border-color:var(--gray)!important;font-size:11px!important;}

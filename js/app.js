@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+// ======================== EMOJI-SAFE STRING HELPERS ========================
+// Array.from splits by full Unicode code points so surrogate pairs / ZWJ emoji stay intact
+function safeSlice(str,start,end){var a=Array.from(str||'');return a.slice(start,end).join('');}
+function safeTruncate(str,max,ellipsis){var a=Array.from(str||'');if(a.length<=max)return str;return a.slice(0,max).join('')+(ellipsis||'');}
+
 // ======================== AUTHENTICATION (Supabase) ========================
 // currentUser holds the live profile row; currentAuthUser holds auth.users row
 var currentUser = null;    // { id, username, display_name, bio, avatar_url, ... }
@@ -1129,8 +1134,8 @@ async function renderSearchResults(q,tab){
                 var text=fp.text;
                 var tags=fp.tags||[];
                 var badge=fp.badge||badgeTypes[0];
-                var short=text.substring(0,200);
-                var rest=text.substring(200);
+                var short=safeSlice(text,0,200);
+                var rest=safeSlice(text,200);
                 var hasMore=rest.length>0;
                 html+='<div class="card feed-post search-post-card">';
                 var avatarSrc=person.avatar_url||DEFAULT_AVATAR;
@@ -3295,7 +3300,7 @@ function renderFeed(tab){
         var i=p.idx,person=p.person,text=p.text,tags=p.tags||[],badge=p.badge,loc=p.loc,likes=p.likes,genComments=p.comments||[],shares=p.shares;
         var commentCount=p.commentCount||genComments.length;
         var menuId='post-menu-'+i;
-        var short=text.substring(0,Math.min(160,text.length));var rest=text.substring(160);var hasMore=rest.length>0;
+        var short=safeSlice(text,0,160);var rest=safeSlice(text,160);var hasMore=rest.length>0;
         var avatarSrc=person.avatar_url||'images/default-avatar.svg';
         var timeStr=p.created_at?timeAgoReal(p.created_at):timeAgo(typeof i==='number'?i:0);
         html+='<div class="card feed-post">';
@@ -3866,7 +3871,7 @@ async function renderSuggestions(){
             var name=p.display_name||p.username;
             var avatar=p.avatar_url||DEFAULT_AVATAR;
             html+='<div class="suggestion-item"><img src="'+avatar+'" alt="'+name+'" class="suggestion-avatar">';
-            html+='<div class="suggestion-info"><h4>'+name+'</h4><p>'+((p.bio||'').substring(0,40))+'</p></div>';
+            html+='<div class="suggestion-info"><h4>'+name+'</h4><p>'+safeTruncate(p.bio||'',40)+'</p></div>';
             html+='<button class="suggestion-follow-btn" data-uid="'+p.id+'"><i class="fas fa-user-plus"></i></button></div>';
         });
         list.innerHTML=html;
@@ -4045,7 +4050,7 @@ function profileCardHtml(p,opts){
     var noBio=opts&&opts.noBio;
     var btnLabel=isFollowed?(nfb?'Not Following Back':'Following'):'Follow';
     var btnClass=isFollowed?(nfb?'btn-outline nfb-label':'btn-outline'):'btn-primary';
-    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4>'+(noBio?'':'<p class="profile-card-bio">'+bio.substring(0,60)+'</p>')+(isSelf?'':'<button class="btn '+btnClass+' profile-follow-btn" data-uid="'+p.id+'">'+btnLabel+'</button>')+'</div>';
+    return '<div class="profile-card-item"><img src="'+avatar+'" class="profile-card-avatar" data-uid="'+p.id+'"><h4 class="profile-card-name" data-uid="'+p.id+'">'+name+'</h4>'+(noBio?'':'<p class="profile-card-bio">'+safeTruncate(bio,60)+'</p>')+(isSelf?'':'<button class="btn '+btnClass+' profile-follow-btn" data-uid="'+p.id+'">'+btnLabel+'</button>')+'</div>';
 }
 var _networkRenderVersion=0;
 async function renderMyNetwork(container,query){
@@ -4912,7 +4917,7 @@ function renderMsgContacts(search){
         var avatar=c.partner.avatar_url||DEFAULT_AVATAR;
         var preview=c.lastMessage.content||'';
         if(/^\[img\]/.test(preview)) preview='Sent an image';
-        else if(preview.length>40) preview=preview.substring(0,40)+'...';
+        else if(Array.from(preview).length>40) preview=safeTruncate(preview,40,'...');
         var time=timeAgoReal(c.lastMessage.created_at);
         var isActive=activeChat&&activeChat.partnerId===c.partnerId;
         html+='<div class="msg-contact'+(isActive?' active':'')+'" data-partner-id="'+c.partnerId+'">';
@@ -5096,7 +5101,7 @@ function initMessageSubscription(){
             // Not viewing this chat — show notification
             sbGetProfile(newMsg.sender_id).then(function(sender){
                 var senderName=sender?(sender.display_name||sender.username):'Someone';
-                var preview=/^\[img\]/.test(newMsg.content)?'sent an image':newMsg.content.substring(0,40);
+                var preview=/^\[img\]/.test(newMsg.content)?'sent an image':safeTruncate(newMsg.content,40);
                 addNotification('message',senderName+': '+preview);
             }).catch(function(){
                 addNotification('message','New message received');
@@ -5377,7 +5382,7 @@ function showHiddenPostsModal(){
         pids.forEach(function(pid){
             var p=feedPosts.find(function(fp){return String(fp.idx)===String(pid);});
             if(!p) return;
-            var short=p.text.substring(0,100)+(p.text.length>100?'...':'');
+            var short=safeTruncate(p.text,100,Array.from(p.text).length>100?'...':'');
             h+='<div class="hidden-post-item" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">';
             h+='<img src="'+(p.person.img||p.person.avatar_url||DEFAULT_AVATAR)+'" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;object-fit:cover;">';
             h+='<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+p.person.name+'</div><p style="font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+short+'</p></div>';
@@ -5533,7 +5538,7 @@ function savedFolderCard(f){
 }
 function renderSavedPostCard(p){
     var i=p.idx,person=p.person,text=p.text,badge=p.badge,loc=p.loc,likes=p.likes,genComments=p.comments,shares=p.shares;
-    var short=text.substring(0,Math.min(160,text.length));var rest=text.substring(160);var hasMore=rest.length>0;
+    var short=safeSlice(text,0,160);var rest=safeSlice(text,160);var hasMore=rest.length>0;
     var folder=findPostFolder(i);
     var html='<div class="card feed-post saved-post-item" data-spid="'+i+'">';
     html+='<div class="post-header">';

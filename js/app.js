@@ -271,6 +271,14 @@ async function initApp() {
     await loadSkinDataFromSupabase();
     populateUserUI();
     showApp();
+    // Immediately navigate to the hash page so the user never sees home flash
+    var hashPage=(location.hash||'').replace('#','');
+    if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'&&hashPage.indexOf('group-view:')!==0){
+        navigateTo(hashPage,true);
+    }
+    // Remove the pre-paint hash-nav style now that JS has taken over
+    var hashFix=document.getElementById('hash-nav-fix');
+    if(hashFix) hashFix.remove();
     reapplyCustomizations(); // Re-apply skins, fonts, nav styles, dark mode
     detectUserLocation(); // Start async geolocation detection
     if(currentUser.cover_photo_url) { state.coverPhoto = currentUser.cover_photo_url; applyCoverPhoto(); }
@@ -367,22 +375,16 @@ async function initApp() {
     loadConversations();
     renderMsgFollowing();
     initMessageSubscription();
-    // Restore page from URL hash on refresh
-    var hashPage=(location.hash||'').replace('#','');
-    if(hashPage&&hashPage.indexOf('group-view:')===0){
-        // Restore specific group view by ID
-        var gvId=hashPage.split(':')[1];
+    // Restore group-view from hash (needs groups loaded, so handled here at the end)
+    var hashPage2=(location.hash||'').replace('#','');
+    if(hashPage2&&hashPage2.indexOf('group-view:')===0){
+        var gvId=hashPage2.split(':')[1];
         if(gvId){
             var gvGroup=groups.find(function(g){return g.id===gvId;});
             if(gvGroup){_navFromPopstate=true;showGroupView(gvGroup);_navFromPopstate=false;}
             else navigateTo('groups',true);
         }
-    } else if(hashPage&&hashPage!=='home'&&hashPage!=='profile-view'&&hashPage!=='group-view'){
-        navigateTo(hashPage,true);
     }
-    // Remove the pre-paint hash-nav style now that JS has taken over
-    var hashFix=document.getElementById('hash-nav-fix');
-    if(hashFix) hashFix.remove();
     _initAppRunning = false;
 }
 

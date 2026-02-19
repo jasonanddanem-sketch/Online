@@ -5481,14 +5481,19 @@ function renderPhotosCard(){
 }
 async function renderPhotoAlbum(){
     // Ensure albums are loaded
-    if((!_pvAlbums||!_pvAlbums.length)&&currentUser){
+    if(currentUser){
         try{_pvAlbums=await sbGetAlbums(currentUser.id);}catch(e){}
     }
-    var html='<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" id="createAlbumBtn"><i class="fas fa-plus"></i> Create Album</button></div>';
+    var albums=_pvAlbums||[];
+    var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">';
+    if(albums.length>1) html+='<button class="btn btn-outline" id="deleteAllAlbumsBtn" style="color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i> Delete All Albums</button>';
+    html+='<button class="btn btn-primary" id="createAlbumBtn"><i class="fas fa-plus"></i> Create Album</button></div>';
     // Albums first (above post photos)
-    (_pvAlbums||[]).forEach(function(album){
+    albums.forEach(function(album){
         var photos=album.album_photos||[];
-        html+='<div class="photo-album-section"><h3><i class="fas fa-folder"></i> '+album.title+' <span style="font-weight:400;font-size:12px;color:var(--gray);">'+photos.length+' photo'+(photos.length!==1?'s':'')+'</span></h3>';
+        html+='<div class="photo-album-section"><h3><i class="fas fa-folder"></i> '+album.title+' <span style="font-weight:400;font-size:12px;color:var(--gray);">'+photos.length+' photo'+(photos.length!==1?'s':'')+'</span>';
+        html+='<button class="btn btn-outline album-section-delete" data-album-id="'+album.id+'" style="padding:2px 10px;font-size:11px;margin-left:8px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i></button>';
+        html+='</h3>';
         if(photos.length){html+='<div class="photo-album-grid">';photos.forEach(function(p){html+='<img src="'+p.photo_url+'">';});html+='</div>';}
         else html+='<p class="photo-album-empty">No photos in this album yet.</p>';
         html+='</div>';
@@ -5510,6 +5515,25 @@ async function renderPhotoAlbum(){
     html+='</div>';
     $('#photoAlbumContent').innerHTML=html;
     $('#createAlbumBtn').addEventListener('click',function(){showCreateAlbumModal();});
+    // Individual album delete buttons
+    $$('.album-section-delete').forEach(function(btn){
+        btn.addEventListener('click',function(){
+            var aid=btn.dataset.albumId;
+            var album=albums.find(function(a){return a.id===aid;});
+            if(!confirm('Delete album "'+(album?album.title:'')+'"?'))return;
+            sbDeleteAlbum(aid).then(function(){showToast('Album deleted');renderPhotoAlbum();}).catch(function(){showToast('Error deleting album');});
+        });
+    });
+    // Delete all albums button
+    var delAllBtn=document.getElementById('deleteAllAlbumsBtn');
+    if(delAllBtn) delAllBtn.addEventListener('click',async function(){
+        if(!confirm('Delete ALL '+albums.length+' albums? This cannot be undone.'))return;
+        for(var i=0;i<albums.length;i++){
+            try{await sbDeleteAlbum(albums[i].id);}catch(e){}
+        }
+        showToast('All albums deleted');
+        _pvAlbums=[];renderPhotoAlbum();
+    });
 }
 $('#viewAllPhotos').addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
 $$('.photos-back-link').forEach(function(l){l.addEventListener('click',function(e){e.preventDefault();navigateTo(_navPrev&&_navPrev!=='photos'?_navPrev:'home');});});

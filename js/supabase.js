@@ -812,7 +812,51 @@ function sbSubscribeMessages(userId, callback) {
     .subscribe();
 }
 
-// ---- 15. UTILITY: timeAgo for real timestamps --------------------------------
+// ---- 15. ALBUMS -------------------------------------------------------------
+
+async function sbGetAlbums(userId) {
+  const { data, error } = await sb.from('albums')
+    .select('*, album_photos(id, photo_url, created_at)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function sbCreateAlbum(userId, title) {
+  const { data, error } = await sb.from('albums')
+    .insert({ user_id: userId, title })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function sbDeleteAlbum(albumId) {
+  const { error } = await sb.from('albums').delete().eq('id', albumId);
+  if (error) throw error;
+}
+
+async function sbRenameAlbum(albumId, title) {
+  const { error } = await sb.from('albums').update({ title }).eq('id', albumId);
+  if (error) throw error;
+}
+
+async function sbAddPhotoToAlbum(albumId, photoUrl) {
+  const { data, error } = await sb.from('album_photos')
+    .upsert({ album_id: albumId, photo_url: photoUrl }, { onConflict: 'album_id,photo_url' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function sbRemovePhotoFromAlbum(albumPhotoId) {
+  const { error } = await sb.from('album_photos').delete().eq('id', albumPhotoId);
+  if (error) throw error;
+}
+
+// ---- 16. UTILITY: timeAgo for real timestamps --------------------------------
 
 function timeAgoReal(dateStr) {
   const now = Date.now();

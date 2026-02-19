@@ -1908,7 +1908,7 @@ function profileToPerson(p){
 async function showProfileView(person){
     // Allow viewing own profile even if somehow in blockedUsers; block viewing others
     if(person.id&&!person.isMe&&blockedUsers[person.id]){showToast('This user is blocked');return;}
-    pvPhotoTab='photos';
+    pvPhotoTab='albums';
     $$('.page').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-profile-view').classList.add('active');
     $$('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1968,26 +1968,39 @@ async function showProfileView(person){
     cardHtml+='</div>';
     $('#pvProfileCard').innerHTML=cardHtml;
 
-    // Photos card - tabbed: Photos | Albums
+    // Photos card - tabbed: Albums | Photos (albums first)
+    var pvUserId=isMe?currentUser.id:person.id;
+    // Load viewed user's post photos if not own profile
+    if(!isMe){
+        try{
+            var theirPosts=await sbGetUserPosts(pvUserId,50);
+            var theirPhotos=[];
+            (theirPosts||[]).forEach(function(p){
+                var ts=new Date(p.created_at).getTime();
+                if(p.media_urls&&p.media_urls.length) p.media_urls.forEach(function(u){theirPhotos.push({src:u,date:ts});});
+                else if(p.image_url) theirPhotos.push({src:p.image_url,date:ts});
+            });
+            _pvPostPhotos=theirPhotos;
+        }catch(e){_pvPostPhotos=[];}
+    } else { _pvPostPhotos=state.photos.post; }
+    // Load albums from Supabase for viewed user
+    try{_pvAlbums=await sbGetAlbums(pvUserId);}catch(e){_pvAlbums=[];}
     var photosHtml='<div class="card photos-card"><h4 class="card-heading"><i class="fas fa-images" style="margin-right:8px;color:var(--primary);"></i>Photos</h4>';
-    if(isMe){
-        photosHtml+='<div class="search-tabs" id="pvPhotoTabs">';
-        photosHtml+='<button class="search-tab'+(pvPhotoTab==='photos'?' active':'')+'" data-pvpt="photos"><i class="fas fa-image"></i> Photos</button>';
-        photosHtml+='<button class="search-tab'+(pvPhotoTab==='albums'?' active':'')+'" data-pvpt="albums"><i class="fas fa-folder"></i> Albums</button>';
-        photosHtml+='</div>';
-    }
+    photosHtml+='<div class="search-tabs" id="pvPhotoTabs">';
+    photosHtml+='<button class="search-tab'+(pvPhotoTab==='albums'?' active':'')+'" data-pvpt="albums"><i class="fas fa-folder"></i> Albums</button>';
+    photosHtml+='<button class="search-tab'+(pvPhotoTab==='photos'?' active':'')+'" data-pvpt="photos"><i class="fas fa-image"></i> Photos</button>';
+    photosHtml+='</div>';
     photosHtml+='<div id="pvPhotoContent"></div>';
     photosHtml+='</div>';
     document.getElementById('pvPhotosCard').innerHTML=photosHtml;
+    _pvIsMe=isMe;_pvUserId=pvUserId;
     renderPvPhotoTab(isMe);
-    if(isMe){
-        $$('#pvPhotoTabs .search-tab').forEach(function(tab){tab.addEventListener('click',function(){
-            pvPhotoTab=tab.dataset.pvpt;
-            $$('#pvPhotoTabs .search-tab').forEach(function(t){t.classList.remove('active');});
-            tab.classList.add('active');
-            renderPvPhotoTab(true);
-        });});
-    }
+    $$('#pvPhotoTabs .search-tab').forEach(function(tab){tab.addEventListener('click',function(){
+        pvPhotoTab=tab.dataset.pvpt;
+        $$('#pvPhotoTabs .search-tab').forEach(function(t){t.classList.remove('active');});
+        tab.classList.add('active');
+        renderPvPhotoTab(_pvIsMe);
+    });});
 
     // "What Skin Am I?" box - reads live state for own profile, person data for others
     var pvSkinId=isMe?(state.activePremiumSkin||state.activeSkin):(person.premiumSkin||person.skin);
@@ -5172,107 +5185,235 @@ function initMessageSubscription(){
 }
 
 // ======================== PHOTOS ========================
-var pvPhotoTab='photos';
+var pvPhotoTab='albums';
+var _pvAlbums=[];var _pvPostPhotos=[];var _pvIsMe=false;var _pvUserId=null;
+
 function renderPvPhotoTab(isMe){
     var container=document.getElementById('pvPhotoContent');
     if(!container)return;
     if(pvPhotoTab==='photos'){
-        var allPhotos=getAllPhotos();
-        var html='<div class="photos-preview">';
-        if(isMe){
-            if(allPhotos.length){allPhotos.slice(0,9).forEach(function(p){html+='<img src="'+p.src+'" draggable="true" data-psrc="'+p.src+'">';});}
-            else{html+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos yet. Upload photos to see them here.</p>';}
+        // Post Photos tab — show grid with "..." menu on each photo
+        var photos=_pvPostPhotos||[];
+        var html='';
+        if(photos.length){
+            html+='<div class="photos-preview">';
+            photos.slice(0,9).forEach(function(p){
+                html+='<div class="photo-wrap" draggable="true" data-psrc="'+p.src+'">';
+                html+='<img src="'+p.src+'">';
+                if(isMe) html+='<button class="photo-menu-btn" data-psrc="'+p.src+'"><i class="fas fa-ellipsis-h"></i></button>';
+                html+='</div>';
+            });
+            html+='</div>';
         } else {
-            html+='<p class="photos-empty" style="color:var(--gray);font-size:13px;text-align:center;padding:20px 0;">No photos available.</p>';
+            html+='<div style="padding:20px;text-align:center;color:var(--gray);"><p style="font-size:13px;">No post photos yet.</p></div>';
         }
-        html+='</div>';
-        if(isMe) html+='<a href="#" class="view-more-link pv-photos-link">View All</a>';
+        if(photos.length>9) html+='<a href="#" class="view-more-link pv-photos-link">View All</a>';
         container.innerHTML=html;
         var pvPP=container.querySelector('.photos-preview');
         if(pvPP&&document.body.classList.contains('tpl-cinema')){pvPP.classList.add('shop-scroll-row');initDragScroll('#pvPhotoContent');}
         var pvPhotosLink=container.querySelector('.pv-photos-link');
         if(pvPhotosLink)pvPhotosLink.addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
         // Drag start for photos
-        if(isMe){container.querySelectorAll('img[draggable]').forEach(function(img){
-            img.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',img.dataset.psrc);e.dataTransfer.effectAllowed='copy';});
-        });}
+        if(isMe) container.querySelectorAll('.photo-wrap[draggable]').forEach(function(wrap){
+            wrap.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',wrap.dataset.psrc);e.dataTransfer.effectAllowed='copy';});
+        });
+        // Photo "..." menu
+        if(isMe) container.querySelectorAll('.photo-menu-btn').forEach(function(btn){
+            btn.addEventListener('click',function(e){e.stopPropagation();showPhotoMenu(btn.dataset.psrc,null,btn);});
+        });
     } else {
-        // Albums tab
+        // Albums tab — show album cards from Supabase
+        var albums=_pvAlbums||[];
         var html='';
-        if(!state.photos.albums.length){
-            html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet. Create one!</p></div>';
+        if(!albums.length){
+            html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet.'+(isMe?' Create one!':'')+'</p></div>';
         } else {
             html+='<div class="pv-album-grid">';
-            state.photos.albums.forEach(function(album,ai){
-                html+='<div class="pv-album-card" data-ai="'+ai+'">';
-                html+='<div class="pv-album-thumbs">';
-                var thumbs=album.photos.slice(0,4);
-                for(var ti=0;ti<4;ti++){
-                    if(thumbs[ti]) html+='<img src="'+thumbs[ti].src+'">';
-                    else html+='<div class="pv-album-placeholder"><i class="fas fa-image"></i></div>';
-                }
-                html+='</div>';
-                html+='<h5>'+album.name+'</h5>';
-                html+='<p>'+album.photos.length+' photo'+(album.photos.length!==1?'s':'')+'</p>';
+            albums.forEach(function(album){
+                var photos=album.album_photos||[];
+                var cover=photos.length?photos[0].photo_url:'';
+                html+='<div class="pv-album-card" data-album-id="'+album.id+'">';
+                if(cover) html+='<div class="pv-album-cover"><img src="'+cover+'"></div>';
+                else html+='<div class="pv-album-cover pv-album-placeholder"><i class="fas fa-image"></i></div>';
+                html+='<h5>'+album.title+'</h5>';
+                html+='<p>'+photos.length+' photo'+(photos.length!==1?'s':'')+'</p>';
                 html+='</div>';
             });
             html+='</div>';
         }
-        html+='<div style="padding:8px 14px 14px;"><button class="btn btn-primary" id="pvCreateAlbumBtn" style="width:100%;"><i class="fas fa-plus"></i> Create Album</button></div>';
+        if(isMe) html+='<div style="padding:8px 14px 14px;"><button class="btn btn-primary" id="pvCreateAlbumBtn" style="width:100%;"><i class="fas fa-plus"></i> Create Album</button></div>';
         container.innerHTML=html;
-        // Create album button
+        // Create album
         var cab=document.getElementById('pvCreateAlbumBtn');
-        if(cab)cab.addEventListener('click',function(){
-            var mHtml='<div class="modal-header"><h3>Create Album</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-            mHtml+='<div class="modal-body"><label style="display:block;font-size:14px;font-weight:500;margin-bottom:6px;">Album Name</label><input type="text" id="albumNameInput" placeholder="My Album" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit;">';
-            mHtml+='<button class="btn btn-primary" id="albumCreateConfirm" style="width:100%;">Create</button></div>';
-            showModal(mHtml);
-            document.getElementById('albumCreateConfirm').addEventListener('click',function(){
-                var name=document.getElementById('albumNameInput').value.trim();
-                if(!name)return;
-                state.photos.albums.push({name:name,photos:[]});
-                closeModal();renderPvPhotoTab(true);renderPhotosCard();saveState();
-            });
-        });
-        // Drag & drop onto album cards
+        if(cab)cab.addEventListener('click',function(){showCreateAlbumModal();});
+        // Click album card to open album view
         container.querySelectorAll('.pv-album-card').forEach(function(card){
-            card.addEventListener('dragover',function(e){e.preventDefault();e.dataTransfer.dropEffect='copy';card.classList.add('drag-over');});
-            card.addEventListener('dragleave',function(){card.classList.remove('drag-over');});
-            card.addEventListener('drop',function(e){
-                e.preventDefault();card.classList.remove('drag-over');
-                var src=e.dataTransfer.getData('text/plain');
-                if(!src)return;
-                var ai=parseInt(card.dataset.ai);
-                var dup=state.photos.albums[ai].photos.some(function(p){return p.src===src;});
-                if(dup){showToast('Photo already in this album');return;}
-                state.photos.albums[ai].photos.unshift({src:src,date:Date.now()});
-                renderPvPhotoTab(true);renderPhotosCard();saveState();
-                showToast('Photo added to '+state.photos.albums[ai].name);
+            card.addEventListener('click',function(e){
+                if(e.target.closest('.photo-menu-btn'))return;
+                var aid=card.dataset.albumId;
+                var album=_pvAlbums.find(function(a){return a.id===aid;});
+                if(album) showAlbumViewModal(album,isMe);
             });
-            // Click album to add photos via file picker
-            card.addEventListener('click',function(){
-                var ai=parseInt(card.dataset.ai);
-                var input=document.createElement('input');input.type='file';input.accept='image/*';input.multiple=true;
-                input.addEventListener('change',function(){
-                    Array.from(input.files).forEach(function(f){
-                        var r=new FileReader();
-                        r.onload=function(ev){state.photos.albums[ai].photos.unshift({src:ev.target.result,date:Date.now()});renderPvPhotoTab(true);renderPhotosCard();saveState();};
-                        r.readAsDataURL(f);
+            // Drag & drop onto album cards
+            if(isMe){
+                card.addEventListener('dragover',function(e){e.preventDefault();e.dataTransfer.dropEffect='copy';card.classList.add('drag-over');});
+                card.addEventListener('dragleave',function(){card.classList.remove('drag-over');});
+                card.addEventListener('drop',function(e){
+                    e.preventDefault();card.classList.remove('drag-over');
+                    var src=e.dataTransfer.getData('text/plain');
+                    if(!src)return;
+                    var aid=card.dataset.albumId;
+                    sbAddPhotoToAlbum(aid,src).then(function(){
+                        showToast('Photo added to album');
+                        sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
+                    }).catch(function(err){
+                        if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
+                        else showToast('Error adding photo');
                     });
                 });
-                input.click();
-            });
+            }
         });
     }
 }
+
+// Show "..." context menu for a photo
+function showPhotoMenu(photoSrc,albumPhotoId,anchorEl){
+    // Remove any existing menu
+    var old=document.querySelector('.photo-context-menu');if(old)old.remove();
+    var menu=document.createElement('div');
+    menu.className='photo-context-menu';
+    var h='';
+    if(!albumPhotoId){
+        h+='<button class="photo-ctx-item" data-action="add-to-album"><i class="fas fa-folder-plus"></i> Add to Album</button>';
+    } else {
+        h+='<button class="photo-ctx-item" data-action="remove-from-album"><i class="fas fa-trash"></i> Remove from Album</button>';
+    }
+    menu.innerHTML=h;
+    document.body.appendChild(menu);
+    // Position near anchor
+    var rect=anchorEl.getBoundingClientRect();
+    menu.style.top=(rect.bottom+window.scrollY+4)+'px';
+    menu.style.left=Math.min(rect.left,window.innerWidth-180)+'px';
+    // Actions
+    menu.querySelector('[data-action="add-to-album"]')&&menu.querySelector('[data-action="add-to-album"]').addEventListener('click',function(){
+        menu.remove();showAlbumSelectorModal(photoSrc);
+    });
+    menu.querySelector('[data-action="remove-from-album"]')&&menu.querySelector('[data-action="remove-from-album"]').addEventListener('click',function(){
+        menu.remove();
+        sbRemovePhotoFromAlbum(albumPhotoId).then(function(){
+            showToast('Photo removed from album');
+            sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
+        }).catch(function(){showToast('Error removing photo');});
+    });
+    // Close on click outside
+    setTimeout(function(){
+        document.addEventListener('click',function handler(e){
+            if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',handler);}
+        });
+    },0);
+}
+
+// Album selector modal — pick which album to add photo to
+function showAlbumSelectorModal(photoSrc){
+    var albums=_pvAlbums||[];
+    var h='<div class="modal-header"><h3><i class="fas fa-folder-plus" style="color:var(--primary);margin-right:8px;"></i>Add to Album</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body">';
+    if(!albums.length){
+        h+='<p style="color:var(--gray);text-align:center;margin-bottom:16px;">No albums yet.</p>';
+    } else {
+        h+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">';
+        albums.forEach(function(a){
+            h+='<button class="btn btn-outline album-pick-btn" data-aid="'+a.id+'" style="text-align:left;justify-content:flex-start;display:flex;align-items:center;gap:8px;"><i class="fas fa-folder" style="color:var(--primary);"></i>'+a.title+' <span style="margin-left:auto;font-size:11px;color:var(--gray);">'+(a.album_photos?a.album_photos.length:0)+' photos</span></button>';
+        });
+        h+='</div>';
+    }
+    h+='<button class="btn btn-primary" id="albumSelectorCreate" style="width:100%;"><i class="fas fa-plus"></i> Create New Album</button>';
+    h+='</div>';
+    showModal(h);
+    $$('.album-pick-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+            var aid=btn.dataset.aid;
+            closeModal();
+            sbAddPhotoToAlbum(aid,photoSrc).then(function(){
+                showToast('Photo added to album');
+                sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;});
+            }).catch(function(err){
+                if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
+                else showToast('Error adding photo');
+            });
+        });
+    });
+    document.getElementById('albumSelectorCreate').addEventListener('click',function(){
+        closeModal();showCreateAlbumModal(photoSrc);
+    });
+}
+
+// Create album modal — optionally add a photo after creation
+function showCreateAlbumModal(photoSrcToAdd){
+    var h='<div class="modal-header"><h3>Create Album</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body"><label style="display:block;font-size:14px;font-weight:500;margin-bottom:6px;">Album Name</label>';
+    h+='<input type="text" id="albumNameInput" placeholder="My Album" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit;">';
+    h+='<button class="btn btn-primary" id="albumCreateConfirm" style="width:100%;">Create</button></div>';
+    showModal(h);
+    document.getElementById('albumCreateConfirm').addEventListener('click',async function(){
+        var name=document.getElementById('albumNameInput').value.trim();
+        if(!name)return;
+        try{
+            var newAlbum=await sbCreateAlbum(currentUser.id,name);
+            if(photoSrcToAdd) await sbAddPhotoToAlbum(newAlbum.id,photoSrcToAdd);
+            _pvAlbums=await sbGetAlbums(_pvUserId);
+            closeModal();pvPhotoTab='albums';
+            $$('#pvPhotoTabs .search-tab').forEach(function(t){t.classList.remove('active');if(t.dataset.pvpt==='albums')t.classList.add('active');});
+            renderPvPhotoTab(true);renderPhotosCard();
+            showToast('Album "'+name+'" created');
+        }catch(e){showToast('Error creating album');}
+    });
+}
+
+// Album view modal — shows all photos in an album
+function showAlbumViewModal(album,isMe){
+    var photos=album.album_photos||[];
+    var h='<div class="modal-header"><h3><i class="fas fa-folder-open" style="color:var(--primary);margin-right:8px;"></i>'+album.title+'</h3>';
+    if(isMe) h+='<button class="btn btn-outline" id="albumDeleteBtn" style="padding:4px 12px;font-size:12px;color:#e74c3c;border-color:#e74c3c;margin-right:8px;"><i class="fas fa-trash"></i></button>';
+    h+='<button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body">';
+    if(!photos.length){
+        h+='<p style="color:var(--gray);text-align:center;padding:20px;">No photos in this album yet.</p>';
+    } else {
+        h+='<div class="photo-album-grid">';
+        photos.forEach(function(p){
+            h+='<div class="photo-wrap">';
+            h+='<img src="'+p.photo_url+'">';
+            if(isMe) h+='<button class="photo-menu-btn" data-ap-id="'+p.id+'" data-psrc="'+p.photo_url+'"><i class="fas fa-ellipsis-h"></i></button>';
+            h+='</div>';
+        });
+        h+='</div>';
+    }
+    h+='</div>';
+    showModal(h);
+    // Delete album
+    var delBtn=document.getElementById('albumDeleteBtn');
+    if(delBtn)delBtn.addEventListener('click',function(){
+        if(!confirm('Delete album "'+album.title+'"?'))return;
+        sbDeleteAlbum(album.id).then(function(){
+            closeModal();showToast('Album deleted');
+            sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);renderPhotosCard();});
+        }).catch(function(){showToast('Error deleting album');});
+    });
+    // Photo menu inside album view
+    if(isMe) $$('.photo-menu-btn').forEach(function(btn){
+        btn.addEventListener('click',function(e){e.stopPropagation();showPhotoMenu(btn.dataset.psrc,btn.dataset.apId,btn);});
+    });
+}
+
 function getAllPhotos(){
     var all=state.photos.profile.concat(state.photos.cover,state.photos.post);
-    state.photos.albums.forEach(function(a){all=all.concat(a.photos);});
     return all;
 }
 function renderPhotosCard(){
     var all=getAllPhotos();
     var el=$('#photosPreview');
+    if(!el)return;
     if(!all.length){el.innerHTML='<p class="photos-empty">No photos yet</p>';return;}
     var html='';
     all.slice(0,6).forEach(function(p){html+='<img src="'+p.src+'">';});
@@ -5280,10 +5421,18 @@ function renderPhotosCard(){
 }
 function renderPhotoAlbum(){
     var html='<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" id="createAlbumBtn"><i class="fas fa-plus"></i> Create Album</button></div>';
+    // Albums first (above post photos)
+    (_pvAlbums||[]).forEach(function(album){
+        var photos=album.album_photos||[];
+        html+='<div class="photo-album-section"><h3><i class="fas fa-folder"></i> '+album.title+' <span style="font-weight:400;font-size:12px;color:var(--gray);">'+photos.length+' photo'+(photos.length!==1?'s':'')+'</span></h3>';
+        if(photos.length){html+='<div class="photo-album-grid">';photos.forEach(function(p){html+='<img src="'+p.photo_url+'">';});html+='</div>';}
+        else html+='<p class="photo-album-empty">No photos in this album yet.</p>';
+        html+='</div>';
+    });
     // Profile Pictures
     html+='<div class="photo-album-section"><h3><i class="fas fa-user-circle"></i> Profile Pictures</h3>';
     if(state.photos.profile.length){html+='<div class="photo-album-grid">';state.photos.profile.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
-    else html+='<p class="photo-album-empty">No profile pictures yet. Upload a profile or cover photo!</p>';
+    else html+='<p class="photo-album-empty">No profile pictures yet.</p>';
     html+='</div>';
     // Cover Photos
     html+='<div class="photo-album-section"><h3><i class="fas fa-panorama"></i> Cover Photos</h3>';
@@ -5293,43 +5442,10 @@ function renderPhotoAlbum(){
     // Post Photos
     html+='<div class="photo-album-section"><h3><i class="fas fa-newspaper"></i> Post Photos</h3>';
     if(state.photos.post.length){html+='<div class="photo-album-grid">';state.photos.post.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
-    else html+='<p class="photo-album-empty">No post photos yet. Create a post with images!</p>';
+    else html+='<p class="photo-album-empty">No post photos yet.</p>';
     html+='</div>';
-    // Custom Albums
-    state.photos.albums.forEach(function(album,ai){
-        html+='<div class="photo-album-section"><h3><i class="fas fa-folder"></i> '+album.name+' <button class="btn btn-primary album-add-btn" data-ai="'+ai+'" style="padding:4px 12px;font-size:12px;margin-left:8px;"><i class="fas fa-plus"></i> Add</button></h3>';
-        if(album.photos.length){html+='<div class="photo-album-grid">';album.photos.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
-        else html+='<p class="photo-album-empty">No photos in this album yet.</p>';
-        html+='</div>';
-    });
     $('#photoAlbumContent').innerHTML=html;
-    // Lightbox handled by delegated click listener
-    $('#createAlbumBtn').addEventListener('click',function(){
-        var mHtml='<div class="modal-header"><h3>Create Album</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-        mHtml+='<div class="modal-body"><label style="display:block;font-size:14px;font-weight:500;margin-bottom:6px;">Album Name</label><input type="text" id="albumNameInput" placeholder="My Album" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit;">';
-        mHtml+='<button class="btn btn-primary" id="albumCreateConfirm" style="width:100%;">Create</button></div>';
-        showModal(mHtml);
-        document.getElementById('albumCreateConfirm').addEventListener('click',function(){
-            var name=document.getElementById('albumNameInput').value.trim();
-            if(!name)return;
-            state.photos.albums.push({name:name,photos:[]});
-            closeModal();renderPhotoAlbum();renderPhotosCard();
-        });
-    });
-    $$('.album-add-btn').forEach(function(btn){
-        btn.addEventListener('click',function(){
-            var ai=parseInt(btn.dataset.ai);
-            var input=document.createElement('input');input.type='file';input.accept='image/*';input.multiple=true;
-            input.addEventListener('change',function(){
-                Array.from(input.files).forEach(function(f){
-                    var r=new FileReader();
-                    r.onload=function(e){state.photos.albums[ai].photos.unshift({src:e.target.result,date:Date.now()});renderPhotoAlbum();renderPhotosCard();};
-                    r.readAsDataURL(f);
-                });
-            });
-            input.click();
-        });
-    });
+    $('#createAlbumBtn').addEventListener('click',function(){showCreateAlbumModal();});
 }
 $('#viewAllPhotos').addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
 $$('.photos-back-link').forEach(function(l){l.addEventListener('click',function(e){e.preventDefault();navigateTo(_navPrev&&_navPrev!=='photos'?_navPrev:'home');});});

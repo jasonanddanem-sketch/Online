@@ -816,12 +816,27 @@ function sbSubscribeMessages(userId, callback) {
 
 async function sbGetAlbums(userId) {
   if (!userId) return [];
-  const { data, error } = await sb.from('albums')
-    .select('*, album_photos(id, photo_url, created_at)')
+  // Fetch albums
+  const { data: albums, error } = await sb.from('albums')
+    .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  if (!albums || !albums.length) return [];
+  // Fetch photos for all albums in one query
+  const albumIds = albums.map(a => a.id);
+  const { data: photos, error: pErr } = await sb.from('album_photos')
+    .select('id, album_id, photo_url, created_at')
+    .in('album_id', albumIds);
+  if (pErr) console.warn('album_photos fetch error:', pErr);
+  // Group photos by album
+  const photoMap = {};
+  (photos || []).forEach(function(p) {
+    if (!photoMap[p.album_id]) photoMap[p.album_id] = [];
+    photoMap[p.album_id].push(p);
+  });
+  albums.forEach(function(a) { a.album_photos = photoMap[a.id] || []; });
+  return albums;
 }
 
 async function sbCreateAlbum(userId, title) {

@@ -5265,7 +5265,7 @@ function renderPvPhotoTab(isMe){
                     var aid=card.dataset.albumId;
                     sbAddPhotoToAlbum(aid,src).then(function(){
                         showToast('Photo added to album');
-                        sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
+                        sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
                     }).catch(function(err){
                         if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
                         else showToast('Error adding photo');
@@ -5302,7 +5302,7 @@ function showPhotoMenu(photoSrc,albumPhotoId,anchorEl){
         menu.remove();
         sbRemovePhotoFromAlbum(albumPhotoId).then(function(){
             showToast('Photo removed from album');
-            sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
+            sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
         }).catch(function(){showToast('Error removing photo');});
     });
     // Close on click outside
@@ -5336,7 +5336,7 @@ function showAlbumSelectorModal(photoSrc){
             closeModal();
             sbAddPhotoToAlbum(aid,photoSrc).then(function(){
                 showToast('Photo added to album');
-                sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;});
+                sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;});
             }).catch(function(err){
                 if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
                 else showToast('Error adding photo');
@@ -5361,12 +5361,12 @@ function showCreateAlbumModal(photoSrcToAdd){
         try{
             var newAlbum=await sbCreateAlbum(currentUser.id,name);
             if(photoSrcToAdd) await sbAddPhotoToAlbum(newAlbum.id,photoSrcToAdd);
-            _pvAlbums=await sbGetAlbums(_pvUserId);
+            _pvAlbums=await sbGetAlbums(_pvUserId||currentUser.id);
             closeModal();pvPhotoTab='albums';
             $$('#pvPhotoTabs .search-tab').forEach(function(t){t.classList.remove('active');if(t.dataset.pvpt==='albums')t.classList.add('active');});
             renderPvPhotoTab(true);renderPhotosCard();
             showToast('Album "'+name+'" created');
-        }catch(e){showToast('Error creating album');}
+        }catch(e){console.error('Album create error:',e);showToast('Error creating album');}
     });
 }
 
@@ -5397,7 +5397,7 @@ function showAlbumViewModal(album,isMe){
         if(!confirm('Delete album "'+album.title+'"?'))return;
         sbDeleteAlbum(album.id).then(function(){
             closeModal();showToast('Album deleted');
-            sbGetAlbums(_pvUserId).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);renderPhotosCard();});
+            sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);renderPhotosCard();});
         }).catch(function(){showToast('Error deleting album');});
     });
     // Photo menu inside album view

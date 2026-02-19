@@ -815,6 +815,7 @@ function sbSubscribeMessages(userId, callback) {
 // ---- 15. ALBUMS -------------------------------------------------------------
 
 async function sbGetAlbums(userId) {
+  if (!userId) return [];
   const { data, error } = await sb.from('albums')
     .select('*, album_photos(id, photo_url, created_at)')
     .eq('user_id', userId)

@@ -5485,19 +5485,30 @@ async function renderPhotoAlbum(){
         try{_pvAlbums=await sbGetAlbums(currentUser.id);}catch(e){}
     }
     var albums=_pvAlbums||[];
-    var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">';
-    if(albums.length>1) html+='<button class="btn btn-outline" id="deleteAllAlbumsBtn" style="color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i> Delete All Albums</button>';
-    html+='<button class="btn btn-primary" id="createAlbumBtn"><i class="fas fa-plus"></i> Create Album</button></div>';
-    // Albums first (above post photos)
-    albums.forEach(function(album){
-        var photos=album.album_photos||[];
-        html+='<div class="photo-album-section"><h3><i class="fas fa-folder"></i> '+album.title+' <span style="font-weight:400;font-size:12px;color:var(--gray);">'+photos.length+' photo'+(photos.length!==1?'s':'')+'</span>';
-        html+='<button class="btn btn-outline album-section-delete" data-album-id="'+album.id+'" style="padding:2px 10px;font-size:11px;margin-left:8px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i></button>';
-        html+='</h3>';
-        if(photos.length){html+='<div class="photo-album-grid">';photos.forEach(function(p){html+='<img src="'+p.photo_url+'">';});html+='</div>';}
-        else html+='<p class="photo-album-empty">No photos in this album yet.</p>';
+    var html='';
+    // Albums as horizontal scroll row (like skin shop)
+    html+='<div class="photo-album-section"><h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-folder"></i> My Albums';
+    html+='<button class="btn btn-primary" id="createAlbumBtn" style="padding:4px 14px;font-size:12px;margin-left:auto;"><i class="fas fa-plus"></i> Create</button>';
+    if(albums.length>1) html+='<button class="btn btn-outline" id="deleteAllAlbumsBtn" style="padding:4px 14px;font-size:12px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i> Delete All</button>';
+    html+='</h3>';
+    if(albums.length){
+        html+='<div class="shop-scroll-row" id="albumScrollRow" style="padding:8px 0 16px;">';
+        albums.forEach(function(album){
+            var photos=album.album_photos||[];
+            var cover=photos.length?photos[0].photo_url:'';
+            html+='<div class="pv-album-card" data-album-id="'+album.id+'">';
+            if(cover) html+='<div class="pv-album-cover"><img src="'+cover+'"></div>';
+            else html+='<div class="pv-album-cover pv-album-placeholder"><i class="fas fa-image"></i></div>';
+            html+='<h5>'+album.title+'</h5>';
+            html+='<p>'+photos.length+' photo'+(photos.length!==1?'s':'')+'</p>';
+            html+='<button class="album-delete-btn" data-album-id="'+album.id+'" title="Delete album"><i class="fas fa-trash"></i></button>';
+            html+='</div>';
+        });
         html+='</div>';
-    });
+    } else {
+        html+='<p class="photo-album-empty">No albums yet. Create one!</p>';
+    }
+    html+='</div>';
     // Profile Pictures
     html+='<div class="photo-album-section"><h3><i class="fas fa-user-circle"></i> Profile Pictures</h3>';
     if(state.photos.profile.length){html+='<div class="photo-album-grid">';state.photos.profile.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
@@ -5514,17 +5525,45 @@ async function renderPhotoAlbum(){
     else html+='<p class="photo-album-empty">No post photos yet.</p>';
     html+='</div>';
     $('#photoAlbumContent').innerHTML=html;
+    // Init scroll row
+    var scrollRow=document.getElementById('albumScrollRow');
+    if(scrollRow) _bindDragScroll(scrollRow);
+    // Create album
     $('#createAlbumBtn').addEventListener('click',function(){showCreateAlbumModal();});
-    // Individual album delete buttons
-    $$('.album-section-delete').forEach(function(btn){
-        btn.addEventListener('click',function(){
+    // Click album card to open
+    $$('#photoAlbumContent .pv-album-card').forEach(function(card){
+        var _moved=false;
+        card.addEventListener('mousedown',function(){_moved=false;});
+        card.addEventListener('mousemove',function(){_moved=true;});
+        card.addEventListener('mouseup',function(e){
+            if(_moved)return;
+            if(e.target.closest('.album-delete-btn'))return;
+            var aid=card.dataset.albumId;
+            var album=albums.find(function(a){return a.id===aid;});
+            if(album) showAlbumViewModal(album,true);
+        });
+        card.addEventListener('touchend',function(e){
+            if(e.target.closest('.album-delete-btn'))return;
+            var aid=card.dataset.albumId;
+            var album=albums.find(function(a){return a.id===aid;});
+            if(album) showAlbumViewModal(album,true);
+        });
+    });
+    // Delete individual album
+    $$('#photoAlbumContent .album-delete-btn').forEach(function(btn){
+        btn.addEventListener('mouseup',function(e){
+            e.stopPropagation();
             var aid=btn.dataset.albumId;
             var album=albums.find(function(a){return a.id===aid;});
             if(!confirm('Delete album "'+(album?album.title:'')+'"?'))return;
             sbDeleteAlbum(aid).then(function(){showToast('Album deleted');renderPhotoAlbum();}).catch(function(){showToast('Error deleting album');});
         });
+        btn.addEventListener('touchend',function(e){
+            e.stopPropagation();e.preventDefault();
+            btn.dispatchEvent(new MouseEvent('mouseup',{bubbles:false}));
+        });
     });
-    // Delete all albums button
+    // Delete all albums
     var delAllBtn=document.getElementById('deleteAllAlbumsBtn');
     if(delAllBtn) delAllBtn.addEventListener('click',async function(){
         if(!confirm('Delete ALL '+albums.length+' albums? This cannot be undone.'))return;

@@ -5222,13 +5222,13 @@ function renderPvPhotoTab(isMe){
             btn.addEventListener('click',function(e){e.stopPropagation();showPhotoMenu(btn.dataset.psrc,null,btn);});
         });
     } else {
-        // Albums tab — show album cards from Supabase
+        // Albums tab — horizontal scroll row of album cards
         var albums=_pvAlbums||[];
         var html='';
         if(!albums.length){
             html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet.'+(isMe?' Create one!':'')+'</p></div>';
         } else {
-            html+='<div class="pv-album-grid">';
+            html+='<div class="pv-album-scroll shop-scroll-row">';
             albums.forEach(function(album){
                 var photos=album.album_photos||[];
                 var cover=photos.length?photos[0].photo_url:'';
@@ -5237,19 +5237,36 @@ function renderPvPhotoTab(isMe){
                 else html+='<div class="pv-album-cover pv-album-placeholder"><i class="fas fa-image"></i></div>';
                 html+='<h5>'+album.title+'</h5>';
                 html+='<p>'+photos.length+' photo'+(photos.length!==1?'s':'')+'</p>';
+                if(isMe) html+='<button class="album-delete-btn" data-album-id="'+album.id+'" title="Delete album"><i class="fas fa-trash"></i></button>';
                 html+='</div>';
             });
             html+='</div>';
         }
         if(isMe) html+='<div style="padding:8px 14px 14px;"><button class="btn btn-primary" id="pvCreateAlbumBtn" style="width:100%;"><i class="fas fa-plus"></i> Create Album</button></div>';
         container.innerHTML=html;
+        // Init horizontal drag-scroll
+        var scrollRow=container.querySelector('.pv-album-scroll');
+        if(scrollRow) _bindDragScroll(scrollRow);
         // Create album
         var cab=document.getElementById('pvCreateAlbumBtn');
         if(cab)cab.addEventListener('click',function(){showCreateAlbumModal();});
+        // Delete album buttons
+        if(isMe) container.querySelectorAll('.album-delete-btn').forEach(function(btn){
+            btn.addEventListener('click',function(e){
+                e.stopPropagation();
+                var aid=btn.dataset.albumId;
+                var album=_pvAlbums.find(function(a){return a.id===aid;});
+                if(!confirm('Delete album "'+(album?album.title:'')+'?')) return;
+                sbDeleteAlbum(aid).then(function(){
+                    showToast('Album deleted');
+                    sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
+                }).catch(function(){showToast('Error deleting album');});
+            });
+        });
         // Click album card to open album view
         container.querySelectorAll('.pv-album-card').forEach(function(card){
             card.addEventListener('click',function(e){
-                if(e.target.closest('.photo-menu-btn'))return;
+                if(e.target.closest('.album-delete-btn'))return;
                 var aid=card.dataset.albumId;
                 var album=_pvAlbums.find(function(a){return a.id===aid;});
                 if(album) showAlbumViewModal(album,isMe);
@@ -5370,17 +5387,17 @@ function showCreateAlbumModal(photoSrcToAdd){
     });
 }
 
-// Album view modal — shows all photos in an album
+// Album view modal — shows all photos in an album, supports drag-drop into it
 function showAlbumViewModal(album,isMe){
     var photos=album.album_photos||[];
     var h='<div class="modal-header"><h3><i class="fas fa-folder-open" style="color:var(--primary);margin-right:8px;"></i>'+album.title+'</h3>';
     if(isMe) h+='<button class="btn btn-outline" id="albumDeleteBtn" style="padding:4px 12px;font-size:12px;color:#e74c3c;border-color:#e74c3c;margin-right:8px;"><i class="fas fa-trash"></i></button>';
     h+='<button class="modal-close"><i class="fas fa-times"></i></button></div>';
-    h+='<div class="modal-body">';
+    h+='<div class="modal-body" id="albumViewBody">';
     if(!photos.length){
-        h+='<p style="color:var(--gray);text-align:center;padding:20px;">No photos in this album yet.</p>';
+        h+='<div class="album-drop-zone" id="albumDropZone"><i class="fas fa-cloud-upload-alt" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p>No photos yet. Drag photos here or use the "..." menu on your photos.</p></div>';
     } else {
-        h+='<div class="photo-album-grid">';
+        h+='<div class="photo-album-grid" id="albumDropZone">';
         photos.forEach(function(p){
             h+='<div class="photo-wrap">';
             h+='<img src="'+p.photo_url+'">';
@@ -5401,9 +5418,34 @@ function showAlbumViewModal(album,isMe){
         }).catch(function(){showToast('Error deleting album');});
     });
     // Photo menu inside album view
-    if(isMe) $$('.photo-menu-btn').forEach(function(btn){
-        btn.addEventListener('click',function(e){e.stopPropagation();showPhotoMenu(btn.dataset.psrc,btn.dataset.apId,btn);});
-    });
+    if(isMe){
+        $$('#albumViewBody .photo-menu-btn').forEach(function(btn){
+            btn.addEventListener('click',function(e){e.stopPropagation();showPhotoMenu(btn.dataset.psrc,btn.dataset.apId,btn);});
+        });
+        // Drag & drop into album view
+        var dropZone=document.getElementById('albumDropZone');
+        if(dropZone){
+            dropZone.addEventListener('dragover',function(e){e.preventDefault();e.dataTransfer.dropEffect='copy';dropZone.classList.add('drag-over');});
+            dropZone.addEventListener('dragleave',function(){dropZone.classList.remove('drag-over');});
+            dropZone.addEventListener('drop',function(e){
+                e.preventDefault();dropZone.classList.remove('drag-over');
+                var src=e.dataTransfer.getData('text/plain');
+                if(!src)return;
+                sbAddPhotoToAlbum(album.id,src).then(function(){
+                    showToast('Photo added to album');
+                    sbGetAlbums(_pvUserId||currentUser.id).then(function(a){
+                        _pvAlbums=a;
+                        var updated=a.find(function(al){return al.id===album.id;});
+                        if(updated){closeModal();showAlbumViewModal(updated,true);}
+                        renderPvPhotoTab(true);
+                    });
+                }).catch(function(err){
+                    if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
+                    else showToast('Error adding photo');
+                });
+            });
+        }
+    }
 }
 
 function getAllPhotos(){

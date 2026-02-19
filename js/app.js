@@ -1011,7 +1011,11 @@ function navigateTo(page,skipPush){
     if(page==='groups') renderGroups();
     if(page==='shop') renderShop();
     if(page==='skins') renderMySkins();
-    if(page==='photos') renderPhotoAlbum();
+    if(page==='photos'){
+        if(currentUser&&(!_pvAlbums||!_pvAlbums.length)){
+            sbGetAlbums(currentUser.id).then(function(a){_pvAlbums=a;renderPhotoAlbum();}).catch(function(){renderPhotoAlbum();});
+        } else renderPhotoAlbum();
+    }
     if(page==='saved') renderSavedPage();
     _navPrev=_navCurrent;_navCurrent=page;
     if(!skipPush) history.pushState({page:page},'','#'+page);
@@ -5475,7 +5479,11 @@ function renderPhotosCard(){
     all.slice(0,6).forEach(function(p){html+='<img src="'+p.src+'">';});
     el.innerHTML=html;
 }
-function renderPhotoAlbum(){
+async function renderPhotoAlbum(){
+    // Ensure albums are loaded
+    if((!_pvAlbums||!_pvAlbums.length)&&currentUser){
+        try{_pvAlbums=await sbGetAlbums(currentUser.id);}catch(e){}
+    }
     var html='<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" id="createAlbumBtn"><i class="fas fa-plus"></i> Create Album</button></div>';
     // Albums first (above post photos)
     (_pvAlbums||[]).forEach(function(album){

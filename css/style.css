@@ -2358,12 +2358,7 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
 .pv-col-photos .photos-preview img[draggable="true"]{cursor:grab;}
 .pv-col-photos .photos-preview img[draggable="true"]:active{cursor:grabbing;}
 .photos-card .search-tabs{margin-bottom:0;padding:0 14px 8px;}
-.pv-album-scroll{display:flex;gap:12px;padding:10px 14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;cursor:grab;user-select:none;scrollbar-width:thin;}
-.pv-album-scroll::-webkit-scrollbar{height:4px;}
-.pv-album-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.pv-album-scroll.dragging{cursor:grabbing;scroll-snap-type:none;}
-.pv-album-scroll.dragging *{pointer-events:none;}
-.pv-album-card{background:var(--card);border:2px solid var(--border);border-radius:10px;overflow:hidden;text-align:center;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;min-width:140px;max-width:160px;flex-shrink:0;scroll-snap-align:start;position:relative;}
+.pv-album-card{background:var(--card);border:2px solid var(--border);border-radius:10px;overflow:hidden;text-align:center;cursor:pointer!important;transition:border-color .2s,transform .2s,box-shadow .2s;min-width:150px;max-width:170px;flex-shrink:0;scroll-snap-align:start;position:relative;}
 .pv-album-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:var(--shadow-hover);}
 .pv-album-card.drag-over{border-color:var(--primary);background:rgba(139,92,246,.08);border-style:solid;transform:scale(1.03);}
 .pv-album-card h5{font-size:13px;font-weight:600;margin:0 8px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

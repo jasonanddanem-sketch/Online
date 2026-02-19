@@ -5228,7 +5228,7 @@ function renderPvPhotoTab(isMe){
         if(!albums.length){
             html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet.'+(isMe?' Create one!':'')+'</p></div>';
         } else {
-            html+='<div class="pv-album-scroll">';
+            html+='<div class="shop-scroll-row" style="padding:10px 14px;">';
             albums.forEach(function(album){
                 var photos=album.album_photos||[];
                 var cover=photos.length?photos[0].photo_url:'';
@@ -5245,7 +5245,7 @@ function renderPvPhotoTab(isMe){
         if(isMe) html+='<div style="padding:8px 14px 14px;"><button class="btn btn-primary" id="pvCreateAlbumBtn" style="width:100%;"><i class="fas fa-plus"></i> Create Album</button></div>';
         container.innerHTML=html;
         // Init horizontal drag-scroll
-        var scrollRow=container.querySelector('.pv-album-scroll');
+        var scrollRow=container.querySelector('.shop-scroll-row');
         if(scrollRow) _bindDragScroll(scrollRow);
         // Create album
         var cab=document.getElementById('pvCreateAlbumBtn');

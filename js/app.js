@@ -1984,7 +1984,7 @@ async function showProfileView(person){
         }catch(e){_pvPostPhotos=[];}
     } else { _pvPostPhotos=state.photos.post; }
     // Load albums from Supabase for viewed user
-    try{_pvAlbums=await sbGetAlbums(pvUserId);}catch(e){_pvAlbums=[];}
+    try{_pvAlbums=await sbGetAlbums(pvUserId);console.log('[Albums] Loaded',_pvAlbums.length,'albums for',pvUserId);}catch(e){console.error('[Albums] Fetch error:',e);_pvAlbums=[];}
     var photosHtml='<div class="card photos-card"><h4 class="card-heading"><i class="fas fa-images" style="margin-right:8px;color:var(--primary);"></i>Photos</h4>';
     photosHtml+='<div class="search-tabs" id="pvPhotoTabs">';
     photosHtml+='<button class="search-tab'+(pvPhotoTab==='albums'?' active':'')+'" data-pvpt="albums"><i class="fas fa-folder"></i> Albums</button>';
@@ -5228,7 +5228,7 @@ function renderPvPhotoTab(isMe){
         if(!albums.length){
             html+='<div style="padding:20px;text-align:center;color:var(--gray);"><i class="fas fa-folder-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:.4;"></i><p style="font-size:13px;">No albums yet.'+(isMe?' Create one!':'')+'</p></div>';
         } else {
-            html+='<div class="pv-album-scroll shop-scroll-row">';
+            html+='<div class="pv-album-scroll">';
             albums.forEach(function(album){
                 var photos=album.album_photos||[];
                 var cover=photos.length?photos[0].photo_url:'';

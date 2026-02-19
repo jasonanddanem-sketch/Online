@@ -5250,10 +5250,10 @@ function renderPvPhotoTab(isMe){
         // Create album
         var cab=document.getElementById('pvCreateAlbumBtn');
         if(cab)cab.addEventListener('click',function(){showCreateAlbumModal();});
-        // Delete album buttons
+        // Delete album buttons — use mouseup to avoid drag-scroll interference
         if(isMe) container.querySelectorAll('.album-delete-btn').forEach(function(btn){
-            btn.addEventListener('click',function(e){
-                e.stopPropagation();
+            btn.addEventListener('mouseup',function(e){
+                e.stopPropagation();e.preventDefault();
                 var aid=btn.dataset.albumId;
                 var album=_pvAlbums.find(function(a){return a.id===aid;});
                 if(!confirm('Delete album "'+(album?album.title:'')+'?')) return;
@@ -5262,10 +5262,24 @@ function renderPvPhotoTab(isMe){
                     sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);});
                 }).catch(function(){showToast('Error deleting album');});
             });
+            btn.addEventListener('touchend',function(e){
+                e.stopPropagation();e.preventDefault();
+                btn.dispatchEvent(new MouseEvent('mouseup',{bubbles:false}));
+            });
         });
-        // Click album card to open album view
+        // Click album card to open album view — use mouseup to avoid drag-scroll interference
+        var _albumCardMoved=false;
         container.querySelectorAll('.pv-album-card').forEach(function(card){
-            card.addEventListener('click',function(e){
+            card.addEventListener('mousedown',function(){_albumCardMoved=false;});
+            card.addEventListener('mousemove',function(){_albumCardMoved=true;});
+            card.addEventListener('mouseup',function(e){
+                if(_albumCardMoved)return;
+                if(e.target.closest('.album-delete-btn'))return;
+                var aid=card.dataset.albumId;
+                var album=_pvAlbums.find(function(a){return a.id===aid;});
+                if(album) showAlbumViewModal(album,isMe);
+            });
+            card.addEventListener('touchend',function(e){
                 if(e.target.closest('.album-delete-btn'))return;
                 var aid=card.dataset.albumId;
                 var album=_pvAlbums.find(function(a){return a.id===aid;});

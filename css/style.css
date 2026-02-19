@@ -2380,8 +2380,7 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
 .photo-ctx-item:hover{background:var(--border,#f0f0f0);}
 .photo-ctx-item i{width:16px;color:var(--primary);}
 /* Album delete button on card */
-.album-delete-btn{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:10px;cursor:pointer;opacity:0;transition:opacity .2s;display:flex;align-items:center;justify-content:center;z-index:2;}
-.pv-album-card:hover .album-delete-btn{opacity:1;}
+.album-delete-btn{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:10px;cursor:pointer!important;transition:background .2s;display:flex;align-items:center;justify-content:center;z-index:2;}
 .album-delete-btn:hover{background:#e74c3c;}
 /* Album drop zone inside modal */
 .album-drop-zone{padding:40px 20px;text-align:center;color:var(--gray);border:2px dashed var(--border);border-radius:10px;transition:border-color .2s,background .2s;}

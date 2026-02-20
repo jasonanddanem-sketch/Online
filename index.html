@@ -17,6 +17,8 @@
     // Prevent home page flash on reload — hide home before paint if hash says otherwise
     (function(){
         var h=(location.hash||'').replace('#','');
+        // Fallback to localStorage if hash lost (mobile Safari refresh)
+        if(!h||h==='home'){try{var lp=localStorage.getItem('blipvibe_lastPage');if(lp&&lp!=='home')h=lp;}catch(e){}}
         if(h&&h!=='home'&&h!=='profile-view'&&h!=='group-view'){
             var s=document.createElement('style');
             s.id='hash-nav-fix';

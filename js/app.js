@@ -2775,29 +2775,6 @@ async function showGroupView(group){
             var ss=document.getElementById('gvShopSection');if(ss){ss.style.display='';renderGroupShop(group.id);}
         }
     });});
-    // Swipe left/right to switch Feed <-> Group Shop
-    var _gvCenter=document.querySelector('#page-group-view .gv-center');
-    if(_gvCenter&&(joined||isOwner)){
-        var _gvTx=0;
-        _gvCenter.addEventListener('touchstart',function(e){_gvTx=e.touches[0].clientX;},{passive:true});
-        _gvCenter.addEventListener('touchend',function(e){
-            var dx=e.changedTouches[0].clientX-_gvTx;
-            if(Math.abs(dx)<50) return;
-            var modes=['feed','shop'];
-            var feedVis=$('#gvPostsFeed').style.display!=='none';
-            var cur=feedVis?0:1;
-            var next=dx<0?cur+1:cur-1;
-            if(next<0||next>=modes.length) return;
-            $$('#gvModeTabs .search-tab').forEach(function(t){t.classList.toggle('active',t.dataset.gvmode===modes[next]);});
-            if(modes[next]==='feed'){
-                $('#gvPostBar').style.display='';$('#gvPostsFeed').style.display='';
-                var ss=document.getElementById('gvShopSection');if(ss)ss.style.display='none';
-            } else {
-                $('#gvPostBar').style.display='none';$('#gvPostsFeed').style.display='none';
-                var ss=document.getElementById('gvShopSection');if(ss){ss.style.display='';renderGroupShop(group.id);}
-            }
-        });
-    }
     bindGvPostEvents();
 }
 
@@ -4377,18 +4354,6 @@ function renderShop(){
         $$('#shopTabs .search-tab').forEach(function(t){t.classList.remove('active');});
         tab.classList.add('active');currentShopTab=tab.dataset.stab;renderShop();
     });});
-    // Swipe left/right to switch Shop tabs
-    var _shopSwTx=0;
-    var shopGrid=$('#shopGrid');
-    shopGrid.addEventListener('touchstart',function(e){_shopSwTx=e.touches[0].clientX;},{passive:true});
-    shopGrid.addEventListener('touchend',function(e){
-        var dx=e.changedTouches[0].clientX-_shopSwTx;
-        if(Math.abs(dx)<50) return;
-        var keys=cats.map(function(c){return c.key;});
-        var ci=keys.indexOf(currentShopTab);
-        if(dx<0&&ci<keys.length-1){currentShopTab=keys[ci+1];renderShop();}
-        else if(dx>0&&ci>0){currentShopTab=keys[ci-1];renderShop();}
-    });
 }
 
 // ======================== GROUP SHOP ========================
@@ -4503,17 +4468,6 @@ function renderGroupShop(groupId){
         tab.classList.add('active');currentGroupShopTab=tab.dataset.gstab;renderGroupShop(groupId);
     });});
 
-    // Swipe left/right to switch Group Shop tabs
-    var _gsTx=0;
-    container.addEventListener('touchstart',function(e){_gsTx=e.touches[0].clientX;},{passive:true});
-    container.addEventListener('touchend',function(e){
-        var dx=e.changedTouches[0].clientX-_gsTx;
-        if(Math.abs(dx)<50) return;
-        var keys=cats.map(function(c){return c.key;});
-        var ci=keys.indexOf(currentGroupShopTab);
-        if(dx<0&&ci<keys.length-1){currentGroupShopTab=keys[ci+1];renderGroupShop(groupId);}
-        else if(dx>0&&ci>0){currentGroupShopTab=keys[ci-1];renderGroupShop(groupId);}
-    });
 }
 
 function updateGroupCoinDisplay(gid){
@@ -4916,18 +4870,6 @@ function renderMySkins(){
         $$('#mySkinsTabs .search-tab').forEach(function(t){t.classList.remove('active');});
         tab.classList.add('active');currentMySkinsTab=tab.dataset.mtab;renderMySkins();
     });});
-    // Swipe left/right to switch My Skins tabs
-    var _msSwTx=0;
-    var msGrid=$('#mySkinsGrid');
-    msGrid.addEventListener('touchstart',function(e){_msSwTx=e.touches[0].clientX;},{passive:true});
-    msGrid.addEventListener('touchend',function(e){
-        var dx=e.changedTouches[0].clientX-_msSwTx;
-        if(Math.abs(dx)<50) return;
-        var keys=cats.map(function(c){return c.key;});
-        var ci=keys.indexOf(currentMySkinsTab);
-        if(dx<0&&ci<keys.length-1){currentMySkinsTab=keys[ci+1];renderMySkins();}
-        else if(dx>0&&ci>0){currentMySkinsTab=keys[ci-1];renderMySkins();}
-    });
 }
 
 // ======================== MESSAGES (Supabase) ========================

@@ -2427,10 +2427,16 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
 .lightbox-arrow:hover{opacity:1;background:rgba(255,255,255,.25);}
 .lightbox-prev{left:16px;}
 .lightbox-next{right:16px;}
-.lightbox-counter{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:14px;z-index:2;}
+/* Bottom bar: counter + reactions + comment toggle */
+.lightbox-bar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px;z-index:2;background:linear-gradient(transparent,rgba(0,0,0,.6));}
+.lightbox-counter{color:rgba(255,255,255,.7);font-size:14px;}
+.lightbox-reactions{display:flex;gap:8px;}
+.lb-like-btn,.lb-dislike-btn{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .2s;}
+.lb-like-btn:hover,.lb-dislike-btn:hover{background:rgba(255,255,255,.3);}
+.lb-like-btn span,.lb-dislike-btn span{font-size:12px;}
 /* Comment toggle button (mobile only) */
-.lightbox-comment-toggle{display:none;position:absolute;bottom:20px;right:20px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:20px;padding:8px 14px;font-size:14px;cursor:pointer;gap:6px;align-items:center;z-index:2;transition:background .2s;}
-.lightbox-comment-toggle:hover{background:rgba(255,255,255,.35);}
+.lightbox-comment-toggle{display:none;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:14px;cursor:pointer;gap:5px;align-items:center;transition:background .2s;}
+.lightbox-comment-toggle:hover{background:rgba(255,255,255,.3);}
 .lightbox-comment-toggle span{font-size:12px;}
 /* Comment panel */
 .lightbox-comments{width:340px;flex-shrink:0;background:var(--card);display:flex;flex-direction:column;max-height:90vh;}

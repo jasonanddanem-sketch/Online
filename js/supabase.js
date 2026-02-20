@@ -900,7 +900,56 @@ async function sbDeletePhotoComment(commentId) {
   if (error) throw error;
 }
 
-// ---- 17. UTILITY: timeAgo for real timestamps --------------------------------
+// ---- 17. PHOTO LIKES/DISLIKES ------------------------------------------------
+
+async function sbTogglePhotoReaction(photoUrl, userId, reaction) {
+  // Check existing reaction
+  const { data: existing } = await sb.from('photo_likes')
+    .select('id, reaction')
+    .eq('photo_url', photoUrl)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.reaction === reaction) {
+      // Same reaction — remove it (toggle off)
+      await sb.from('photo_likes').delete().eq('id', existing.id);
+      return null;
+    } else {
+      // Different reaction — switch it
+      await sb.from('photo_likes').update({ reaction }).eq('id', existing.id);
+      return reaction;
+    }
+  } else {
+    // No existing reaction — insert
+    await sb.from('photo_likes').insert({ photo_url: photoUrl, user_id: userId, reaction });
+    return reaction;
+  }
+}
+
+async function sbGetPhotoReactionCounts(photoUrl) {
+  const { data, error } = await sb.from('photo_likes')
+    .select('reaction')
+    .eq('photo_url', photoUrl);
+  if (error) throw error;
+  var likes = 0, dislikes = 0;
+  (data || []).forEach(function(r) {
+    if (r.reaction === 'like') likes++;
+    else if (r.reaction === 'dislike') dislikes++;
+  });
+  return { likes: likes, dislikes: dislikes };
+}
+
+async function sbGetUserPhotoReaction(photoUrl, userId) {
+  const { data } = await sb.from('photo_likes')
+    .select('reaction')
+    .eq('photo_url', photoUrl)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data ? data.reaction : null;
+}
+
+// ---- 18. UTILITY: timeAgo for real timestamps --------------------------------
 
 function timeAgoReal(dateStr) {
   const now = Date.now();

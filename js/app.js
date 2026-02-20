@@ -6026,8 +6026,14 @@ updateFollowCounts();
                 '<button class="lightbox-arrow lightbox-prev"><i class="fas fa-chevron-left"></i></button>'+
                 '<img src="" alt="">'+
                 '<button class="lightbox-arrow lightbox-next"><i class="fas fa-chevron-right"></i></button>'+
-                '<div class="lightbox-counter"></div>'+
-                '<button class="lightbox-comment-toggle"><i class="far fa-comment"></i><span>0</span></button>'+
+                '<div class="lightbox-bar">'+
+                    '<div class="lightbox-counter"></div>'+
+                    '<div class="lightbox-reactions">'+
+                        '<button class="lb-like-btn"><i class="far fa-thumbs-up"></i><span>0</span></button>'+
+                        '<button class="lb-dislike-btn"><i class="far fa-thumbs-down"></i><span>0</span></button>'+
+                    '</div>'+
+                    '<button class="lightbox-comment-toggle"><i class="far fa-comment"></i><span>0</span></button>'+
+                '</div>'+
             '</div>'+
             '<div class="lightbox-comments">'+
                 '<div class="lb-comments-header"><h4>Comments</h4><button class="lb-comments-close"><i class="fas fa-times"></i></button></div>'+
@@ -6056,8 +6062,14 @@ updateFollowCounts();
     var replyNameEl=overlay.querySelector('.lb-reply-name');
     var cancelReply=overlay.querySelector('.lb-cancel-reply');
     var commentsClose=overlay.querySelector('.lb-comments-close');
+    var likeBtn=overlay.querySelector('.lb-like-btn');
+    var likeBtnIcon=likeBtn.querySelector('i');
+    var likeBtnCount=likeBtn.querySelector('span');
+    var dislikeBtn=overlay.querySelector('.lb-dislike-btn');
+    var dislikeBtnIcon=dislikeBtn.querySelector('i');
+    var dislikeBtnCount=dislikeBtn.querySelector('span');
 
-    var srcs=[],idx=0,tx=0,dragging=false,currentPostId=null,replyTarget=null;
+    var srcs=[],idx=0,tx=0,dragging=false,currentPostId=null,replyTarget=null,myReaction=null;
 
     function open(list,i,postId){srcs=list;idx=i;currentPostId=postId||null;show();}
     window._openLightbox=open;
@@ -6072,6 +6084,7 @@ updateFollowCounts();
         resetReply();
         commentInput.value='';
         loadPhotoComments();
+        loadPhotoReactions();
     }
     function close(){overlay.classList.remove('show');document.body.style.overflow='';commentsPanel.classList.remove('lb-open');}
     function go(d){idx=(idx+d+srcs.length)%srcs.length;show();}
@@ -6164,6 +6177,56 @@ updateFollowCounts();
     });
     commentInput.addEventListener('keypress',function(e){if(e.key==='Enter')postBtn.click();});
     cancelReply.addEventListener('click',resetReply);
+
+    // Photo like/dislike
+    async function loadPhotoReactions(){
+        var url=srcs[idx];
+        myReaction=null;
+        likeBtnCount.textContent='0';dislikeBtnCount.textContent='0';
+        likeBtnIcon.className='far fa-thumbs-up';dislikeBtnIcon.className='far fa-thumbs-down';
+        likeBtn.style.color='';dislikeBtn.style.color='';
+        try{
+            var counts=await sbGetPhotoReactionCounts(url);
+            likeBtnCount.textContent=counts.likes;
+            dislikeBtnCount.textContent=counts.dislikes;
+            if(currentUser){
+                myReaction=await sbGetUserPhotoReaction(url,currentUser.id);
+                if(myReaction==='like'){likeBtnIcon.className='fas fa-thumbs-up';likeBtn.style.color='var(--primary)';}
+                if(myReaction==='dislike'){dislikeBtnIcon.className='fas fa-thumbs-down';dislikeBtn.style.color='#e74c3c';}
+            }
+        }catch(e){console.error('Load photo reactions error:',e);}
+    }
+    function updateReactionUI(newReaction,oldReaction){
+        var lc=parseInt(likeBtnCount.textContent)||0;
+        var dc=parseInt(dislikeBtnCount.textContent)||0;
+        // Remove old
+        if(oldReaction==='like')lc--;
+        if(oldReaction==='dislike')dc--;
+        // Add new
+        if(newReaction==='like')lc++;
+        if(newReaction==='dislike')dc++;
+        likeBtnCount.textContent=Math.max(0,lc);
+        dislikeBtnCount.textContent=Math.max(0,dc);
+        likeBtnIcon.className=newReaction==='like'?'fas fa-thumbs-up':'far fa-thumbs-up';
+        dislikeBtnIcon.className=newReaction==='dislike'?'fas fa-thumbs-down':'far fa-thumbs-down';
+        likeBtn.style.color=newReaction==='like'?'var(--primary)':'';
+        dislikeBtn.style.color=newReaction==='dislike'?'#e74c3c':'';
+        myReaction=newReaction;
+    }
+    likeBtn.addEventListener('click',async function(e){
+        e.stopPropagation();if(!currentUser)return;
+        var old=myReaction;
+        updateReactionUI(old==='like'?null:'like',old);
+        try{await sbTogglePhotoReaction(srcs[idx],currentUser.id,'like');}
+        catch(e){console.error('Like error:',e);updateReactionUI(old,myReaction);}
+    });
+    dislikeBtn.addEventListener('click',async function(e){
+        e.stopPropagation();if(!currentUser)return;
+        var old=myReaction;
+        updateReactionUI(old==='dislike'?null:'dislike',old);
+        try{await sbTogglePhotoReaction(srcs[idx],currentUser.id,'dislike');}
+        catch(e){console.error('Dislike error:',e);updateReactionUI(old,myReaction);}
+    });
 
     // Mobile: toggle comment panel
     commentToggle.addEventListener('click',function(e){

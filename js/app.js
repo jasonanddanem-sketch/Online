@@ -3232,12 +3232,10 @@ document.addEventListener('click',function(e){
             h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Hidden Posts</span><button class="btn btn-outline" id="settingsViewHidden" style="padding:4px 14px;font-size:12px;">View ('+hiddenCount+')</button></div>';
             var blockedCount=Object.keys(blockedUsers).length;
             h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Blocked Users</span><button class="btn btn-outline" id="settingsViewBlocked" style="padding:4px 14px;font-size:12px;color:#e74c3c;border-color:#e74c3c;">View ('+blockedCount+')</button></div>';
-            h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Report / Feedback</span><button class="btn btn-outline" id="settingsReportFeedback" style="padding:4px 14px;font-size:12px;"><i class="fas fa-envelope" style="margin-right:4px;"></i>Send</button></div>';
             h+='<div style="margin-top:16px;text-align:center;"><button class="btn btn-primary modal-close">Done</button></div></div>';
             showModal(h);
             document.getElementById('settingsViewHidden').addEventListener('click',function(){showHiddenPostsModal();});
             document.getElementById('settingsViewBlocked').addEventListener('click',function(){showBlockedUsersModal();});
-            document.getElementById('settingsReportFeedback').addEventListener('click',function(){_showFeedbackModal();});
             document.getElementById('commentOrderSelect').addEventListener('change',function(){settings.commentOrder=this.value;saveState();});
             $$('.stoggle').forEach(function(t){t.style.cursor='pointer';t.addEventListener('click',function(){
                 var k=t.dataset.key;settings[k]=!settings[k];
@@ -3246,6 +3244,11 @@ document.addEventListener('click',function(e){
                 if(k==='darkMode'){document.body.style.background=settings[k]?'#1a1a2e':'';document.body.style.color=settings[k]?'#eee':'';}
                 saveState();
             });});
+        }
+        if(text==='Submit Feedback'){
+            e.preventDefault();
+            $('#userDropdownMenu').classList.remove('show');
+            _showFeedbackModal();
         }
         if(text==='Logout'){
             e.preventDefault();

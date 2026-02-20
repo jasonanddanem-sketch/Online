@@ -4532,8 +4532,9 @@ function applyGroupSkin(groupId){
     var hasCover=grp&&grp.coverPhoto;
     // Save personal skin state once when entering group view
     if(!_gvSaved) _gvSaved={skin:state.activeSkin,premiumSkin:state.activePremiumSkin,bgImage:premiumBgImage,bgOverlay:premiumBgOverlay,bgDarkness:premiumBgDarkness,cardTrans:premiumCardTransparency};
-    // Hide premium bg in group view
-    var _bgLayer=document.getElementById('premiumBgLayer');if(_bgLayer)_bgLayer.classList.remove('active');
+    // Fully disable premium bg in group view so transparency doesn't bleed into nav/cards
+    premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;
+    updatePremiumBg();
     // Clear group-specific classes
     skins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});
     guildSkins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});

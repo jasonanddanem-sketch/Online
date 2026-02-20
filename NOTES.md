@@ -180,6 +180,17 @@
 - Added `nav-split` to the list of nav styles that get explicit `--ps-nav` backgrounds when premium skins are active (alongside dock, pill, island)
 - Premium bg state is fully reset in group view to prevent card transparency bleeding into nav
 
+### Mobile group view fixes (fixed 2026-02-19)
+- **Group profile pic not centered:** Added `margin:0 auto` to `.gv-icon-wrap` so icon-based group avatars center on all screen sizes
+- **Rules+members buried after posts on mobile:** Added `.gv-mobile-right` container inside `gv-center` (between profile card and post bar). On ≤768px, `.gv-right` is hidden and `.gv-mobile-right` shown instead. Rules button + members preview now appear right after the profile card on phones.
+- Both rules buttons share `.gv-rules-btn` class; members previews share `.gv-members-preview` class for unified event binding
+
+## Report / Feedback (added 2026-02-19)
+- **Settings → Report / Feedback → Send** button opens a modal with Subject + Message fields
+- Submit opens `mailto:hello@blipvibe.com` with pre-filled subject and body
+- Validates that at least one field is filled before opening mail client
+- `_showFeedbackModal()` function in app.js
+
 ## Album System (added 2026-02-19)
 
 ### Schema

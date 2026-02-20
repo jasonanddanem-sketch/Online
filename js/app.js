@@ -335,6 +335,8 @@ async function initApp() {
         state.photos.post = postPhotos;
     } catch(e){ console.warn('Could not load post photos:', e); }
     renderPhotosCard();
+    // Re-render full photos page if user is currently viewing it (fixes empty photos on reload)
+    if(_navCurrent==='photos') renderPhotoAlbum();
     await loadFollowCounts();
     // Load friends-of-friends for discover tab
     try { _fofIds = await sbGetFriendsOfFriends(currentUser.id); } catch(e){ console.warn('Could not load friends-of-friends:', e); _fofIds={}; }

@@ -156,6 +156,10 @@
 - `_renderSavedTabPosts()` checks both `feedPosts` and `_savedPostCache`
 - Also fixed null badge crash in `renderSavedPostCard` and improved timestamps to use real `created_at` dates
 
+### Premium transparency bleeding into group view (fixed 2026-02-19)
+- **Cause:** When entering a group, only the premium bg layer div was hidden but `has-premium-bg` class and `--card-opacity` CSS variable remained on the body, causing card transparency to affect navbar and other elements
+- **Fix:** Fully reset `premiumBgImage`/overlay/darkness/transparency to defaults and call `updatePremiumBg()` to properly remove all premium bg state when entering group view. Personal settings restored from `_gvSaved` when leaving.
+
 ## Album System (added 2026-02-19)
 
 ### Schema

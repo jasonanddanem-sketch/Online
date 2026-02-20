@@ -501,7 +501,9 @@ img{display:block;}
 .album-photo-scroll img:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
 .album-del-x{opacity:.4;font-size:10px;margin-left:4px;cursor:pointer;transition:opacity .2s,color .2s;}
 .album-del-x:hover{opacity:1;color:#e74c3c;}
-#albumTabContent{transition:opacity .25s ease,transform .25s ease;}
+#albumTabContent,#savedTabContent{transition:opacity .25s ease,transform .25s ease;}
+.saved-tab-count{background:rgba(0,0,0,.1);color:var(--gray);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600;}
+.search-tab.active .saved-tab-count{background:rgba(255,255,255,.25);color:#fff;}
 body.skin-midnight .photos-empty,body.skin-midnight .photo-album-empty{color:#bbb;}
 
 /* ========== MODAL ========== */

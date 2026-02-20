@@ -5892,53 +5892,50 @@ function showUndoToast(msg,onUndo){
 
 // ======================== SAVED PAGE ========================
 var _savedOpenFolder=null;
+var _currentSavedTab='all';
 function renderSavedPage(){
     _savedOpenFolder=null;
     var container=document.getElementById('savedContent');
-    if(!savedFolders.length||savedFolders.every(function(f){return f.posts.length===0;})){
-        // Show empty + folders
-        var h='';
-        if(savedFolders.length){
-            h+='<div class="shop-section-title"><i class="fas fa-folder"></i> Your Folders</div>';
-            h+='<div class="shop-scroll-row scroll-2row">';
-            savedFolders.forEach(function(f){h+=savedFolderCard(f);});
-            h+='</div>';
-        }
-        h+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);margin-top:20px;"><i class="fas fa-bookmark" style="font-size:36px;margin-bottom:12px;display:block;"></i><p>No saved posts yet.</p><p style="font-size:13px;margin-top:6px;">Use the <i class="fas fa-ellipsis-h"></i> menu on any post to save it.</p></div>';
-        container.innerHTML=h;
-    } else {
-        var h='<div class="shop-section-title"><i class="fas fa-folder"></i> Your Folders</div>';
-        h+='<div class="shop-scroll-row scroll-2row">';
-        savedFolders.forEach(function(f){h+=savedFolderCard(f);});
-        h+='</div>';
-        // Show all saved posts
-        h+='<div class="shop-section-title" style="margin-top:12px;"><i class="fas fa-bookmark"></i> All Saved Posts</div>';
-        var allIds=[];
-        savedFolders.forEach(function(f){f.posts.forEach(function(pid){if(allIds.indexOf(pid)===-1)allIds.push(pid);});});
-        allIds.forEach(function(pid){
-            var p=feedPosts.find(function(fp){return String(fp.idx)===pid;});
-            if(p) h+=renderSavedPostCard(p);
-        });
-        if(!allIds.length) h+='<p style="color:var(--gray);padding:20px;">No posts saved yet.</p>';
-        container.innerHTML=h;
-    }
-    initDragScroll('#savedContent');
-    bindSavedPageEvents();
+    var h='';
+    // Pill tabs — "All" + one per folder
+    h+='<div class="search-tabs" id="savedPillTabs">';
+    h+='<button class="search-tab'+(_currentSavedTab==='all'?' active':'')+'" data-stab="all"><i class="fas fa-bookmark"></i> All</button>';
+    savedFolders.forEach(function(f){
+        h+='<button class="search-tab'+(_currentSavedTab===f.id?' active':'')+'" data-stab="'+f.id+'">'+f.name+' <span class="saved-tab-count">'+(f.posts.length||0)+'</span>';
+        if(f.id!=='fav') h+=' <span class="album-del-x" data-fid="'+f.id+'" title="Delete folder"><i class="fas fa-times-circle"></i></span>';
+        h+='</button>';
+    });
+    h+='</div>';
+    // Tab content
+    h+='<div id="savedTabContent">';
+    h+=_renderSavedTabPosts();
+    h+='</div>';
+    container.innerHTML=h;
+    // Drag-scroll on pill tabs
+    var pillTabs=document.getElementById('savedPillTabs');
+    if(pillTabs) _bindDragScroll(pillTabs);
+    _bindSavedPageEvents();
 }
-function savedFolderCard(f){
-    var count=f.posts.length;
-    return '<div class="card saved-folder-card" data-fid="'+f.id+'" style="min-width:220px;max-width:220px;flex-shrink:0;scroll-snap-align:start;cursor:pointer;overflow:hidden;">'
-        +'<div style="height:80px;background:linear-gradient(135deg,var(--primary),#8b5cf6);display:flex;align-items:center;justify-content:center;"><i class="fas fa-folder-open" style="font-size:32px;color:rgba(255,255,255,.8);"></i></div>'
-        +'<div style="padding:14px;">'
-        +'<h4 style="font-size:14px;font-weight:600;margin-bottom:4px;">'+f.name+'</h4>'
-        +'<p style="font-size:12px;color:var(--gray);">'+count+' post'+(count!==1?'s':'')+'</p>'
-        +'<div style="display:flex;gap:6px;margin-top:8px;">'
-        +'<button class="btn btn-outline saved-folder-rename" data-fid="'+f.id+'" style="padding:4px 10px;font-size:11px;border-radius:6px;"><i class="fas fa-pen"></i></button>'
-        +(f.id!=='fav'?'<button class="btn btn-outline saved-folder-delete" data-fid="'+f.id+'" style="padding:4px 10px;font-size:11px;border-radius:6px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i></button>':'')
-        +'</div></div></div>';
+function _renderSavedTabPosts(){
+    var ids=[];
+    if(_currentSavedTab==='all'){
+        savedFolders.forEach(function(f){f.posts.forEach(function(pid){if(ids.indexOf(pid)===-1)ids.push(pid);});});
+    } else {
+        var f=savedFolders.find(function(x){return x.id===_currentSavedTab;});
+        if(f) ids=f.posts.slice();
+    }
+    if(!ids.length){
+        return '<div class="card" style="padding:40px;text-align:center;color:var(--gray);margin-top:12px;"><i class="fas fa-bookmark" style="font-size:36px;margin-bottom:12px;display:block;opacity:.4;"></i><p>'+(_currentSavedTab==='all'?'No saved posts yet.':'This folder is empty.')+'</p>'+(_currentSavedTab==='all'?'<p style="font-size:13px;margin-top:6px;">Use the <i class="fas fa-ellipsis-h"></i> menu on any post to save it.</p>':'')+'</div>';
+    }
+    var h='';
+    ids.forEach(function(pid){
+        var p=feedPosts.find(function(fp){return String(fp.idx)===pid;});
+        if(p) h+=renderSavedPostCard(p);
+    });
+    return h||'<p style="color:var(--gray);padding:20px;">Posts not found in current feed.</p>';
 }
 function renderSavedPostCard(p){
-    var i=p.idx,person=p.person,text=p.text,badge=p.badge,loc=p.loc,likes=p.likes,genComments=p.comments,shares=p.shares;
+    var i=p.idx,person=p.person,text=p.text,badge=p.badge,likes=p.likes,genComments=p.comments,shares=p.shares;
     var short=safeSlice(text,0,160);var rest=safeSlice(text,160);var hasMore=rest.length>0;
     var folder=findPostFolder(i);
     var html='<div class="card feed-post saved-post-item" data-spid="'+i+'">';
@@ -5961,77 +5958,55 @@ function renderSavedPostCard(p){
     return html;
 }
 function renderSavedFolderView(fid){
-    _savedOpenFolder=fid;
-    var f=savedFolders.find(function(x){return x.id===fid;});
-    if(!f) return renderSavedPage();
-    var container=document.getElementById('savedContent');
-    var h='<a href="#" class="saved-back-link" style="display:inline-flex;align-items:center;gap:6px;color:var(--primary);font-weight:500;font-size:14px;margin-bottom:16px;"><i class="fas fa-arrow-left"></i> Back to Saved</a>';
-    h+='<div class="shop-section-title"><i class="fas fa-folder-open"></i> '+f.name+' <span style="font-weight:400;font-size:14px;color:var(--gray);">('+f.posts.length+')</span></div>';
-    if(!f.posts.length){
-        h+='<div class="card" style="padding:40px;text-align:center;color:var(--gray);"><p>This folder is empty.</p></div>';
-    } else {
-        f.posts.forEach(function(pid){
-            var p=feedPosts.find(function(fp){return String(fp.idx)===pid;});
-            if(p) h+=renderSavedPostCard(p);
-        });
-    }
-    container.innerHTML=h;
-    bindSavedPageEvents();
+    _currentSavedTab=fid;
+    renderSavedPage();
 }
-function bindSavedPageEvents(){
+function _bindSavedPageEvents(){
     var c=document.getElementById('savedContent');
-    // Folder click
-    c.querySelectorAll('.saved-folder-card').forEach(function(card){
-        card.addEventListener('click',function(e){
-            if(e.target.closest('.saved-folder-rename')||e.target.closest('.saved-folder-delete')) return;
-            renderSavedFolderView(card.dataset.fid);
+    // Pill tab clicks — switch folder with fade transition
+    $$('#savedPillTabs .search-tab').forEach(function(tab){
+        tab.addEventListener('click',function(e){
+            if(e.target.closest('.album-del-x')) return;
+            $$('#savedPillTabs .search-tab').forEach(function(t){t.classList.remove('active');});
+            tab.classList.add('active');_currentSavedTab=tab.dataset.stab;
+            var tc=document.getElementById('savedTabContent');
+            if(tc){tc.style.opacity='0';tc.style.transform='translateX(10px)';setTimeout(function(){tc.innerHTML=_renderSavedTabPosts();tc.style.opacity='1';tc.style.transform='translateX(0)';_bindSavedPostEvents();},200);}
         });
     });
-    // Rename
-    c.querySelectorAll('.saved-folder-rename').forEach(function(btn){
-        btn.addEventListener('click',function(e){
-            e.stopPropagation();
-            var f=savedFolders.find(function(x){return x.id===btn.dataset.fid;});
+    // Delete folder (X on pill)
+    $$('#savedPillTabs .album-del-x').forEach(function(x){
+        x.addEventListener('click',function(e){
+            e.stopPropagation();var fid=x.dataset.fid;
+            var f=savedFolders.find(function(fx){return fx.id===fid;});
             if(!f) return;
-            var h='<div class="modal-header"><h3>Rename Folder</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-            h+='<div class="modal-body"><input type="text" id="renameFolderInput" value="'+f.name+'" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:12px;"><button class="btn btn-primary" id="renameFolderConfirm" style="width:100%;">Rename</button></div>';
-            showModal(h);
-            document.getElementById('renameFolderInput').focus();
-            document.getElementById('renameFolderConfirm').addEventListener('click',function(){
-                var n=document.getElementById('renameFolderInput').value.trim();
-                if(n){f.name=n;persistSaved();closeModal();if(_savedOpenFolder)renderSavedFolderView(_savedOpenFolder);else renderSavedPage();}
-            });
+            if(!confirm('Delete folder "'+f.name+'"? Saved post references will be removed.')) return;
+            savedFolders=savedFolders.filter(function(fx){return fx.id!==fid;});
+            if(_currentSavedTab===fid) _currentSavedTab='all';
+            persistSaved();renderSavedPage();
         });
     });
-    // Delete
-    c.querySelectorAll('.saved-folder-delete').forEach(function(btn){
-        btn.addEventListener('click',function(e){
-            e.stopPropagation();
-            var f=savedFolders.find(function(x){return x.id===btn.dataset.fid;});
-            if(!f) return;
-            var h='<div class="modal-header"><h3>Delete Folder</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
-            h+='<div class="modal-body"><p style="color:var(--gray);margin-bottom:16px;">Delete "<strong>'+f.name+'</strong>"? Saved post references will be removed.</p><div class="modal-actions"><button class="btn btn-primary modal-close">Cancel</button><button class="btn btn-outline" id="deleteFolderConfirm" style="color:#e74c3c;border-color:#e74c3c;">Delete</button></div></div>';
-            showModal(h);
-            document.getElementById('deleteFolderConfirm').addEventListener('click',function(){
-                savedFolders=savedFolders.filter(function(x){return x.id!==f.id;});
-                persistSaved();closeModal();renderSavedPage();
-            });
-        });
-    });
+    _bindSavedPostEvents();
+}
+function _bindSavedPostEvents(){
+    var c=document.getElementById('savedContent');
     // Unsave
     c.querySelectorAll('.saved-unsave-btn').forEach(function(btn){
         btn.addEventListener('click',function(){
             var pid=btn.dataset.pid;
             savedFolders.forEach(function(f){var idx=f.posts.indexOf(String(pid));if(idx!==-1)f.posts.splice(idx,1);});
             persistSaved();
-            if(_savedOpenFolder) renderSavedFolderView(_savedOpenFolder);
-            else renderSavedPage();
+            var tc=document.getElementById('savedTabContent');
+            if(tc){tc.innerHTML=_renderSavedTabPosts();_bindSavedPostEvents();}
+            // Update pill counts
+            $$('#savedPillTabs .search-tab').forEach(function(tab){
+                var fid=tab.dataset.stab;if(fid==='all') return;
+                var f=savedFolders.find(function(x){return x.id===fid;});
+                var cnt=tab.querySelector('.saved-tab-count');
+                if(f&&cnt) cnt.textContent=f.posts.length;
+            });
             showToast('Post unsaved');
         });
     });
-    // Back link
-    var back=c.querySelector('.saved-back-link');
-    if(back) back.addEventListener('click',function(e){e.preventDefault();renderSavedPage();});
     // View more
     c.querySelectorAll('.view-more-btn').forEach(function(btn){
         btn.addEventListener('click',function(){

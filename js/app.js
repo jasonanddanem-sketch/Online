@@ -967,16 +967,7 @@ var premiumSkins = [
     {id:'matrix',name:'Matrix',desc:'Digital rain green on black. Enter the simulation.',price:1,preview:'linear-gradient(135deg,#000000,#003300)',border:'conic-gradient(from 0deg,#00ff41,#008f11,#00ff41,#003300,#00ff41)',icon:'fa-terminal',iconColor:'#00ff41',accent:'#00ff41',accentHover:'#00cc33',dark:true,cardBg:'#001a00',cardText:'#00ff41',cardMuted:'#008f11'}
 ];
 
-var guildSkins = [
-    {id:'guild-banner',name:'Guild Banner',desc:'Medieval guild banner theme with heraldic colors.',price:50,preview:'linear-gradient(135deg,#8B4513,#DAA520)',cardBg:'#f5e6d0',cardText:'#5c3310',cardMuted:'#8B6914'},
-    {id:'guild-fortress',name:'Fortress',desc:'Stone castle walls and iron gates. Impenetrable style.',price:75,preview:'linear-gradient(135deg,#4a4a4a,#7a7a7a)',cardBg:'#e8e8e8',cardText:'#333',cardMuted:'#666'},
-    {id:'guild-dragon',name:'Dragon\'s Lair',desc:'Fiery dragon scales with smoldering ember accents.',price:100,preview:'linear-gradient(135deg,#8b0000,#ff4500)',cardBg:'#2a0a0a',cardText:'#ff6b35',cardMuted:'#cc4400'},
-    {id:'guild-enchanted',name:'Enchanted Grove',desc:'Mystical forest with glowing fairy dust particles.',price:75,preview:'linear-gradient(135deg,#1a472a,#2d8659)',cardBg:'#e8f5e9',cardText:'#1a472a',cardMuted:'#2d8659'},
-    {id:'guild-ocean',name:'Pirate Cove',desc:'Seafaring adventure with treasure map aesthetics.',price:50,preview:'linear-gradient(135deg,#1a3a5c,#2980b9)',cardBg:'#e3f2fd',cardText:'#1a3a5c',cardMuted:'#2471a3'},
-    {id:'guild-celestial',name:'Celestial Order',desc:'Heavenly starlight with divine golden halos.',price:100,preview:'linear-gradient(135deg,#1a1a3e,#4a0080)',cardBg:'#1e1e3a',cardText:'#e8d5ff',cardMuted:'#b388ff'},
-    {id:'guild-steampunk',name:'Steampunk Works',desc:'Clockwork gears and brass pipes. Industrial elegance.',price:75,preview:'linear-gradient(135deg,#5c3a1e,#b87333)',cardBg:'#f5e6d0',cardText:'#5c3a1e',cardMuted:'#b87333'},
-    {id:'guild-frost',name:'Frost Legion',desc:'Icy blue with frozen crystal formations.',price:50,preview:'linear-gradient(135deg,#0a2a4a,#00bcd4)',cardBg:'#e0f7fa',cardText:'#006064',cardMuted:'#00838f'}
-];
+var guildSkins = [];
 
 var gfLink=document.createElement('link');gfLink.rel='stylesheet';gfLink.href='https://fonts.googleapis.com/css2?family=Orbitron&family=Rajdhani&family=Quicksand&family=Pacifico&family=Baloo+2&display=swap';document.head.appendChild(gfLink);
 
@@ -2204,7 +2195,7 @@ function getGroupThemeColor(group){
     var premSkin=state.groupActivePremiumSkin[group.id];
     var basicSkin=state.groupActiveSkin[group.id];
     if(premSkin){var ps=premiumSkins.find(function(s){return s.id===premSkin;});if(ps)return ps.accent;}
-    if(basicSkin){if(skinColors[basicSkin])return skinColors[basicSkin].primary;var gs=guildSkins.find(function(s){return s.id===basicSkin;});if(gs)return gs.cardText;}
+    if(basicSkin&&skinColors[basicSkin])return skinColors[basicSkin].primary;
     return group.color||'var(--primary)';
 }
 function showGroupProfileCropModal(src,group){
@@ -4413,15 +4404,10 @@ function getGroupShopCategories(groupId){
         return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="premium-preview-frame" style="background:'+s.border+';"><img src="images/default-avatar.svg" class="premium-preview-avatar"></div></div><div class="skin-card-body" style="background:'+s.cardBg+';"><h4 style="color:'+s.cardText+';"><i class="fas '+s.icon+'" style="color:'+s.iconColor+';margin-right:6px;"></i>'+s.name+'</h4><p style="color:'+s.cardMuted+';">'+s.desc+'</p>'+groupShopBuy(groupId,state.groupOwnedPremiumSkins[groupId][s.id],s.price,'buy-gspremium-btn','data-pid="'+s.id+'" data-gid="'+groupId+'"')+'</div></div>';
     }});
 
-    cats.push({key:'guild',label:'<i class="fas fa-shield-halved"></i> Guild Skins',items:guildSkins,render:function(s){
-        return '<div class="skin-card"><div class="skin-preview" style="background:'+s.preview+';"><div class="skin-preview-inner" style="color:'+s.cardText+';background:'+s.cardBg+';">Guild</div></div><div class="skin-card-body" style="background:'+s.cardBg+';"><h4 style="color:'+s.cardText+';">'+s.name+'</h4><p style="color:'+s.cardMuted+';">'+s.desc+'</p>'+groupShopBuy(groupId,state.groupOwnedSkins[groupId][s.id],s.price,'buy-gskin-btn','data-sid="'+s.id+'" data-gid="'+groupId+'"')+'</div></div>';
-    }});
-
     // Apply Skins tab (always visible)
     var ownedBasic=skins.filter(function(s){return state.groupOwnedSkins[groupId][s.id];});
-    var ownedGuild=guildSkins.filter(function(s){return state.groupOwnedSkins[groupId][s.id];});
     var ownedPrem=premiumSkins.filter(function(s){return state.groupOwnedPremiumSkins[groupId][s.id];});
-    var allOwned=ownedBasic.concat(ownedGuild).concat(ownedPrem);
+    var allOwned=ownedBasic.concat(ownedPrem);
     if(allOwned.length){
         cats.push({key:'owned',label:'<i class="fas fa-check-circle"></i> Apply Skins',items:allOwned,render:function(s){
             var isPremium=!!s.border;
@@ -4462,7 +4448,7 @@ function renderGroupShop(groupId){
 
     $$('#gvShopContent .buy-gskin-btn').forEach(function(btn){btn.addEventListener('click',function(){
         var sid=btn.getAttribute('data-sid');var gid=btn.getAttribute('data-gid');
-        var skin=skins.find(function(s){return s.id===sid;})||guildSkins.find(function(s){return s.id===sid;});
+        var skin=skins.find(function(s){return s.id===sid;});
         if(!skin) return;
         var gc=getGroupCoinCount(gid);
         if(gc>=skin.price){
@@ -4512,21 +4498,14 @@ function updateGroupCoinDisplay(gid){
 
 var groupSkinBgs={
     classic:'#e8f6f5',midnight:'#1a1a2e',ocean:'#d0e8f7',forest:'#dceede',royal:'#ede0f3',
-    sunset:'#fff3e0',cherry:'#fce4ec',slate:'#2c3a42',ember:'#fbe9e7',arctic:'#d8f3f6',moss:'#ecf4e2',
-    'guild-banner':'#efe0c8','guild-fortress':'#d5d5d5','guild-dragon':'#1a0505',
-    'guild-enchanted':'#dceede','guild-ocean':'#d0e8f7','guild-celestial':'#15152e',
-    'guild-steampunk':'#efe0c8','guild-frost':'#d8f3f6'
+    sunset:'#fff3e0',cherry:'#fce4ec',slate:'#2c3a42',ember:'#fbe9e7',arctic:'#d8f3f6',moss:'#ecf4e2'
 };
 var groupSkinBanners={
     classic:'linear-gradient(135deg,#5cbdb9,#4aada9)',midnight:'#1a1a2e',ocean:'linear-gradient(135deg,#1976d2,#0d47a1)',
     forest:'linear-gradient(135deg,#2e7d32,#1b5e20)',royal:'linear-gradient(135deg,#7b1fa2,#4a148c)',
     sunset:'linear-gradient(135deg,#ef6c00,#e65100)',cherry:'linear-gradient(135deg,#d81b60,#c2185b)',
     slate:'linear-gradient(135deg,#37474f,#263238)',ember:'linear-gradient(135deg,#e64a19,#bf360c)',
-    arctic:'linear-gradient(135deg,#00acc1,#00838f)',moss:'linear-gradient(135deg,#689f38,#558b2f)',
-    'guild-banner':'linear-gradient(135deg,#8B4513,#DAA520)','guild-fortress':'linear-gradient(135deg,#4a4a4a,#7a7a7a)',
-    'guild-dragon':'linear-gradient(135deg,#8b0000,#ff4500)','guild-enchanted':'linear-gradient(135deg,#1a472a,#2d8659)',
-    'guild-ocean':'linear-gradient(135deg,#1a3a5c,#2980b9)','guild-celestial':'linear-gradient(135deg,#1a1a3e,#4a0080)',
-    'guild-steampunk':'linear-gradient(135deg,#5c3a1e,#b87333)','guild-frost':'linear-gradient(135deg,#0a2a4a,#00bcd4)'
+    arctic:'linear-gradient(135deg,#00acc1,#00838f)',moss:'linear-gradient(135deg,#689f38,#558b2f)'
 };
 function applyGroupSkin(groupId){
     var gvPage=document.getElementById('page-group-view');
@@ -4542,7 +4521,6 @@ function applyGroupSkin(groupId){
     updatePremiumBg();
     // Reset ALL body-level skin state to prevent bleeding between groups
     skins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
-    guildSkins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
     premiumSkins.forEach(function(s){document.body.classList.remove('premium-'+s.id);});
     document.body.classList.remove('premium-dark');
     // Reset CSS vars to default before applying group's skin
@@ -4553,7 +4531,6 @@ function applyGroupSkin(groupId){
     setThemeVars(false);
     // Clear group-specific page classes
     skins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});
-    guildSkins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});
     premiumSkins.forEach(function(s){gvPage.classList.remove('gpremium-'+s.id);});
     gvPage.classList.remove('gpremium-dark');
     gvPage.style.background='';
@@ -4593,15 +4570,7 @@ var skinColors={
     slate:{primary:'#78909c',hover:'#607d8b',navBg:'#37474f'},
     ember:{primary:'#e64a19',hover:'#bf360c',navBg:'#bf360c',light:true},
     arctic:{primary:'#00acc1',hover:'#00838f',navBg:'#00838f',light:true},
-    moss:{primary:'#689f38',hover:'#558b2f',navBg:'#558b2f',light:true},
-    'guild-banner':{primary:'#DAA520',hover:'#8B4513',navBg:'#8B4513',light:true},
-    'guild-fortress':{primary:'#7a7a7a',hover:'#4a4a4a',navBg:'#4a4a4a',light:true},
-    'guild-dragon':{primary:'#ff4500',hover:'#8b0000',navBg:'#8b0000'},
-    'guild-enchanted':{primary:'#2d8659',hover:'#1a472a',navBg:'#1a472a',light:true},
-    'guild-ocean':{primary:'#2980b9',hover:'#1a3a5c',navBg:'#1a3a5c',light:true},
-    'guild-celestial':{primary:'#b388ff',hover:'#4a0080',navBg:'#1a1a3e'},
-    'guild-steampunk':{primary:'#b87333',hover:'#5c3a1e',navBg:'#5c3a1e',light:true},
-    'guild-frost':{primary:'#00bcd4',hover:'#0a2a4a',navBg:'#0a2a4a',light:true}
+    moss:{primary:'#689f38',hover:'#558b2f',navBg:'#558b2f',light:true}
 };
 
 function setThemeVars(light){
@@ -4622,7 +4591,6 @@ function applySkin(skinId,silent){
     var card=$('#profileCard');
     var root=document.documentElement;
     skins.forEach(function(s){card.classList.remove('skin-'+s.id);document.body.classList.remove('skin-'+s.id);});
-    guildSkins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
     premiumSkins.forEach(function(s){document.body.classList.remove('premium-'+s.id);});
     document.body.classList.remove('premium-dark');
     var avatars=document.querySelectorAll('#profileAvatarImg, .pv-profile-card .profile-avatar, .nav-avatar');

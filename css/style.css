@@ -2537,8 +2537,10 @@ body.premium-matrix{--ps-bg:#000000;--ps-nav:linear-gradient(135deg,#001a00,#003
 body[class*="premium-"]{background-color:var(--ps-bg);background-image:var(--ps-pattern);background-size:cover;background-repeat:no-repeat;background-position:center;background-attachment:fixed;color:var(--ps-text);transition:background-color .4s;}
 body[class*="premium-"] .navbar{background:var(--ps-nav);background-size:200% 200%;animation:gradientShift 6s ease infinite;}
 body[class*="premium-"] .nav-center,body[class*="premium-"] .nav-left,body[class*="premium-"] .nav-right{background-color:transparent;}
-body[class*="premium-"].nav-dock .nav-center{background:var(--ps-nav);background-size:200% 200%;animation:gradientShift 6s ease infinite;}
-body[class*="premium-"].nav-pill .nav-center{background:var(--ps-nav);background-size:200% 200%;animation:gradientShift 6s ease infinite;}
+/* Nav styles with separate bottom positioning need explicit premium backgrounds */
+body[class*="premium-"].nav-dock .nav-center,
+body[class*="premium-"].nav-pill .nav-center,
+body[class*="premium-"].nav-split .nav-center{background:var(--ps-nav);background-size:200% 200%;animation:gradientShift 6s ease infinite;}
 body[class*="premium-"].nav-island .nav-left,body[class*="premium-"].nav-island .nav-center,body[class*="premium-"].nav-island .nav-right{background:var(--ps-nav);background-size:200% 200%;animation:gradientShift 6s ease infinite;}
 body[class*="premium-"] .card,body[class*="premium-"] .group-card,body[class*="premium-"] .profile-card-item,body[class*="premium-"] .notif-item{background:var(--ps-card);color:var(--ps-text);}
 body[class*="premium-"] .feed-post{border-left:3px solid var(--ps-post-border);animation:var(--ps-anim);}

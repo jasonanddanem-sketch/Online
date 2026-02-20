@@ -2492,35 +2492,38 @@ async function showGroupView(group){
 
     // Right sidebar - rules button + members preview
     if(!group.rules) group.rules=['Be respectful to all members','No spam or self-promotion','Stay on topic','No hate speech'];
-    var rightHtml='<button class="btn btn-outline btn-block" id="gvViewRulesBtn" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-scroll" style="color:var(--primary);"></i> Group Rules</button>';
-    rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview" id="gvMembersPreview">';
+    var rightHtml='<button class="btn btn-outline btn-block gv-rules-btn" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-scroll" style="color:var(--primary);"></i> Group Rules</button>';
+    rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview">';
     rightHtml+='<p style="color:var(--gray);font-size:13px;">Loading members...</p>';
     rightHtml+='</div></div>';
     $('#gvRightSidebar').innerHTML=rightHtml;
+    // Mobile duplicate (visible only on phones)
+    $('#gvMobileRight').innerHTML=rightHtml;
 
-    // Load members preview asynchronously
+    // Load members preview asynchronously (both desktop + mobile)
     (async function(){
         try{
             var members=await sbGetGroupMembers(group.id);
-            var preview=document.getElementById('gvMembersPreview');
-            if(!preview)return;
-            if(!members.length){preview.innerHTML='<p style="color:var(--gray);font-size:13px;">No members yet.</p>';return;}
+            var previews=document.querySelectorAll('.gv-members-preview');
+            if(!previews.length)return;
             var html='';
-            members.slice(0,6).forEach(function(m){
-                var p=m.user||{};
-                var name=p.display_name||p.username||'User';
-                var avatar=p.avatar_url||DEFAULT_AVATAR;
-                html+='<img src="'+avatar+'" title="'+name+'" class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;">';
-            });
-            var moreCount=Math.max(0,members.length-6);
-            if(moreCount>0) html+='<span class="gv-members-more" id="gvShowAllMembers" style="cursor:pointer;">+'+moreCount+' more</span>';
-            preview.innerHTML=html;
+            if(!members.length){html='<p style="color:var(--gray);font-size:13px;">No members yet.</p>';}
+            else{
+                members.slice(0,6).forEach(function(m){
+                    var p=m.user||{};
+                    var name=p.display_name||p.username||'User';
+                    var avatar=p.avatar_url||DEFAULT_AVATAR;
+                    html+='<img src="'+avatar+'" title="'+name+'" class="gv-member-click" data-person-id="'+p.id+'" style="cursor:pointer;">';
+                });
+                var moreCount=Math.max(0,members.length-6);
+                if(moreCount>0) html+='<span class="gv-members-more gv-show-all-members" style="cursor:pointer;">+'+moreCount+' more</span>';
+            }
+            previews.forEach(function(el){el.innerHTML=html;});
             $$('.gv-member-click').forEach(function(img){img.addEventListener('click',async function(){
                 var uid=img.dataset.personId;if(!uid)return;
                 try{var p=await sbGetProfile(uid);if(p)showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}catch(e){}
             });});
-            var showAllBtn=document.getElementById('gvShowAllMembers');
-            if(showAllBtn)showAllBtn.addEventListener('click',function(){showGroupMembersModal(group);});
+            $$('.gv-show-all-members').forEach(function(btn){btn.addEventListener('click',function(){showGroupMembersModal(group);});});
         }catch(e){console.error('gvMembers:',e);}
     })();
 
@@ -2743,10 +2746,9 @@ async function showGroupView(group){
             $$('.gv-icon-pick').forEach(function(btn){btn.addEventListener('click',function(){group.icon=btn.dataset.icon;delete group.profileImg;closeModal();showGroupView(group);renderGroups();});});
         });}
     }
-    var viewRulesBtn=document.getElementById('gvViewRulesBtn');
-    if(viewRulesBtn){viewRulesBtn.addEventListener('click',function(){
+    $$('.gv-rules-btn').forEach(function(btn){btn.addEventListener('click',function(){
         _showGroupRulesModal(group,isOwner);
-    });}
+    });});
     function _showGroupRulesModal(grp,canEdit){
         var h='<div class="modal-header"><h3><i class="fas fa-scroll" style="color:var(--primary);margin-right:8px;"></i>Group Rules</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
         if(!canEdit){

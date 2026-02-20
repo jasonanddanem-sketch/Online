@@ -724,6 +724,20 @@ function reapplyCustomizations(){
 // Auto-save state on page leave and periodically
 window.addEventListener('beforeunload',function(){saveState();});
 setInterval(function(){saveState();},10000); // save every 10s as safety net
+// Cross-device sync: push when leaving, pull when returning
+document.addEventListener('visibilitychange',function(){
+    if(!currentUser) return;
+    if(document.visibilityState==='hidden'){
+        // Sync immediately when page goes hidden (reliable on mobile unlike beforeunload)
+        syncSkinDataToSupabase(true);
+    } else if(document.visibilityState==='visible'){
+        // Pull latest settings when tab regains focus (picks up changes from other devices)
+        loadSkinDataFromSupabase().then(function(){
+            reapplyCustomizations();
+            saveState(); // update localStorage with fresh data
+        });
+    }
+});
 
 // Load follow counts from Supabase
 async function loadFollowCounts() {

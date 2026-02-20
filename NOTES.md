@@ -143,6 +143,13 @@
 - **Fix:** After photo loading completes (line ~337), check if `_navCurrent==='photos'` and re-render the photos page
 - Only affects users who reload while already on the `#photos` page
 
+### Cross-device sync not working on mobile (fixed 2026-02-19)
+- **Cause:** `syncSkinDataToSupabase()` uses a 2s debounce, and `beforeunload` is unreliable on mobile (iOS Safari doesn't always fire it when switching/closing tabs)
+- **Fix:** Added `visibilitychange` event listener with two-way sync:
+  - **Page hidden** → immediately push settings to Supabase (replaces unreliable `beforeunload`)
+  - **Page visible** → pull latest settings from Supabase + `reapplyCustomizations()` (picks up changes from other devices)
+- Covers: skins, fonts, nav styles, templates, logos, icon sets, coin skins, premium backgrounds, settings, etc.
+
 ## Album System (added 2026-02-19)
 
 ### Schema

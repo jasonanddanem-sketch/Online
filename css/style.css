@@ -295,6 +295,8 @@ img{display:block;}
 .suggestion-name{display:block;font-size:calc(11px * var(--font-scale));font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
 .suggestion-name:hover{color:var(--primary);}
 .suggestion-role{display:none;}
+.suggestion-follow-btn{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:background .3s,transform .2s;}
+.suggestion-follow-btn:hover{background:var(--primary-hover);transform:scale(1.1);}
 .follow-btn-small{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .3s,transform .2s;}
 .follow-btn-small:hover{background:var(--primary-hover);transform:scale(1.1);}
 .follow-btn-small.followed{background:var(--gray);}

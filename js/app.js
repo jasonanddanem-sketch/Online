@@ -3961,7 +3961,7 @@ async function renderSuggestions(){
             var avatar=p.avatar_url||DEFAULT_AVATAR;
             html+='<div class="suggestion-item"><img src="'+avatar+'" alt="'+name+'" class="suggestion-avatar">';
             html+='<div class="suggestion-info"><h4>'+name+'</h4><p>'+safeTruncate(p.bio||'',40)+'</p></div>';
-            html+='<button class="suggestion-follow-btn" data-uid="'+p.id+'"><i class="fas fa-user-plus"></i></button></div>';
+            html+='<button class="suggestion-follow-btn" data-uid="'+p.id+'">'+(state.followedUsers[p.id]?'<i class="fas fa-check"></i>':'<i class="fas fa-plus"></i>')+'</button></div>';
         });
         list.innerHTML=html;
         list.querySelectorAll('.suggestion-follow-btn').forEach(function(btn){

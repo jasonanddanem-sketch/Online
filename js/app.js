@@ -1015,7 +1015,7 @@ function navigateTo(page,skipPush){
     }
     if(page==='messages'){var ml=document.querySelector('.messages-layout');if(ml)ml.classList.remove('chat-open');loadConversations();renderMsgFollowing();}
     if(page==='profiles') renderProfiles(currentProfileTab);
-    if(page==='groups') renderGroups();
+    if(page==='groups'){currentGroupTab='yours';renderGroups();}
     if(page==='shop') renderShop();
     if(page==='skins') renderMySkins();
     if(page==='photos'){

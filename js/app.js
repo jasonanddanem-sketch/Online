@@ -1273,7 +1273,7 @@ async function toggleFollow(userId,btn){
             state.following--;
             if(btn){
                 btn.classList.remove('followed','btn-disabled');
-                btn.classList.add('btn-green');
+                btn.classList.add('btn-primary');
                 btn.innerHTML=btn.classList.contains('follow-btn-small')?'<i class="fas fa-plus"></i>':'<i class="fas fa-plus"></i> Follow';
             }
             // Notify the person being unfollowed
@@ -1285,7 +1285,7 @@ async function toggleFollow(userId,btn){
             state.following++;
             if(btn){
                 btn.classList.add('followed');
-                btn.classList.remove('btn-green');
+                btn.classList.remove('btn-primary');
                 btn.classList.add('btn-disabled');
                 btn.innerHTML=btn.classList.contains('follow-btn-small')?'<i class="fas fa-check"></i>':'<i class="fas fa-check"></i> Following';
             }
@@ -1987,7 +1987,7 @@ async function showProfileView(person){
     cardHtml+='<div class="stat stat-clickable pv-stat-followers" style="'+(pvPriv?'opacity:.5;pointer-events:none;cursor:default;':'')+'"><span class="stat-count">'+followers+'</span><span class="stat-label">Followers'+(pvPriv?' <i class="fas fa-lock" style="font-size:10px;"></i>':'')+'</span></div>';
     cardHtml+='</div>';
     if(!isMe){
-        cardHtml+='<div class="pv-actions"><button class="btn '+(isFollowed?'btn-disabled':'btn-green')+'" id="pvFollowBtn" data-uid="'+person.id+'">'+(isFollowed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button>';
+        cardHtml+='<div class="pv-actions"><button class="btn '+(isFollowed?'btn-disabled':'btn-primary')+'" id="pvFollowBtn" data-uid="'+person.id+'">'+(isFollowed?'<i class="fas fa-check"></i> Following':'<i class="fas fa-plus"></i> Follow')+'</button>';
         cardHtml+='<button class="btn btn-primary" id="pvMsgBtn"><i class="fas fa-envelope"></i> Message</button>';
         cardHtml+='<button class="btn btn-outline" id="pvBlockBtn" style="color:#e74c3c;border-color:#e74c3c;">'+(blockedUsers[person.id]?'<i class="fas fa-unlock"></i> Unblock':'<i class="fas fa-ban"></i> Block')+'</button></div>';
     }

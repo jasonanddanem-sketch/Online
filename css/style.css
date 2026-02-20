@@ -295,8 +295,8 @@ img{display:block;}
 .suggestion-name{display:block;font-size:calc(11px * var(--font-scale));font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
 .suggestion-name:hover{color:var(--primary);}
 .suggestion-role{display:none;}
-.follow-btn-small{width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .3s,transform .2s;}
-.follow-btn-small:hover{background:var(--green-hover);transform:scale(1.1);}
+.follow-btn-small{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .3s,transform .2s;}
+.follow-btn-small:hover{background:var(--primary-hover);transform:scale(1.1);}
 .follow-btn-small.followed{background:var(--gray);}
 .view-more-link{display:block;text-align:center;padding:12px;font-size:13px;color:var(--primary);font-weight:500;border-top:1px solid var(--border);transition:background .2s;cursor:pointer;}
 .view-more-link:hover{background:var(--border);}
@@ -1947,6 +1947,10 @@ body.nav-pill .nav-link:hover span:not(.notif-badge),body.nav-split .nav-link:ho
     .pv-col-feed{grid-column:1!important;grid-row:auto!important;}
     .pv-col-skin{grid-column:1!important;grid-row:auto!important;position:static!important;max-width:none!important;margin:0!important;}
     .pv-cover-banner{height:200px!important;}
+
+    /* --- Follow button — skin-themed circle with + on mobile --- */
+    #pvFollowBtn{width:40px!important;height:40px!important;border-radius:50%!important;padding:0!important;font-size:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;}
+    #pvFollowBtn i{font-size:16px!important;}
 
     /* --- Cover edit button — camera icon only on mobile, on the cover --- */
     .timeline-cover-btn{top:auto!important;bottom:10px!important;right:10px!important;padding:0!important;width:36px;height:36px;border-radius:50%!important;font-size:0!important;justify-content:center;align-items:center;}

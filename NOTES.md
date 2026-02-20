@@ -150,6 +150,12 @@
   - **Page visible** → pull latest settings from Supabase + `reapplyCustomizations()` (picks up changes from other devices)
 - Covers: skins, fonts, nav styles, templates, logos, icon sets, coin skins, premium backgrounds, settings, etc.
 
+### Saved posts not showing up (fixed 2026-02-19)
+- **Cause:** Saved posts page looked up post IDs in `feedPosts` (only the last 50 feed posts). Any saved post not in the current feed was silently skipped.
+- **Fix:** `renderSavedPage()` now async — collects all saved post IDs, fetches any missing ones from Supabase via `sbGetPostsByIds()`, caches in `_savedPostCache`
+- `_renderSavedTabPosts()` checks both `feedPosts` and `_savedPostCache`
+- Also fixed null badge crash in `renderSavedPostCard` and improved timestamps to use real `created_at` dates
+
 ## Album System (added 2026-02-19)
 
 ### Schema

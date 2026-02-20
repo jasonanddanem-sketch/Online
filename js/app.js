@@ -2499,13 +2499,9 @@ async function showGroupView(group){
     if(amIAdmin) leftHtml+='<button class="btn btn-outline btn-block" id="gvDeleteGroupBtn" style="color:#e74c3c;border-color:#e74c3c;margin-top:12px;"><i class="fas fa-trash"></i> Delete Group</button>';
     $('#gvLeftSidebar').innerHTML=leftHtml;
 
-    // Right sidebar - rules + members preview
+    // Right sidebar - rules button + members preview
     if(!group.rules) group.rules=['Be respectful to all members','No spam or self-promotion','Stay on topic','No hate speech'];
-    var rightHtml='<div class="card gv-rules-card"><h4 class="card-heading"><i class="fas fa-scroll" style="color:var(--primary);margin-right:6px;"></i>Group Rules';
-    if(isOwner) rightHtml+='<button class="gv-edit-rules-btn" id="gvEditRulesBtn" title="Edit Rules"><i class="fas fa-pen"></i></button>';
-    rightHtml+='</h4><div class="gv-rules-body"><ol>';
-    group.rules.forEach(function(r){rightHtml+='<li>'+r+'</li>';});
-    rightHtml+='</ol></div></div>';
+    var rightHtml='<button class="btn btn-outline btn-block" id="gvViewRulesBtn" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-scroll" style="color:var(--primary);"></i> Group Rules</button>';
     rightHtml+='<div class="card"><h4 class="card-heading"><i class="fas fa-user-friends" style="color:var(--primary);margin-right:6px;"></i>Members</h4><div class="gv-members-preview" id="gvMembersPreview">';
     rightHtml+='<p style="color:var(--gray);font-size:13px;">Loading members...</p>';
     rightHtml+='</div></div>';
@@ -2756,30 +2752,39 @@ async function showGroupView(group){
             $$('.gv-icon-pick').forEach(function(btn){btn.addEventListener('click',function(){group.icon=btn.dataset.icon;delete group.profileImg;closeModal();showGroupView(group);renderGroups();});});
         });}
     }
-    var rulesBtn=document.getElementById('gvEditRulesBtn');
-    if(rulesBtn){rulesBtn.addEventListener('click',function(){
-        var h='<div class="modal-header"><h3>Edit Rules</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
-        group.rules.forEach(function(r,i){h+='<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;"><span style="font-weight:600;color:var(--gray);">'+(i+1)+'.</span><input type="text" class="post-input gv-rule-input" value="'+r+'" style="flex:1;"><button class="gv-rule-del" data-idx="'+i+'" style="background:none;color:var(--gray);font-size:14px;padding:4px;"><i class="fas fa-trash"></i></button></div>';});
-        h+='<button class="btn btn-outline" id="gvAddRule" style="margin:8px 0 16px;font-size:13px;"><i class="fas fa-plus"></i> Add Rule</button>';
-        h+='<button class="btn btn-primary btn-block" id="gvSaveRules">Save Rules</button></div>';
-        showModal(h);
-        document.getElementById('gvAddRule').addEventListener('click',function(){
-            var container=this.parentElement;
-            var inputs=container.querySelectorAll('.gv-rule-input');
-            var idx=inputs.length;
-            var div=document.createElement('div');div.style.cssText='margin-bottom:8px;display:flex;gap:8px;align-items:center;';
-            div.innerHTML='<span style="font-weight:600;color:var(--gray);">'+(idx+1)+'.</span><input type="text" class="post-input gv-rule-input" placeholder="New rule..." style="flex:1;"><button class="gv-rule-del" data-idx="'+idx+'" style="background:none;color:var(--gray);font-size:14px;padding:4px;"><i class="fas fa-trash"></i></button>';
-            container.insertBefore(div,this);
-        });
-        document.getElementById('gvSaveRules').addEventListener('click',async function(){
-            var inputs=$$('.gv-rule-input');
-            group.rules=[];inputs.forEach(function(inp){var v=inp.value.trim();if(v)group.rules.push(v);});
-            // Persist rules to Supabase
-            try{await sbUpdateGroup(group.id,{rules:group.rules});}catch(e){console.warn('Save rules:',e);}
-            closeModal();showGroupView(group);
-        });
-        $$('.gv-rule-del').forEach(function(btn){btn.addEventListener('click',function(){btn.parentElement.remove();});});
+    var viewRulesBtn=document.getElementById('gvViewRulesBtn');
+    if(viewRulesBtn){viewRulesBtn.addEventListener('click',function(){
+        _showGroupRulesModal(group,isOwner);
     });}
+    function _showGroupRulesModal(grp,canEdit){
+        var h='<div class="modal-header"><h3><i class="fas fa-scroll" style="color:var(--primary);margin-right:8px;"></i>Group Rules</h3><button class="modal-close"><i class="fas fa-times"></i></button></div><div class="modal-body">';
+        if(!canEdit){
+            h+='<ol style="padding-left:20px;margin:0;">';
+            grp.rules.forEach(function(r){h+='<li style="margin-bottom:8px;line-height:1.5;">'+r+'</li>';});
+            h+='</ol></div>';
+            showModal(h);
+        } else {
+            grp.rules.forEach(function(r,i){h+='<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;"><span style="font-weight:600;color:var(--gray);">'+(i+1)+'.</span><input type="text" class="post-input gv-rule-input" value="'+r+'" style="flex:1;"><button class="gv-rule-del" data-idx="'+i+'" style="background:none;color:var(--gray);font-size:14px;padding:4px;"><i class="fas fa-trash"></i></button></div>';});
+            h+='<button class="btn btn-outline" id="gvAddRule" style="margin:8px 0 16px;font-size:13px;"><i class="fas fa-plus"></i> Add Rule</button>';
+            h+='<button class="btn btn-primary btn-block" id="gvSaveRules">Save Rules</button></div>';
+            showModal(h);
+            document.getElementById('gvAddRule').addEventListener('click',function(){
+                var container=this.parentElement;
+                var inputs=container.querySelectorAll('.gv-rule-input');
+                var idx=inputs.length;
+                var div=document.createElement('div');div.style.cssText='margin-bottom:8px;display:flex;gap:8px;align-items:center;';
+                div.innerHTML='<span style="font-weight:600;color:var(--gray);">'+(idx+1)+'.</span><input type="text" class="post-input gv-rule-input" placeholder="New rule..." style="flex:1;"><button class="gv-rule-del" data-idx="'+idx+'" style="background:none;color:var(--gray);font-size:14px;padding:4px;"><i class="fas fa-trash"></i></button>';
+                container.insertBefore(div,this);
+            });
+            document.getElementById('gvSaveRules').addEventListener('click',async function(){
+                var inputs=$$('.gv-rule-input');
+                grp.rules=[];inputs.forEach(function(inp){var v=inp.value.trim();if(v)grp.rules.push(v);});
+                try{await sbUpdateGroup(grp.id,{rules:grp.rules});}catch(e){console.warn('Save rules:',e);}
+                closeModal();showGroupView(grp);
+            });
+            $$('.gv-rule-del').forEach(function(btn){btn.addEventListener('click',function(){btn.parentElement.remove();});});
+        }
+    }
     $$('.gv-member-click').forEach(function(img){img.addEventListener('click',async function(){
         var uid=img.dataset.personId;if(!uid)return;
         try{var p=await sbGetProfile(uid);if(p)showGroupProfileModal({id:p.id,name:p.display_name||p.username,bio:p.bio||'',avatar_url:p.avatar_url},group);}catch(e){}

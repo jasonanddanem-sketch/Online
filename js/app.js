@@ -3266,13 +3266,17 @@ function _showFeedbackModal(){
     h+='<div style="margin-top:14px;text-align:right;"><button class="btn btn-primary" id="feedbackSendBtn"><i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit</button></div>';
     h+='</div>';
     showModal(h);
-    document.getElementById('feedbackSendBtn').addEventListener('click',function(){
+    document.getElementById('feedbackSendBtn').addEventListener('click',async function(){
         var subj=document.getElementById('feedbackSubject').value.trim();
         var body=document.getElementById('feedbackBody').value.trim();
         if(!subj&&!body){document.getElementById('feedbackSubject').style.borderColor='#e74c3c';document.getElementById('feedbackBody').style.borderColor='#e74c3c';return;}
-        var mailto='mailto:hello@blipvibe.com?subject='+encodeURIComponent(subj||'Feedback')+'&body='+encodeURIComponent(body);
-        window.open(mailto,'_blank');
-        closeModal();
+        var btn=document.getElementById('feedbackSendBtn');
+        btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Sending...';
+        try{
+            var res=await fetch('https://formsubmit.co/ajax/hello@blipvibe.com',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({_subject:subj||'Feedback from BlipVibe',message:body,_template:'table'})});
+            if(res.ok){closeModal();showToast('Feedback sent! Thank you.');}
+            else{btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit';showToast('Failed to send. Please try again.');}
+        }catch(e){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit';showToast('Network error. Please try again.');}
     });
 }
 

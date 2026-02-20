@@ -84,6 +84,34 @@
 ### Migration
 - Run `supabase/add-photo-comments.sql` in Supabase SQL Editor
 
+## Per-Photo Likes/Dislikes (added 2026-02-19)
+
+### Overview
+- Like and dislike buttons in the lightbox bottom bar for every photo
+- Optimistic UI — instant visual feedback, reverts on error
+- Toggle: tap same reaction to remove it, tap opposite to switch
+
+### Database
+```sql
+-- photo_likes: id (UUID PK), photo_url (TEXT), user_id (FK profiles),
+--   reaction TEXT ('like' or 'dislike'), created_at
+-- UNIQUE(photo_url, user_id) — one reaction per user per photo
+```
+
+### Supabase Functions (js/supabase.js)
+- `sbTogglePhotoReaction(photoUrl, userId, reaction)` — insert/switch/remove
+- `sbGetPhotoReactionCounts(photoUrl)` — returns `{likes, dislikes}`
+- `sbGetUserPhotoReaction(photoUrl, userId)` — returns user's current reaction or null
+
+### UI
+- `.lightbox-bar` at bottom of `.lightbox-media` — gradient overlay for readability
+- Contains: counter, like button, dislike button, comment toggle (mobile)
+- Active like = primary color + filled icon, active dislike = red + filled icon
+- Counts update instantly on click
+
+### Migration
+- Run `supabase/add-photo-likes.sql` in Supabase SQL Editor
+
 ## Bug Fixes
 
 ### Tablet/iPad swipe jumping to wrong category (fixed 2026-02-19)

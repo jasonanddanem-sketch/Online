@@ -5865,9 +5865,33 @@ function showUndoToast(msg,onUndo){
 // ======================== SAVED PAGE ========================
 var _savedOpenFolder=null;
 var _currentSavedTab='all';
-function renderSavedPage(){
+var _savedPostCache={};
+async function renderSavedPage(){
     _savedOpenFolder=null;
     var container=document.getElementById('savedContent');
+    // Collect all saved post IDs and fetch any missing from Supabase
+    var allIds=[];
+    savedFolders.forEach(function(f){f.posts.forEach(function(pid){if(allIds.indexOf(pid)===-1)allIds.push(pid);});});
+    var missing=allIds.filter(function(pid){
+        return !_savedPostCache[pid]&&!feedPosts.find(function(fp){return String(fp.idx)===pid;});
+    });
+    if(missing.length){
+        try{
+            var rows=await sbGetPostsByIds(missing);
+            rows.forEach(function(p){
+                if(!p||!p.author) return;
+                _savedPostCache[String(p.id)]={
+                    idx:p.id,
+                    person:{id:p.author.id,name:p.author.display_name||p.author.username||'User',img:null,avatar_url:p.author.avatar_url},
+                    text:p.content||'',tags:[],badge:null,
+                    likes:p.like_count||0,comments:[],commentCount:0,
+                    shares:0,
+                    images:p.media_urls&&p.media_urls.length?p.media_urls:(p.image_url?[p.image_url]:null),
+                    created_at:p.created_at
+                };
+            });
+        }catch(e){console.warn('Failed to load saved posts:',e);}
+    }
     var h='';
     // Pill tabs — "All" + one per folder
     h+='<div class="search-tabs" id="savedPillTabs">';
@@ -5901,10 +5925,10 @@ function _renderSavedTabPosts(){
     }
     var h='';
     ids.forEach(function(pid){
-        var p=feedPosts.find(function(fp){return String(fp.idx)===pid;});
+        var p=feedPosts.find(function(fp){return String(fp.idx)===pid;})||_savedPostCache[pid];
         if(p) h+=renderSavedPostCard(p);
     });
-    return h||'<p style="color:var(--gray);padding:20px;">Posts not found in current feed.</p>';
+    return h||'<p style="color:var(--gray);padding:20px;">Saved posts could not be loaded.</p>';
 }
 function renderSavedPostCard(p){
     var i=p.idx,person=p.person,text=p.text,badge=p.badge,likes=p.likes,genComments=p.comments,shares=p.shares;
@@ -5913,10 +5937,13 @@ function renderSavedPostCard(p){
     var html='<div class="card feed-post saved-post-item" data-spid="'+i+'">';
     html+='<div class="post-header">';
     html+='<img src="'+(person.img||person.avatar_url||DEFAULT_AVATAR)+'" alt="'+person.name+'" class="post-avatar" style="object-fit:cover;">';
-    html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeAgo(i)+'</span></div>';
-    html+='<div class="post-badges"><span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span>';
-    if(folder) html+='<span class="badge badge-blue"><i class="fas fa-folder"></i> '+folder.name+'</span>';
-    html+='</div></div>';
+    var timeStr=p.created_at?timeAgoReal(p.created_at):timeAgo(typeof i==='number'?i:0);
+    html+='<div class="post-user-info"><div class="post-user-top"><h4 class="post-username">'+person.name+'</h4><span class="post-time">'+timeStr+'</span></div>';
+    var badgesHtml='';
+    if(badge) badgesHtml+='<span class="badge '+badge.cls+'"><i class="fas '+badge.icon+'"></i> '+badge.text+'</span>';
+    if(folder) badgesHtml+='<span class="badge badge-blue"><i class="fas fa-folder"></i> '+folder.name+'</span>';
+    if(badgesHtml) html+='<div class="post-badges">'+badgesHtml+'</div>';
+    html+='</div>';
     html+='<button class="btn btn-outline saved-unsave-btn" data-pid="'+i+'" style="padding:4px 12px;font-size:12px;margin-left:auto;"><i class="fas fa-bookmark-slash"></i> Unsave</button>';
     html+='</div>';
     html+='<div class="post-description"><p>'+short+(hasMore?'<span class="view-more-text hidden">'+rest+'</span>':'')+'</p>'+(hasMore?'<button class="view-more-btn">view more</button>':'')+'</div>';

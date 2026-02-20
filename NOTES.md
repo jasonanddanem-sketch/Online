@@ -167,6 +167,10 @@
 - **Owners:** editable inputs with add/delete/save (same as before, just in the modal)
 - Members preview card remains in the sidebar below the rules button
 
+### Group skins bleeding between groups (fixed 2026-02-19)
+- **Cause:** `applySkin()` only removed basic skin body classes, not guild skin classes — they accumulated. Also no explicit reset of body-level skin state (CSS vars, theme vars) between groups.
+- **Fix:** `applyGroupSkin()` now does a complete body-level reset before applying each group's skin: removes ALL skin/guild/premium classes from body, resets CSS variables to defaults, resets theme vars. Also added guild skin cleanup to `applySkin()`.
+
 ## Album System (added 2026-02-19)
 
 ### Schema

@@ -6019,26 +6019,175 @@ updateFollowCounts();
 // ======================== LIGHTBOX ========================
 (function(){
     var overlay=document.createElement('div');overlay.className='lightbox-overlay';
-    overlay.innerHTML='<button class="lightbox-close"><i class="fas fa-times"></i></button><button class="lightbox-arrow lightbox-prev"><i class="fas fa-chevron-left"></i></button><img src="" alt=""><button class="lightbox-arrow lightbox-next"><i class="fas fa-chevron-right"></i></button><div class="lightbox-counter"></div>';
+    overlay.innerHTML=
+        '<button class="lightbox-close"><i class="fas fa-times"></i></button>'+
+        '<div class="lightbox-layout">'+
+            '<div class="lightbox-media">'+
+                '<button class="lightbox-arrow lightbox-prev"><i class="fas fa-chevron-left"></i></button>'+
+                '<img src="" alt="">'+
+                '<button class="lightbox-arrow lightbox-next"><i class="fas fa-chevron-right"></i></button>'+
+                '<div class="lightbox-counter"></div>'+
+                '<button class="lightbox-comment-toggle"><i class="far fa-comment"></i><span>0</span></button>'+
+            '</div>'+
+            '<div class="lightbox-comments">'+
+                '<div class="lb-comments-header"><h4>Comments</h4><button class="lb-comments-close"><i class="fas fa-times"></i></button></div>'+
+                '<div class="lb-comments-scroll"><div class="lb-comments-list"></div></div>'+
+                '<div class="lb-comments-input">'+
+                    '<div class="lb-reply-indicator" style="display:none;">Replying to <span class="lb-reply-name"></span> <button class="lb-cancel-reply" style="background:none;color:#999;font-size:12px;margin-left:8px;cursor:pointer;">Cancel</button></div>'+
+                    '<div style="display:flex;gap:8px;"><input type="text" class="post-input lb-comment-input" placeholder="Write a comment..." style="flex:1;"><button class="btn btn-primary lb-post-btn">Post</button></div>'+
+                '</div>'+
+            '</div>'+
+        '</div>';
     document.body.appendChild(overlay);
-    var img=overlay.querySelector('img'),prev=overlay.querySelector('.lightbox-prev'),next=overlay.querySelector('.lightbox-next'),counter=overlay.querySelector('.lightbox-counter');
-    var srcs=[],idx=0,tx=0,dragging=false;
 
-    function open(list,i){srcs=list;idx=i;show();}
+    var layout=overlay.querySelector('.lightbox-layout');
+    var media=overlay.querySelector('.lightbox-media');
+    var img=overlay.querySelector('.lightbox-media img');
+    var prev=overlay.querySelector('.lightbox-prev');
+    var next=overlay.querySelector('.lightbox-next');
+    var counter=overlay.querySelector('.lightbox-counter');
+    var commentToggle=overlay.querySelector('.lightbox-comment-toggle');
+    var commentToggleCount=commentToggle.querySelector('span');
+    var commentsPanel=overlay.querySelector('.lightbox-comments');
+    var commentsList=overlay.querySelector('.lb-comments-list');
+    var commentInput=overlay.querySelector('.lb-comment-input');
+    var postBtn=overlay.querySelector('.lb-post-btn');
+    var replyIndicator=overlay.querySelector('.lb-reply-indicator');
+    var replyNameEl=overlay.querySelector('.lb-reply-name');
+    var cancelReply=overlay.querySelector('.lb-cancel-reply');
+    var commentsClose=overlay.querySelector('.lb-comments-close');
+
+    var srcs=[],idx=0,tx=0,dragging=false,currentPostId=null,replyTarget=null;
+
+    function open(list,i,postId){srcs=list;idx=i;currentPostId=postId||null;show();}
     window._openLightbox=open;
-    function show(){img.src=srcs[idx];counter.textContent=(idx+1)+' / '+srcs.length;prev.style.display=srcs.length>1?'':'none';next.style.display=srcs.length>1?'':'none';overlay.classList.add('show');document.body.style.overflow='hidden';}
-    function close(){overlay.classList.remove('show');document.body.style.overflow='';}
-    function go(d){idx=(idx+d+srcs.length)%srcs.length;show();}
 
-    prev.addEventListener('click',function(){go(-1);});
-    next.addEventListener('click',function(){go(1);});
+    function show(){
+        img.src=srcs[idx];
+        counter.textContent=(idx+1)+' / '+srcs.length;
+        prev.style.display=srcs.length>1?'':'none';
+        next.style.display=srcs.length>1?'':'none';
+        overlay.classList.add('show');
+        document.body.style.overflow='hidden';
+        resetReply();
+        commentInput.value='';
+        loadPhotoComments();
+    }
+    function close(){overlay.classList.remove('show');document.body.style.overflow='';commentsPanel.classList.remove('lb-open');}
+    function go(d){idx=(idx+d+srcs.length)%srcs.length;show();}
+    function resetReply(){replyTarget=null;replyIndicator.style.display='none';commentInput.placeholder='Write a comment...';}
+
+    // Load comments for current photo
+    async function loadPhotoComments(){
+        var url=srcs[idx];
+        commentsList.innerHTML='<p style="color:var(--gray,#777);text-align:center;padding:20px;">Loading...</p>';
+        commentToggleCount.textContent='';
+        try{
+            var comments=await sbGetPhotoComments(url,'newest');
+            commentToggleCount.textContent=comments.length||'';
+            if(!comments.length){
+                commentsList.innerHTML='<p style="color:var(--gray,#777);text-align:center;padding:20px;">No comments yet. Be the first!</p>';
+                return;
+            }
+            var topLevel=comments.filter(function(c){return !c.parent_comment_id;});
+            var replies={};
+            comments.filter(function(c){return c.parent_comment_id;}).forEach(function(c){
+                if(!replies[c.parent_comment_id])replies[c.parent_comment_id]=[];
+                replies[c.parent_comment_id].push(c);
+            });
+            var nameById={};
+            comments.forEach(function(c){nameById[c.id]=c.author?(c.author.display_name||c.author.username):'User';});
+            var html='';
+            topLevel.forEach(function(c){
+                var name=c.author?(c.author.display_name||c.author.username):'User';
+                var avatar=c.author?c.author.avatar_url:null;
+                html+=buildLbComment(c.id,name,avatar,c.content,false,c.author_id);
+                (replies[c.id]||[]).forEach(function(r){
+                    var rName=r.author?(r.author.display_name||r.author.username):'User';
+                    var rAvatar=r.author?r.author.avatar_url:null;
+                    var replyTo=nameById[r.parent_comment_id]||name;
+                    html+=buildLbComment(r.id,rName,rAvatar,r.content,true,r.author_id,replyTo);
+                });
+            });
+            commentsList.innerHTML=html;
+            bindLbCommentActions();
+        }catch(e){
+            console.error('Photo comments error:',e);
+            commentsList.innerHTML='<p style="color:var(--gray,#777);text-align:center;padding:20px;">Could not load comments.</p>';
+        }
+    }
+
+    function buildLbComment(cid,name,avatar,text,isReply,authorId,replyToName){
+        var src=avatar||DEFAULT_AVATAR;
+        var sz=isReply?26:30;
+        var isOwn=currentUser&&authorId&&authorId===currentUser.id;
+        var tag=isReply&&replyToName?'<span style="color:var(--primary);font-size:11px;margin-right:3px;"><i class="fas fa-reply" style="transform:scaleX(-1);font-size:9px;margin-right:2px;"></i>@'+replyToName+'</span>':'';
+        var h='<div class="lb-comment'+(isReply?' lb-comment-reply':'')+'" data-cid="'+cid+'">';
+        h+='<img src="'+src+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;flex-shrink:0;object-fit:cover;">';
+        h+='<div style="flex:1;min-width:0;"><strong style="font-size:12px;">'+name+'</strong>';
+        h+='<p style="font-size:12px;color:var(--gray,#aaa);margin-top:2px;word-break:break-word;">'+tag+text+'</p>';
+        h+='<div style="display:flex;gap:10px;margin-top:4px;">';
+        h+='<button class="lb-reply-btn" data-cid="'+cid+'" data-name="'+name+'" style="background:none;font-size:11px;color:var(--gray,#999);cursor:pointer;"><i class="far fa-comment"></i> Reply</button>';
+        if(isOwn) h+='<button class="lb-del-btn" data-cid="'+cid+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>';
+        h+='</div></div></div>';
+        return h;
+    }
+
+    function bindLbCommentActions(){
+        commentsPanel.querySelectorAll('.lb-reply-btn').forEach(function(btn){
+            btn.addEventListener('click',function(){
+                replyTarget=btn.dataset.cid;
+                replyNameEl.textContent=btn.dataset.name;
+                replyIndicator.style.display='block';
+                commentInput.placeholder='Reply to '+btn.dataset.name+'...';
+                commentInput.focus();
+            });
+        });
+        commentsPanel.querySelectorAll('.lb-del-btn').forEach(function(btn){
+            btn.addEventListener('click',async function(){
+                if(!confirm('Delete this comment?'))return;
+                try{await sbDeletePhotoComment(btn.dataset.cid);loadPhotoComments();}
+                catch(e){console.error('Delete photo comment error:',e);}
+            });
+        });
+    }
+
+    // Post comment
+    postBtn.addEventListener('click',async function(){
+        var text=commentInput.value.trim();if(!text||!currentUser)return;
+        try{
+            var parentId=replyTarget&&/^[0-9a-f]{8}-/.test(replyTarget)?replyTarget:null;
+            await sbCreatePhotoComment(srcs[idx],currentPostId,currentUser.id,text,parentId);
+            commentInput.value='';resetReply();
+            loadPhotoComments();
+        }catch(e){console.error('Post photo comment error:',e);showToast('Comment failed');}
+    });
+    commentInput.addEventListener('keypress',function(e){if(e.key==='Enter')postBtn.click();});
+    cancelReply.addEventListener('click',resetReply);
+
+    // Mobile: toggle comment panel
+    commentToggle.addEventListener('click',function(e){
+        e.stopPropagation();
+        commentsPanel.classList.toggle('lb-open');
+    });
+    commentsClose.addEventListener('click',function(e){
+        e.stopPropagation();
+        commentsPanel.classList.remove('lb-open');
+    });
+
+    prev.addEventListener('click',function(e){e.stopPropagation();go(-1);});
+    next.addEventListener('click',function(e){e.stopPropagation();go(1);});
     overlay.querySelector('.lightbox-close').addEventListener('click',close);
     overlay.addEventListener('click',function(e){if(e.target===overlay)close();});
-    document.addEventListener('keydown',function(e){if(!overlay.classList.contains('show'))return;if(e.key==='Escape')close();if(e.key==='ArrowLeft')go(-1);if(e.key==='ArrowRight')go(1);});
+    document.addEventListener('keydown',function(e){if(!overlay.classList.contains('show'))return;if(e.key==='Escape'){if(commentsPanel.classList.contains('lb-open')){commentsPanel.classList.remove('lb-open');}else{close();}}if(e.key==='ArrowLeft')go(-1);if(e.key==='ArrowRight')go(1);});
 
-    // Touch swipe
-    overlay.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;dragging=true;},{passive:true});
-    overlay.addEventListener('touchend',function(e){if(!dragging)return;dragging=false;var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx>0?go(-1):go(1);}});
+    // Touch swipe (only on media area)
+    media.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;dragging=true;},{passive:true});
+    media.addEventListener('touchend',function(e){if(!dragging)return;dragging=false;var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx>0?go(-1):go(1);}});
+    // Prevent close/swipe when interacting with comments
+    commentsPanel.addEventListener('click',function(e){e.stopPropagation();});
+    commentsPanel.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:true});
+    commentsPanel.addEventListener('touchend',function(e){e.stopPropagation();});
 
     // Collect image srcs from a container
     function collect(container){return Array.from(container.querySelectorAll('img')).map(function(i){return i.src;}).filter(Boolean);}
@@ -6058,14 +6207,22 @@ updateFollowCounts();
                     var thumbImg=pmThumb.querySelector('img');
                     var startIdx=thumbImg?list.indexOf(thumbImg.src):0;
                     if(startIdx<0)startIdx=0;
-                    if(list.length){open(list,startIdx);e.stopPropagation();return;}
+                    var feedPost=grid.closest('.feed-post');
+                    var pid=feedPost?(feedPost.querySelector('.like-btn[data-post-id]')||{}).getAttribute&&feedPost.querySelector('.like-btn[data-post-id]').getAttribute('data-post-id'):null;
+                    if(list.length){open(list,startIdx,pid);e.stopPropagation();return;}
                 }
             }
         }
         if(t.tagName!=='IMG')return;
         // Post media grid
         var grid=t.closest('.post-media-grid');
-        if(grid){var pgid=grid.dataset.pgid;var allMedia=pgid&&window['_media_'+pgid];var list;if(allMedia){list=allMedia.filter(function(m){return m.type==='image';}).map(function(m){return m.src;});}else{list=collect(grid);}if(list.length){open(list,list.indexOf(t.src));e.stopPropagation();return;}}
+        if(grid){
+            var pgid=grid.dataset.pgid;var allMedia=pgid&&window['_media_'+pgid];var list;
+            if(allMedia){list=allMedia.filter(function(m){return m.type==='image';}).map(function(m){return m.src;});}else{list=collect(grid);}
+            var feedPost=grid.closest('.feed-post');
+            var pid=feedPost?(feedPost.querySelector('.like-btn[data-post-id]')||{}).getAttribute&&feedPost.querySelector('.like-btn[data-post-id]').getAttribute('data-post-id'):null;
+            if(list.length){open(list,list.indexOf(t.src),pid);e.stopPropagation();return;}
+        }
         // Photo album grid
         var album=t.closest('.photo-album-grid');
         if(album){var list=collect(album);if(list.length){open(list,list.indexOf(t.src));e.stopPropagation();return;}}

@@ -872,7 +872,35 @@ async function sbRemovePhotoFromAlbum(albumPhotoId) {
   if (error) throw error;
 }
 
-// ---- 16. UTILITY: timeAgo for real timestamps --------------------------------
+// ---- 16. PHOTO COMMENTS -------------------------------------------------------
+
+async function sbGetPhotoComments(photoUrl, sortBy = 'newest') {
+  const { data, error } = await sb.from('photo_comments')
+    .select('*, author:profiles(id, username, display_name, avatar_url)')
+    .eq('photo_url', photoUrl)
+    .order('created_at', { ascending: sortBy === 'oldest' });
+  if (error) throw error;
+  return data || [];
+}
+
+async function sbCreatePhotoComment(photoUrl, postId, authorId, content, parentCommentId = null) {
+  const row = { photo_url: photoUrl, author_id: authorId, content };
+  if (postId) row.post_id = postId;
+  if (parentCommentId) row.parent_comment_id = parentCommentId;
+  const { data, error } = await sb.from('photo_comments')
+    .insert(row)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function sbDeletePhotoComment(commentId) {
+  const { error } = await sb.from('photo_comments').delete().eq('id', commentId);
+  if (error) throw error;
+}
+
+// ---- 17. UTILITY: timeAgo for real timestamps --------------------------------
 
 function timeAgoReal(dateStr) {
   const now = Date.now();

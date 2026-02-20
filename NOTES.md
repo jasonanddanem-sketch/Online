@@ -112,6 +112,13 @@
 ### Migration
 - Run `supabase/add-photo-likes.sql` in Supabase SQL Editor
 
+## Coin System Fix (2026-02-19)
+- **No coins for interacting with your own content**
+- `isOwnPost(postId)` helper checks if post belongs to current user via `feedPosts`
+- Covers: post likes/dislikes (feed, profile view, groups), comment likes/dislikes (modal + inline), commenting/replying on own posts
+- `data-aid` attribute added to comment like/dislike buttons for author-level checking
+- You can still like/dislike your own stuff — it just won't award coins
+
 ## Bug Fixes
 
 ### Tablet/iPad swipe jumping to wrong category (fixed 2026-02-19)

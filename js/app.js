@@ -5337,7 +5337,7 @@ function showPhotoMenu(photoSrc,albumPhotoId,anchorEl){
         menu.remove();
         sbRemovePhotoFromAlbum(albumPhotoId).then(function(){
             showToast('Photo removed from album');
-            sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);var atc=document.getElementById('albumTabContent');if(atc){atc.innerHTML=_renderAlbumTabPhotos(a,true);_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();}});
+            sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;renderPvPhotoTab(true);var atc=document.getElementById('albumTabContent');if(atc){atc.innerHTML=_renderAlbumTabPhotos(a,true);_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();_bindAlbumUpload();}});
         }).catch(function(){showToast('Error removing photo');});
     });
     // Close on click outside
@@ -5371,7 +5371,7 @@ function showAlbumSelectorModal(photoSrc){
             closeModal();
             sbAddPhotoToAlbum(aid,photoSrc).then(function(){
                 showToast('Photo added to album');
-                sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;var atc=document.getElementById('albumTabContent');if(atc){atc.innerHTML=_renderAlbumTabPhotos(a,true);_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();}});
+                sbGetAlbums(_pvUserId||currentUser.id).then(function(a){_pvAlbums=a;var atc=document.getElementById('albumTabContent');if(atc){atc.innerHTML=_renderAlbumTabPhotos(a,true);_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();_bindAlbumUpload();}});
             }).catch(function(err){
                 if(err.message&&err.message.indexOf('duplicate')!==-1) showToast('Photo already in this album');
                 else showToast('Error adding photo');
@@ -5522,6 +5522,7 @@ async function renderPhotoAlbum(){
     if(pillTabs) _bindDragScroll(pillTabs);
     _bindAlbumPhotoScroll();
     _bindPhotoAlbumMenus();
+    _bindAlbumUpload();
     // Create album
     var createBtn=document.getElementById('createAlbumBtn');
     if(createBtn) createBtn.addEventListener('click',function(){showCreateAlbumModal();});
@@ -5532,7 +5533,7 @@ async function renderPhotoAlbum(){
             $$('#albumPillTabs .search-tab').forEach(function(t){t.classList.remove('active');});
             tab.classList.add('active');currentAlbumTab=tab.dataset.atab;
             var c=document.getElementById('albumTabContent');
-            if(c){c.style.opacity='0';c.style.transform='translateX(10px)';setTimeout(function(){c.innerHTML=_renderAlbumTabPhotos(albums,true);c.style.opacity='1';c.style.transform='translateX(0)';_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();},200);}
+            if(c){c.style.opacity='0';c.style.transform='translateX(10px)';setTimeout(function(){c.innerHTML=_renderAlbumTabPhotos(albums,true);c.style.opacity='1';c.style.transform='translateX(0)';_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();_bindAlbumUpload();},200);}
         });
     });
     // Delete album (X on pill)
@@ -5556,11 +5557,12 @@ function _renderAlbumTabPhotos(albums,inner){
     var active=albums.find(function(a){return a.id===currentAlbumTab;});
     var photos=(active&&active.album_photos)||[];
     var h=inner?'':'<div id="albumTabContent">';
+    h+='<div style="margin-bottom:10px;"><button class="btn btn-outline" id="albumUploadBtn" style="padding:5px 14px;font-size:12px;"><i class="fas fa-upload"></i> Upload Photos</button><input type="file" id="albumFileInput" accept="image/*" multiple style="display:none;"></div>';
     if(photos.length){
         h+='<div class="shop-scroll-row album-photo-scroll" id="albumPhotoScroll">';
         photos.forEach(function(p){h+='<div class="photo-wrap"><img src="'+p.photo_url+'"><button class="photo-menu-btn" data-apid="'+p.id+'" data-psrc="'+p.photo_url+'"><i class="fas fa-ellipsis-h"></i></button></div>';});
         h+='</div>';
-    } else h+='<p class="photo-album-empty">No photos in this album.</p>';
+    } else h+='<p class="photo-album-empty">No photos in this album yet. Upload some!</p>';
     if(!inner) h+='</div>';
     return h;
 }
@@ -5569,6 +5571,28 @@ function _bindAlbumPhotoScroll(){
     if(!el) return;
     _bindDragScroll(el);
     el.addEventListener('wheel',function(e){if(e.deltaY&&!e.deltaX){e.preventDefault();el.scrollLeft+=e.deltaY;}},{passive:false});
+}
+function _bindAlbumUpload(){
+    var btn=document.getElementById('albumUploadBtn');
+    var inp=document.getElementById('albumFileInput');
+    if(!btn||!inp) return;
+    btn.addEventListener('click',function(){inp.click();});
+    inp.addEventListener('change',async function(){
+        if(!inp.files.length||!currentAlbumTab||!currentUser) return;
+        btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        var files=Array.from(inp.files);
+        for(var i=0;i<files.length;i++){
+            try{
+                var url=await sbUploadPostImage(currentUser.id,files[i]);
+                await sbAddPhotoToAlbum(currentAlbumTab,url);
+            }catch(e){if(e.message&&e.message.indexOf('duplicate')!==-1) showToast('Duplicate skipped');else console.error('Upload error:',e);}
+        }
+        inp.value='';
+        _pvAlbums=await sbGetAlbums(currentUser.id);
+        var atc=document.getElementById('albumTabContent');
+        if(atc){atc.innerHTML=_renderAlbumTabPhotos(_pvAlbums,true);_bindAlbumPhotoScroll();_bindPhotoAlbumMenus();_bindAlbumUpload();}
+        showToast(files.length>1?files.length+' photos uploaded':'Photo uploaded');
+    });
 }
 function _bindPhotoAlbumMenus(){
     $$('#photoAlbumContent .photo-menu-btn').forEach(function(btn){

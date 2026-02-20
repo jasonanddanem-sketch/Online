@@ -4540,7 +4540,18 @@ function applyGroupSkin(groupId){
     // Fully disable premium bg in group view so transparency doesn't bleed into nav/cards
     premiumBgImage=null;premiumBgOverlay=0;premiumBgDarkness=0;premiumCardTransparency=0.1;
     updatePremiumBg();
-    // Clear group-specific classes
+    // Reset ALL body-level skin state to prevent bleeding between groups
+    skins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
+    guildSkins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
+    premiumSkins.forEach(function(s){document.body.classList.remove('premium-'+s.id);});
+    document.body.classList.remove('premium-dark');
+    // Reset CSS vars to default before applying group's skin
+    var root=document.documentElement;
+    root.style.setProperty('--primary','#8b5cf6');
+    root.style.setProperty('--primary-hover','#7c3aed');
+    root.style.setProperty('--nav-bg','#0f172a');
+    setThemeVars(false);
+    // Clear group-specific page classes
     skins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});
     guildSkins.forEach(function(s){gvPage.classList.remove('gskin-'+s.id);});
     premiumSkins.forEach(function(s){gvPage.classList.remove('gpremium-'+s.id);});
@@ -4611,6 +4622,7 @@ function applySkin(skinId,silent){
     var card=$('#profileCard');
     var root=document.documentElement;
     skins.forEach(function(s){card.classList.remove('skin-'+s.id);document.body.classList.remove('skin-'+s.id);});
+    guildSkins.forEach(function(s){document.body.classList.remove('skin-'+s.id);});
     premiumSkins.forEach(function(s){document.body.classList.remove('premium-'+s.id);});
     document.body.classList.remove('premium-dark');
     var avatars=document.querySelectorAll('#profileAvatarImg, .pv-profile-card .profile-avatar, .nav-avatar');

@@ -5479,100 +5479,95 @@ function renderPhotosCard(){
     all.slice(0,6).forEach(function(p){html+='<img src="'+p.src+'">';});
     el.innerHTML=html;
 }
+var currentAlbumTab=null;
 async function renderPhotoAlbum(){
-    // Ensure albums are loaded
-    if(currentUser){
-        try{_pvAlbums=await sbGetAlbums(currentUser.id);}catch(e){}
-    }
+    if(currentUser){try{_pvAlbums=await sbGetAlbums(currentUser.id);}catch(e){}}
     var albums=_pvAlbums||[];
     var html='';
-    // Albums as horizontal scroll row (like skin shop)
-    html+='<div class="photo-album-section"><h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-folder"></i> My Albums';
-    html+='<button class="btn btn-primary" id="createAlbumBtn" style="padding:4px 14px;font-size:12px;margin-left:auto;"><i class="fas fa-plus"></i> Create</button>';
-    if(albums.length>1) html+='<button class="btn btn-outline" id="deleteAllAlbumsBtn" style="padding:4px 14px;font-size:12px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i> Delete All</button>';
-    html+='</h3>';
-    if(albums.length){
-        html+='<div class="shop-scroll-row" id="albumScrollRow" style="padding:8px 0 16px;">';
-        albums.forEach(function(album){
-            var photos=album.album_photos||[];
-            var cover=photos.length?photos[0].photo_url:'';
-            html+='<div class="pv-album-card" data-album-id="'+album.id+'">';
-            if(cover) html+='<div class="pv-album-cover"><img src="'+cover+'"></div>';
-            else html+='<div class="pv-album-cover pv-album-placeholder"><i class="fas fa-image"></i></div>';
-            html+='<h5>'+album.title+'</h5>';
-            html+='<p>'+photos.length+' photo'+(photos.length!==1?'s':'')+'</p>';
-            html+='<button class="album-delete-btn" data-album-id="'+album.id+'" title="Delete album"><i class="fas fa-trash"></i></button>';
-            html+='</div>';
-        });
-        html+='</div>';
-    } else {
-        html+='<p class="photo-album-empty">No albums yet. Create one!</p>';
-    }
-    html+='</div>';
-    // Profile Pictures
+    // 1. Profile Pictures
     html+='<div class="photo-album-section"><h3><i class="fas fa-user-circle"></i> Profile Pictures</h3>';
     if(state.photos.profile.length){html+='<div class="photo-album-grid">';state.photos.profile.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
     else html+='<p class="photo-album-empty">No profile pictures yet.</p>';
     html+='</div>';
-    // Cover Photos
+    // 2. Cover Photos
     html+='<div class="photo-album-section"><h3><i class="fas fa-panorama"></i> Cover Photos</h3>';
     if(state.photos.cover.length){html+='<div class="photo-album-grid">';state.photos.cover.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
     else html+='<p class="photo-album-empty">No cover photos yet.</p>';
     html+='</div>';
-    // Post Photos
+    // 3. Created Albums — pill tab system (mirrors Skin Shop tabs)
+    html+='<div class="photo-album-section"><h3 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-folder"></i> Created Albums';
+    html+='<button class="btn btn-primary" id="createAlbumBtn" style="padding:4px 14px;font-size:12px;margin-left:auto;"><i class="fas fa-plus"></i> Create</button>';
+    if(albums.length>1) html+='<button class="btn btn-outline" id="deleteAllAlbumsBtn" style="padding:4px 14px;font-size:12px;color:#e74c3c;border-color:#e74c3c;"><i class="fas fa-trash"></i> Delete All</button>';
+    html+='</h3>';
+    if(albums.length){
+        if(!currentAlbumTab||!albums.find(function(a){return a.id===currentAlbumTab;})) currentAlbumTab=albums[0].id;
+        html+='<div class="search-tabs" id="albumPillTabs">';
+        albums.forEach(function(a){
+            html+='<button class="search-tab'+(a.id===currentAlbumTab?' active':'')+'" data-atab="'+a.id+'">'+a.title+' <span class="album-del-x" data-album-id="'+a.id+'" title="Delete album"><i class="fas fa-times-circle"></i></span></button>';
+        });
+        html+='</div>';
+        html+=_renderAlbumTabPhotos(albums);
+    } else {
+        html+='<p class="photo-album-empty">No albums created yet.</p>';
+    }
+    html+='</div>';
+    // 4. Post Photos
     html+='<div class="photo-album-section"><h3><i class="fas fa-newspaper"></i> Post Photos</h3>';
     if(state.photos.post.length){html+='<div class="photo-album-grid">';state.photos.post.forEach(function(p){html+='<img src="'+p.src+'">';});html+='</div>';}
     else html+='<p class="photo-album-empty">No post photos yet.</p>';
     html+='</div>';
     $('#photoAlbumContent').innerHTML=html;
-    // Init scroll row
-    var scrollRow=document.getElementById('albumScrollRow');
-    if(scrollRow) _bindDragScroll(scrollRow);
+    // Drag-scroll on pill tabs
+    var pillTabs=document.getElementById('albumPillTabs');
+    if(pillTabs) _bindDragScroll(pillTabs);
+    _bindAlbumPhotoScroll();
     // Create album
-    $('#createAlbumBtn').addEventListener('click',function(){showCreateAlbumModal();});
-    // Click album card to open
-    $$('#photoAlbumContent .pv-album-card').forEach(function(card){
-        var _moved=false;
-        card.addEventListener('mousedown',function(){_moved=false;});
-        card.addEventListener('mousemove',function(){_moved=true;});
-        card.addEventListener('mouseup',function(e){
-            if(_moved)return;
-            if(e.target.closest('.album-delete-btn'))return;
-            var aid=card.dataset.albumId;
-            var album=albums.find(function(a){return a.id===aid;});
-            if(album) showAlbumViewModal(album,true);
-        });
-        card.addEventListener('touchend',function(e){
-            if(e.target.closest('.album-delete-btn'))return;
-            var aid=card.dataset.albumId;
-            var album=albums.find(function(a){return a.id===aid;});
-            if(album) showAlbumViewModal(album,true);
+    var createBtn=document.getElementById('createAlbumBtn');
+    if(createBtn) createBtn.addEventListener('click',function(){showCreateAlbumModal();});
+    // Pill tab clicks — switch album content with fade transition
+    $$('#albumPillTabs .search-tab').forEach(function(tab){
+        tab.addEventListener('click',function(e){
+            if(e.target.closest('.album-del-x')) return;
+            $$('#albumPillTabs .search-tab').forEach(function(t){t.classList.remove('active');});
+            tab.classList.add('active');currentAlbumTab=tab.dataset.atab;
+            var c=document.getElementById('albumTabContent');
+            if(c){c.style.opacity='0';c.style.transform='translateX(10px)';setTimeout(function(){c.innerHTML=_renderAlbumTabPhotos(albums,true);c.style.opacity='1';c.style.transform='translateX(0)';_bindAlbumPhotoScroll();},200);}
         });
     });
-    // Delete individual album
-    $$('#photoAlbumContent .album-delete-btn').forEach(function(btn){
-        btn.addEventListener('mouseup',function(e){
-            e.stopPropagation();
-            var aid=btn.dataset.albumId;
+    // Delete album (X on pill)
+    $$('#albumPillTabs .album-del-x').forEach(function(x){
+        x.addEventListener('click',function(e){
+            e.stopPropagation();var aid=x.dataset.albumId;
             var album=albums.find(function(a){return a.id===aid;});
-            if(!confirm('Delete album "'+(album?album.title:'')+'"?'))return;
-            sbDeleteAlbum(aid).then(function(){showToast('Album deleted');renderPhotoAlbum();}).catch(function(){showToast('Error deleting album');});
-        });
-        btn.addEventListener('touchend',function(e){
-            e.stopPropagation();e.preventDefault();
-            btn.dispatchEvent(new MouseEvent('mouseup',{bubbles:false}));
+            if(!confirm('Delete album "'+(album?album.title:'')+'"?')) return;
+            sbDeleteAlbum(aid).then(function(){showToast('Album deleted');if(currentAlbumTab===aid) currentAlbumTab=null;renderPhotoAlbum();}).catch(function(){showToast('Error deleting album');});
         });
     });
     // Delete all albums
     var delAllBtn=document.getElementById('deleteAllAlbumsBtn');
     if(delAllBtn) delAllBtn.addEventListener('click',async function(){
-        if(!confirm('Delete ALL '+albums.length+' albums? This cannot be undone.'))return;
-        for(var i=0;i<albums.length;i++){
-            try{await sbDeleteAlbum(albums[i].id);}catch(e){}
-        }
-        showToast('All albums deleted');
-        _pvAlbums=[];renderPhotoAlbum();
+        if(!confirm('Delete ALL '+albums.length+' albums? This cannot be undone.')) return;
+        for(var i=0;i<albums.length;i++){try{await sbDeleteAlbum(albums[i].id);}catch(e){}}
+        showToast('All albums deleted');_pvAlbums=[];currentAlbumTab=null;renderPhotoAlbum();
     });
+}
+function _renderAlbumTabPhotos(albums,inner){
+    var active=albums.find(function(a){return a.id===currentAlbumTab;});
+    var photos=(active&&active.album_photos)||[];
+    var h=inner?'':'<div id="albumTabContent">';
+    if(photos.length){
+        h+='<div class="shop-scroll-row album-photo-scroll" id="albumPhotoScroll">';
+        photos.forEach(function(p){h+='<img src="'+p.photo_url+'">';});
+        h+='</div>';
+    } else h+='<p class="photo-album-empty">No photos in this album.</p>';
+    if(!inner) h+='</div>';
+    return h;
+}
+function _bindAlbumPhotoScroll(){
+    var el=document.getElementById('albumPhotoScroll');
+    if(!el) return;
+    _bindDragScroll(el);
+    el.addEventListener('wheel',function(e){if(e.deltaY&&!e.deltaX){e.preventDefault();el.scrollLeft+=e.deltaY;}},{passive:false});
 }
 $('#viewAllPhotos').addEventListener('click',function(e){e.preventDefault();renderPhotoAlbum();navigateTo('photos');});
 $$('.photos-back-link').forEach(function(l){l.addEventListener('click',function(e){e.preventDefault();navigateTo(_navPrev&&_navPrev!=='photos'?_navPrev:'home');});});

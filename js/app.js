@@ -6165,12 +6165,42 @@ updateFollowCounts();
         });
     }
 
+    // Helper: find post owner from currentPostId
+    function getPostOwner(){
+        if(!currentPostId)return null;
+        var fp=feedPosts.find(function(x){return x.idx===currentPostId;});
+        return fp&&fp.person?fp.person:null;
+    }
+
     // Post comment
     postBtn.addEventListener('click',async function(){
         var text=commentInput.value.trim();if(!text||!currentUser)return;
         try{
             var parentId=replyTarget&&/^[0-9a-f]{8}-/.test(replyTarget)?replyTarget:null;
             await sbCreatePhotoComment(srcs[idx],currentPostId,currentUser.id,text,parentId);
+            var myName=currentUser.display_name||currentUser.username||'Someone';
+            // Notify post owner about photo comment
+            var owner=getPostOwner();
+            if(owner&&owner.id&&owner.id!==currentUser.id){
+                sbCreateNotification(owner.id,'comment',myName+' commented on your photo',text,{originalType:'comment',post_id:currentPostId}).catch(function(e){console.error('Photo comment notif error:',e);});
+            }
+            // Notify parent comment author about reply
+            if(parentId){
+                var parentEl=commentsPanel.querySelector('[data-cid="'+parentId+'"]');
+                var parentAuthorName=parentEl?parentEl.querySelector('strong'):null;
+                // Look up parent comment author from the loaded comments
+                var replyBtn=commentsPanel.querySelector('.lb-reply-btn[data-cid="'+parentId+'"]');
+                if(replyBtn){
+                    // We stored author info in the comment element, but we need the author ID
+                    // Fetch parent comment to get author_id
+                    sbGetPhotoComments(srcs[idx],'newest').then(function(comments){
+                        var parent=comments.find(function(c){return c.id===parentId;});
+                        if(parent&&parent.author_id&&parent.author_id!==currentUser.id){
+                            sbCreateNotification(parent.author_id,'reply',myName+' replied to your comment',text,{originalType:'reply',post_id:currentPostId}).catch(function(e){console.error('Reply notif error:',e);});
+                        }
+                    }).catch(function(){});
+                }
+            }
             commentInput.value='';resetReply();
             loadPhotoComments();
         }catch(e){console.error('Post photo comment error:',e);showToast('Comment failed');}
@@ -6216,9 +6246,18 @@ updateFollowCounts();
     likeBtn.addEventListener('click',async function(e){
         e.stopPropagation();if(!currentUser)return;
         var old=myReaction;
+        var isNew=old!=='like';
         updateReactionUI(old==='like'?null:'like',old);
-        try{await sbTogglePhotoReaction(srcs[idx],currentUser.id,'like');}
-        catch(e){console.error('Like error:',e);updateReactionUI(old,myReaction);}
+        try{
+            await sbTogglePhotoReaction(srcs[idx],currentUser.id,'like');
+            if(isNew){
+                var owner=getPostOwner();
+                var myName=currentUser.display_name||currentUser.username||'Someone';
+                if(owner&&owner.id&&owner.id!==currentUser.id){
+                    sbCreateNotification(owner.id,'like',myName+' liked your photo','',{originalType:'like',post_id:currentPostId}).catch(function(er){console.error('Photo like notif error:',er);});
+                }
+            }
+        }catch(e){console.error('Like error:',e);updateReactionUI(old,myReaction);}
     });
     dislikeBtn.addEventListener('click',async function(e){
         e.stopPropagation();if(!currentUser)return;

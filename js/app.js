@@ -1194,6 +1194,11 @@ function updateCoins(){
     void el.offsetWidth;
     el.classList.add('coin-pop');
 }
+function isOwnPost(postId){
+    if(!currentUser) return false;
+    var fp=feedPosts.find(function(x){return x.idx===postId;});
+    return !!(fp&&fp.person&&fp.person.id===currentUser.id);
+}
 function addGroupCoins(groupId,amount){
     if(!state.groupCoins[groupId]) state.groupCoins[groupId]=0;
     state.groupCoins[groupId]+=amount;
@@ -1470,8 +1475,8 @@ function buildCommentHtml(cid,name,img,text,likes,isReply,authorId,replyToName){
     h+='<div style="flex:1;"><strong style="font-size:13px;">'+name+'</strong>';
     h+='<p class="comment-text" style="font-size:13px;color:#555;margin-top:2px;">'+replyTag+text+'</p>';
     h+='<div class="comment-actions-row" style="display:flex;gap:12px;margin-top:8px;">';
-    h+='<button class="comment-like-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
-    h+='<button class="comment-dislike-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
+    h+='<button class="comment-like-btn" data-cid="'+cid+'" data-aid="'+(authorId||'')+'" style="background:none;font-size:12px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i><span>'+lc+'</span></button>';
+    h+='<button class="comment-dislike-btn" data-cid="'+cid+'" data-aid="'+(authorId||'')+'" style="background:none;font-size:12px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:4px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i><span>'+dc+'</span></button>';
     h+='<button class="comment-reply-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>';
     if(isOwn) h+='<button class="comment-edit-btn" data-cid="'+cid+'" data-text="'+text.replace(/"/g,'&quot;')+'" style="background:none;font-size:12px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i> Edit</button>';
     if(isOwn) h+='<button class="comment-delete-btn" data-cid="'+cid+'" style="background:none;font-size:12px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button>';
@@ -1641,12 +1646,12 @@ async function showComments(postId,countEl,sortMode,autoReplyToCid){
         }
 
         if(replyTarget){
-            if(!state.replyCoinPosts[postId]){state.replyCoinPosts[postId]=true;state.coins+=2;updateCoins();}
+            if(!isOwnPost(postId)&&!state.replyCoinPosts[postId]){state.replyCoinPosts[postId]=true;state.coins+=2;updateCoins();}
             replyTarget=null;
             document.getElementById('replyIndicator').style.display='none';
             input.placeholder='Write a comment...';
         }else{
-            if(!state.commentCoinPosts[postId]){state.commentCoinPosts[postId]=true;state.coins+=2;updateCoins();}
+            if(!isOwnPost(postId)&&!state.commentCoinPosts[postId]){state.commentCoinPosts[postId]=true;state.coins+=2;updateCoins();}
         }
         input.value='';if(countEl)countEl.textContent=parseInt(countEl.textContent)+1;
         renderInlineComments(postId);
@@ -1666,7 +1671,7 @@ function bindCommentLikes(){
             else{
                 if(dislikedComments[cid]&&disBtn){delete dislikedComments[cid];var ds=disBtn.querySelector('span');ds.textContent=parseInt(ds.textContent)-1;disBtn.style.color='#999';disBtn.querySelector('i').className='far fa-thumbs-down';}
                 likedComments[cid]=true;ct++;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-up';
-                var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
+                var isOwn=currentUser&&btn.dataset.aid&&btn.dataset.aid===currentUser.id;
                 if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
                 if(/^[0-9a-f]{8}-/.test(cid)&&currentUser) sbToggleLike(currentUser.id,'comment',cid).catch(function(){});
             }
@@ -1681,7 +1686,7 @@ function bindCommentLikes(){
             else{
                 if(likedComments[cid]&&likeBtn){delete likedComments[cid];var ls=likeBtn.querySelector('span');ls.textContent=parseInt(ls.textContent)-1;likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';}
                 dislikedComments[cid]=true;ct++;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-down';
-                var isOwn=cid.indexOf('-u-')!==-1||cid.indexOf('-r-')!==-1;
+                var isOwn=currentUser&&btn.dataset.aid&&btn.dataset.aid===currentUser.id;
                 if(!isOwn&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
             }
             span.textContent=ct;
@@ -1775,7 +1780,7 @@ async function renderInlineComments(postId){
         var isOwnComment=currentUser&&c.authorId&&c.authorId===currentUser.id;
         var editBtn=isOwnComment?'<button class="inline-comment-edit" data-cid="'+c.cid+'" data-postid="'+postId+'" data-text="'+c.text.replace(/"/g,'&quot;')+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i></button>':'';
         var deleteBtn=isOwnComment?'<button class="inline-comment-delete" data-cid="'+c.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
-        html+='<div class="inline-comment" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+editBtn+deleteBtn+'</div></div></div>';
+        html+='<div class="inline-comment" data-cid="'+c.cid+'"><img src="'+avatarSrc+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><strong style="font-size:12px;">'+c.name+'</strong> <span style="font-size:12px;color:#555;">'+c.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+c.cid+'" data-aid="'+(c.authorId||'')+'" style="background:none;font-size:11px;color:'+(liked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(liked?'fas':'far')+' fa-thumbs-up"></i>'+lc+'</button><button class="inline-comment-dislike" data-cid="'+c.cid+'" data-aid="'+(c.authorId||'')+'" style="background:none;font-size:11px;color:'+(disliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(disliked?'fas':'far')+' fa-thumbs-down"></i>'+dc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+editBtn+deleteBtn+'</div></div></div>';
         // Show replies threaded under this comment
         var replies=repliesByParent[c.cid]||[];
         var shownReplies=replies.slice(0,2);
@@ -1787,7 +1792,7 @@ async function renderInlineComments(postId){
             var rIsOwn=currentUser&&r.authorId&&r.authorId===currentUser.id;
             var rEdit=rIsOwn?'<button class="inline-comment-edit" data-cid="'+r.cid+'" data-postid="'+postId+'" data-text="'+r.text.replace(/"/g,'&quot;')+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="fas fa-pen"></i></button>':'';
             var rDel=rIsOwn?'<button class="inline-comment-delete" data-cid="'+r.cid+'" data-postid="'+postId+'" style="background:none;font-size:11px;color:#e74c3c;cursor:pointer;"><i class="fas fa-trash"></i></button>':'';
-            html+='<div class="inline-comment" style="margin-left:28px;" data-cid="'+r.cid+'"><img src="'+rAvatar+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><i class="fas fa-reply" style="font-size:9px;color:var(--primary);margin-right:4px;transform:scaleX(-1);"></i><span style="color:var(--primary);font-size:11px;margin-right:3px;">@'+c.name+'</span><strong style="font-size:12px;">'+r.name+'</strong> <span style="font-size:12px;color:#555;">'+r.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rLiked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rLiked?'fas':'far')+' fa-thumbs-up"></i>'+rlc+'</button><button class="inline-comment-dislike" data-cid="'+r.cid+'" style="background:none;font-size:11px;color:'+(rDisliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rDisliked?'fas':'far')+' fa-thumbs-down"></i>'+rdc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+rEdit+rDel+'</div></div></div>';
+            html+='<div class="inline-comment" style="margin-left:28px;" data-cid="'+r.cid+'"><img src="'+rAvatar+'" class="inline-comment-avatar" style="object-fit:cover;"><div><div class="inline-comment-bubble"><i class="fas fa-reply" style="font-size:9px;color:var(--primary);margin-right:4px;transform:scaleX(-1);"></i><span style="color:var(--primary);font-size:11px;margin-right:3px;">@'+c.name+'</span><strong style="font-size:12px;">'+r.name+'</strong> <span style="font-size:12px;color:#555;">'+r.text+'</span></div><div style="display:flex;gap:10px;margin-top:6px;margin-left:4px;"><button class="inline-comment-like" data-cid="'+r.cid+'" data-aid="'+(r.authorId||'')+'" style="background:none;font-size:11px;color:'+(rLiked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rLiked?'fas':'far')+' fa-thumbs-up"></i>'+rlc+'</button><button class="inline-comment-dislike" data-cid="'+r.cid+'" data-aid="'+(r.authorId||'')+'" style="background:none;font-size:11px;color:'+(rDisliked?'var(--primary)':'#999')+';display:flex;align-items:center;gap:3px;"><i class="'+(rDisliked?'fas':'far')+' fa-thumbs-down"></i>'+rdc+'</button><button class="inline-comment-reply" data-cid="'+c.cid+'" style="background:none;font-size:11px;color:#999;cursor:pointer;"><i class="far fa-comment"></i> Reply</button>'+rEdit+rDel+'</div></div></div>';
         });
         if(replies.length>2) html+='<a href="#" class="show-more-comments" style="font-size:11px;color:var(--primary);display:block;margin-left:28px;margin-top:2px;margin-bottom:4px;">'+( replies.length-2)+' more repl'+(replies.length-2===1?'y':'ies')+'</a>';
     });
@@ -1802,7 +1807,8 @@ async function renderInlineComments(postId){
             else{
                 if(dislikedComments[cid]&&disBtn){delete dislikedComments[cid];disBtn.style.color='#999';disBtn.querySelector('i').className='far fa-thumbs-down';disBtn.lastChild.textContent=0;}
                 likedComments[cid]=true;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-up';btn.lastChild.textContent=base+1;
-                if(!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                var isOwnC=currentUser&&btn.dataset.aid&&btn.dataset.aid===currentUser.id;
+                if(!isOwnC&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
                 // Like comment in Supabase
                 if(/^[0-9a-f]{8}-/.test(cid)&&currentUser){sbToggleLike(currentUser.id,'comment',cid).catch(function(){});}
             }
@@ -1816,7 +1822,8 @@ async function renderInlineComments(postId){
             else{
                 if(likedComments[cid]&&likeBtn){delete likedComments[cid];likeBtn.style.color='#999';likeBtn.querySelector('i').className='far fa-thumbs-up';var lv=parseInt(likeBtn.lastChild.textContent)||0;likeBtn.lastChild.textContent=Math.max(0,lv-1);}
                 dislikedComments[cid]=true;btn.style.color='var(--primary)';btn.querySelector('i').className='fas fa-thumbs-down';btn.lastChild.textContent=1;
-                if(!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
+                var isOwnC=currentUser&&btn.dataset.aid&&btn.dataset.aid===currentUser.id;
+                if(!isOwnC&&!commentCoinAwarded[cid]){commentCoinAwarded[cid]=true;state.coins+=1;updateCoins();}
             }
         };
     });
@@ -2123,7 +2130,7 @@ async function showProfileView(person){
             else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;
                 if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e2){}}
             }
-            var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!isOwnPost(pid)){if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}}
             saveState();
         });
     });
@@ -2139,7 +2146,7 @@ async function showProfileView(person){
                 }
                 state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;
             }
-            var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!isOwnPost(pid)){if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}}
             saveState();
         });
     });
@@ -2788,8 +2795,8 @@ async function showGroupView(group){
 }
 
 function bindGvPostEvents(){
-    $$('#gvPostsFeed .like-btn').forEach(function(btn){btn.addEventListener('click',function(e){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();var _glm=pid.match(/^gvp?-(\d+)-/);if(_glm)addGroupCoins(parseInt(_glm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _glm2=pid.match(/^gvp?-(\d+)-/);if(_glm2&&(state.groupCoins[parseInt(_glm2[1])]||0)>0)addGroupCoins(parseInt(_glm2[1]),-1);}});});
-    $$('#gvPostsFeed .dislike-btn').forEach(function(btn){btn.addEventListener('click',function(){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];btn.classList.remove('disliked');btn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!had&&has){state.coins++;updateCoins();var _gdm=pid.match(/^gvp?-(\d+)-/);if(_gdm)addGroupCoins(parseInt(_gdm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _gdm2=pid.match(/^gvp?-(\d+)-/);if(_gdm2&&(state.groupCoins[parseInt(_gdm2[1])]||0)>0)addGroupCoins(parseInt(_gdm2[1]),-1);}});});
+    $$('#gvPostsFeed .like-btn').forEach(function(btn){btn.addEventListener('click',function(e){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.like-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.likedPosts[pid]){delete state.likedPosts[pid];btn.classList.remove('liked');btn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;}else{if(state.dislikedPosts[pid]){var db=btn.closest('.action-left').querySelector('.dislike-btn');var dc=db.querySelector('.dislike-count');dc.textContent=parseInt(dc.textContent)-1;delete state.dislikedPosts[pid];db.classList.remove('disliked');db.querySelector('i').className='far fa-thumbs-down';}state.likedPosts[pid]=true;btn.classList.add('liked');btn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!isOwnPost(pid)){if(!had&&has){state.coins++;updateCoins();var _glm=pid.match(/^gvp?-(\d+)-/);if(_glm)addGroupCoins(parseInt(_glm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _glm2=pid.match(/^gvp?-(\d+)-/);if(_glm2&&(state.groupCoins[parseInt(_glm2[1])]||0)>0)addGroupCoins(parseInt(_glm2[1]),-1);}}});});
+    $$('#gvPostsFeed .dislike-btn').forEach(function(btn){btn.addEventListener('click',function(){var pid=btn.getAttribute('data-post-id');var countEl=btn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var had=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];btn.classList.remove('disliked');btn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{if(state.likedPosts[pid]){var lb=btn.closest('.action-left').querySelector('.like-btn');var lc=lb.querySelector('.like-count');lc.textContent=parseInt(lc.textContent)-1;delete state.likedPosts[pid];lb.classList.remove('liked');lb.querySelector('i').className='far fa-thumbs-up';}state.dislikedPosts[pid]=true;btn.classList.add('disliked');btn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}var has=!!(state.likedPosts[pid]||state.dislikedPosts[pid]);if(!isOwnPost(pid)){if(!had&&has){state.coins++;updateCoins();var _gdm=pid.match(/^gvp?-(\d+)-/);if(_gdm)addGroupCoins(parseInt(_gdm[1]),1);}else if(had&&!has){state.coins--;updateCoins();var _gdm2=pid.match(/^gvp?-(\d+)-/);if(_gdm2&&(state.groupCoins[parseInt(_gdm2[1])]||0)>0)addGroupCoins(parseInt(_gdm2[1]),-1);}}});});
     $$('#gvPostsFeed .comment-btn').forEach(function(btn){btn.addEventListener('click',function(){var postId=btn.closest('.action-left').querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,btn.querySelector('span'));});});
     bindLikeCountClicks('#gvPostsFeed');
 }
@@ -3465,7 +3472,7 @@ function bindPostEvents(){
                 }
             }
             var has=!!(state.likedPosts[postId]||state.dislikedPosts[postId]);
-            if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            if(!isOwnPost(postId)){if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}}
         });
     });
 
@@ -3495,7 +3502,7 @@ function bindPostEvents(){
                 countEl.textContent=count+1;
             }
             var has=!!(state.likedPosts[postId]||state.dislikedPosts[postId]);
-            if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}
+            if(!isOwnPost(postId)){if(!had&&has){state.coins++;updateCoins();}else if(had&&!has){state.coins--;updateCoins();}}
         });
     });
 
@@ -3883,7 +3890,7 @@ $('#openPostModal').addEventListener('click',function(){
         closeModal();
         var newPost=container.firstElementChild;
         var likeBtn=newPost.querySelector('.like-btn');
-        likeBtn.addEventListener('click',async function(){var countEl=likeBtn.querySelector('.like-count');var count=parseInt(countEl.textContent);var pid=likeBtn.getAttribute('data-post-id');var isUUID=/^[0-9a-f]{8}-/.test(pid);if(state.likedPosts[pid]){delete state.likedPosts[pid];likeBtn.classList.remove('liked');likeBtn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;state.coins--;updateCoins();if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}};}else{state.likedPosts[pid]=true;likeBtn.classList.add('liked');likeBtn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;state.coins++;updateCoins();if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}}}});
+        likeBtn.addEventListener('click',async function(){var countEl=likeBtn.querySelector('.like-count');var count=parseInt(countEl.textContent);var pid=likeBtn.getAttribute('data-post-id');var isUUID=/^[0-9a-f]{8}-/.test(pid);if(state.likedPosts[pid]){delete state.likedPosts[pid];likeBtn.classList.remove('liked');likeBtn.querySelector('i').className='far fa-thumbs-up';countEl.textContent=count-1;if(!isOwnPost(pid)){state.coins--;updateCoins();}if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}};}else{state.likedPosts[pid]=true;likeBtn.classList.add('liked');likeBtn.querySelector('i').className='fas fa-thumbs-up';countEl.textContent=count+1;if(!isOwnPost(pid)){state.coins++;updateCoins();}if(isUUID&&currentUser){try{await sbToggleLike(currentUser.id,'post',pid);}catch(e){}}}});
         var dislikeBtn=newPost.querySelector('.dislike-btn');
         dislikeBtn.addEventListener('click',function(){var countEl=dislikeBtn.querySelector('.dislike-count');var count=parseInt(countEl.textContent);var pid=dislikeBtn.getAttribute('data-post-id');if(state.dislikedPosts[pid]){delete state.dislikedPosts[pid];dislikeBtn.classList.remove('disliked');dislikeBtn.querySelector('i').className='far fa-thumbs-down';countEl.textContent=count-1;}else{state.dislikedPosts[pid]=true;dislikeBtn.classList.add('disliked');dislikeBtn.querySelector('i').className='fas fa-thumbs-down';countEl.textContent=count+1;}});
         newPost.querySelector('.comment-btn').addEventListener('click',function(){var postId=newPost.querySelector('.like-btn').getAttribute('data-post-id');showComments(postId,newPost.querySelector('.comment-btn span'));});

@@ -3232,10 +3232,12 @@ document.addEventListener('click',function(e){
             h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Hidden Posts</span><button class="btn btn-outline" id="settingsViewHidden" style="padding:4px 14px;font-size:12px;">View ('+hiddenCount+')</button></div>';
             var blockedCount=Object.keys(blockedUsers).length;
             h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Blocked Users</span><button class="btn btn-outline" id="settingsViewBlocked" style="padding:4px 14px;font-size:12px;color:#e74c3c;border-color:#e74c3c;">View ('+blockedCount+')</button></div>';
+            h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;">Report / Feedback</span><button class="btn btn-outline" id="settingsReportFeedback" style="padding:4px 14px;font-size:12px;"><i class="fas fa-envelope" style="margin-right:4px;"></i>Send</button></div>';
             h+='<div style="margin-top:16px;text-align:center;"><button class="btn btn-primary modal-close">Done</button></div></div>';
             showModal(h);
             document.getElementById('settingsViewHidden').addEventListener('click',function(){showHiddenPostsModal();});
             document.getElementById('settingsViewBlocked').addEventListener('click',function(){showBlockedUsersModal();});
+            document.getElementById('settingsReportFeedback').addEventListener('click',function(){_showFeedbackModal();});
             document.getElementById('commentOrderSelect').addEventListener('change',function(){settings.commentOrder=this.value;saveState();});
             $$('.stoggle').forEach(function(t){t.style.cursor='pointer';t.addEventListener('click',function(){
                 var k=t.dataset.key;settings[k]=!settings[k];
@@ -3253,6 +3255,26 @@ document.addEventListener('click',function(e){
         }
     }
 });
+
+function _showFeedbackModal(){
+    var h='<div class="modal-header"><h3><i class="fas fa-envelope" style="color:var(--primary);margin-right:8px;"></i>Report / Feedback</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>';
+    h+='<div class="modal-body">';
+    h+='<label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Subject</label>';
+    h+='<input type="text" id="feedbackSubject" placeholder="What is this about?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:12px;background:var(--card);color:var(--dark);">';
+    h+='<label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Message</label>';
+    h+='<textarea id="feedbackBody" rows="5" placeholder="Describe the issue or share your feedback..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical;background:var(--card);color:var(--dark);"></textarea>';
+    h+='<div style="margin-top:14px;text-align:right;"><button class="btn btn-primary" id="feedbackSendBtn"><i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit</button></div>';
+    h+='</div>';
+    showModal(h);
+    document.getElementById('feedbackSendBtn').addEventListener('click',function(){
+        var subj=document.getElementById('feedbackSubject').value.trim();
+        var body=document.getElementById('feedbackBody').value.trim();
+        if(!subj&&!body){document.getElementById('feedbackSubject').style.borderColor='#e74c3c';document.getElementById('feedbackBody').style.borderColor='#e74c3c';return;}
+        var mailto='mailto:hello@blipvibe.com?subject='+encodeURIComponent(subj||'Feedback')+'&body='+encodeURIComponent(body);
+        window.open(mailto,'_blank');
+        closeModal();
+    });
+}
 
 // ======================== GENERATE FEED (100 POSTS) ========================
 var feedPosts=[];

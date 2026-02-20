@@ -160,6 +160,13 @@
 - **Cause:** When entering a group, only the premium bg layer div was hidden but `has-premium-bg` class and `--card-opacity` CSS variable remained on the body, causing card transparency to affect navbar and other elements
 - **Fix:** Fully reset `premiumBgImage`/overlay/darkness/transparency to defaults and call `updatePremiumBg()` to properly remove all premium bg state when entering group view. Personal settings restored from `_gvSaved` when leaving.
 
+### Group rules moved to modal (2026-02-19)
+- Rules no longer displayed inline in the right sidebar
+- "Group Rules" button in right sidebar opens a modal
+- **Non-owners:** read-only numbered list of rules
+- **Owners:** editable inputs with add/delete/save (same as before, just in the modal)
+- Members preview card remains in the sidebar below the rules button
+
 ## Album System (added 2026-02-19)
 
 ### Schema
